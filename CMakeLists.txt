@@ -65,6 +65,34 @@ if(USE_LIBTORCH)
 endif()
 
 # ============================================================================
+# Shared Library: Railway AI API (for external C++ applications)
+# ============================================================================
+
+add_library(railwayai SHARED
+    cpp/src/railway_api.cpp
+    cpp/src/railway_scheduler.cpp
+)
+
+target_include_directories(railwayai PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/cpp/include>
+    $<INSTALL_INTERFACE:include>
+)
+
+target_compile_definitions(railwayai PRIVATE RAILWAY_API_EXPORTS)
+
+set_target_properties(railwayai PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 1
+    PUBLIC_HEADER cpp/include/railway_api.h
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON
+)
+
+if(USE_LIBTORCH)
+    target_link_libraries(railwayai PUBLIC ${TORCH_LIBRARIES})
+endif()
+
+# ============================================================================
 # Python Module: railway_cpp
 # ============================================================================
 
@@ -91,15 +119,30 @@ set_target_properties(railway_cpp PROPERTIES
 # Installation
 # ============================================================================
 
+# Install shared library for external C++ apps
+install(TARGETS railwayai
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    PUBLIC_HEADER DESTINATION include
+)
+
+# Install Python module
 install(TARGETS railway_cpp
     LIBRARY DESTINATION python
     ARCHIVE DESTINATION python
     RUNTIME DESTINATION python
 )
 
+# Install all headers
 install(DIRECTORY cpp/include/
     DESTINATION include
     FILES_MATCHING PATTERN "*.h"
+)
+
+# Install API documentation
+install(FILES API_REFERENCE.md
+    DESTINATION share/doc/railwayai
 )
 
 # ============================================================================

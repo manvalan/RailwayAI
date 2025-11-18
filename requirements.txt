@@ -29,3 +29,9 @@ tensorboard>=2.13.0
 # Optional: ONNX for model export
 onnx>=1.14.0
 onnxruntime>=1.15.0
+
+# API Server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+python-multipart>=0.0.6

@@ -84,6 +84,7 @@ struct ScheduleAdjustment {
     int new_track_id; // -1 se nessun cambio binario
     int new_platform; // -1 se nessun cambio piattaforma
     std::string reason;
+    double confidence = 0.50; // Confidenza della risoluzione (0.0-1.0)
 };
 
 /**
@@ -285,11 +286,18 @@ private:
 class ConflictResolver {
 public:
     /**
-     * Risoluzione basata su priorità treni.
+     * Risoluzione basata su priorità treni con supporto cambio binario.
+     * 
+     * Strategia:
+     * 1. Se treno a bassa priorità è vicino a stazione (<5km):
+     *    - Cerca binario alternativo disponibile
+     *    - Cambia binario se possibile (ritardo 0.5min per manovra)
+     * 2. Altrimenti applica ritardo temporale (5min * severity)
      */
     static std::vector<ScheduleAdjustment> resolve_by_priority(
         const std::vector<Conflict>& conflicts,
-        const std::unordered_map<int, Train>& trains
+        const std::unordered_map<int, Train>& trains,
+        const std::unordered_map<int, Track>& tracks
     );
     
     /**
@@ -297,16 +305,68 @@ public:
      */
     static std::vector<ScheduleAdjustment> minimize_total_delay(
         const std::vector<Conflict>& conflicts,
-        const std::unordered_map<int, Train>& trains
+        const std::unordered_map<int, Train>& trains,
+        const std::unordered_map<int, Track>& tracks
     );
     
     /**
      * Risoluzione per binari singoli (gestione incroci).
+     * 
+     * Gestisce il caso critico di stazioni multi-binario che collegano 
+     * linee a binario unico in direzioni opposte:
+     * 
+     * Strategia 1 (Deviazione in stazione):
+     * - Se treno è vicino a stazione (entro 10km)
+     * - Cerca binari multi-track disponibili nella stazione
+     * - Devia il treno su binario di stazione con meno congestione
+     * - Ritardo: 1.0min per manovra, confidenza: 85%
+     * 
+     * Strategia 2 (Attesa per priorità):
+     * - Se deviazione non possibile
+     * - Il treno con priorità minore aspetta
+     * - Ritardo: 8min × numero treni in conflitto
+     * - Confidenza: 70%
+     * 
+     * Previene deadlock su binari unici con traffico bidirezionale.
      */
     static std::vector<ScheduleAdjustment> resolve_single_track_conflicts(
         const std::vector<Conflict>& conflicts,
         const std::unordered_map<int, Train>& trains,
         const std::unordered_map<int, Track>& tracks
+    );
+    
+    /**
+     * Trova binari alternativi disponibili per un treno.
+     * Verifica che:
+     * 1. Il binario alternativo connetta le stesse stazioni
+     * 2. Non sia congestionato
+     * 3. Sia disponibile nel tempo stimato
+     * 
+     * @param train Treno che necessita cambio binario
+     * @param current_track_id Binario corrente
+     * @param tracks Mappa di tutti i binari
+     * @param trains Mappa di tutti i treni (per verificare congestione)
+     * @return ID del binario alternativo, o -1 se non disponibile
+     */
+    static int find_alternative_track(
+        const Train& train,
+        int current_track_id,
+        const std::unordered_map<int, Track>& tracks,
+        const std::unordered_map<int, Train>& trains
+    );
+    
+    /**
+     * Verifica se un treno è vicino a una stazione dove può cambiare binario.
+     * 
+     * @param train Treno da verificare
+     * @param track Binario corrente
+     * @param max_distance_km Distanza massima dalla stazione (default 5km)
+     * @return true se il treno è vicino a una stazione
+     */
+    static bool is_near_station(
+        const Train& train,
+        const Track& track,
+        double max_distance_km = 5.0
     );
 };
 

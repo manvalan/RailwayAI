@@ -83,9 +83,11 @@ PYBIND11_MODULE(railway_cpp, m) {
         .def_readwrite("new_track_id", &ScheduleAdjustment::new_track_id)
         .def_readwrite("new_platform", &ScheduleAdjustment::new_platform)
         .def_readwrite("reason", &ScheduleAdjustment::reason)
+        .def_readwrite("confidence", &ScheduleAdjustment::confidence)
         .def("__repr__", [](const ScheduleAdjustment& a) {
             return "<Adjustment train=" + std::to_string(a.train_id) + 
                    " delay=" + std::to_string(a.time_adjustment_minutes) + "min" +
+                   " confidence=" + std::to_string(a.confidence) +
                    " reason='" + a.reason + "'>";
         });
     
@@ -183,12 +185,19 @@ PYBIND11_MODULE(railway_cpp, m) {
     
     py::class_<ConflictResolver>(m, "ConflictResolver")
         .def_static("resolve_by_priority", &ConflictResolver::resolve_by_priority,
-                   "Risolve conflitti basandosi su priorità treni")
+                   py::arg("conflicts"), py::arg("trains"), py::arg("tracks"),
+                   "Risolve conflitti basandosi su priorità treni con cambio binario automatico in stazione")
         .def_static("minimize_total_delay", &ConflictResolver::minimize_total_delay,
                    "Risolve minimizzando il ritardo totale")
         .def_static("resolve_single_track_conflicts", 
                    &ConflictResolver::resolve_single_track_conflicts,
-                   "Risolve conflitti su binari singoli");
+                   "Risolve conflitti su binari singoli")
+        .def_static("find_alternative_track", &ConflictResolver::find_alternative_track,
+                   py::arg("train"), py::arg("current_track_id"), py::arg("tracks"), py::arg("trains"),
+                   "Trova binario alternativo disponibile per cambio in stazione")
+        .def_static("is_near_station", &ConflictResolver::is_near_station,
+                   py::arg("train"), py::arg("track"), py::arg("max_distance_km") = 5.0,
+                   "Verifica se un treno è vicino a una stazione per cambio binario");
     
     // ========================================================================
     // Utility Functions

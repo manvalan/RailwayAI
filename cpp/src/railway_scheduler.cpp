@@ -208,8 +208,8 @@ std::vector<ScheduleAdjustment> RailwayScheduler::resolve_conflicts(
         NetworkState state = get_network_state();
         return predict_with_ml(state, conflicts);
     } else {
-        // Fallback ad euristiche
-        return ConflictResolver::resolve_by_priority(conflicts, trains_);
+        // Fallback ad euristiche con supporto cambio binario
+        return ConflictResolver::resolve_by_priority(conflicts, trains_, tracks_);
     }
 }
 
@@ -278,8 +278,8 @@ std::vector<ScheduleAdjustment> RailwayScheduler::predict_with_ml(
     const std::vector<Conflict>& conflicts) {
     
     // TODO: Implementazione con LibTorch
-    // Per ora fallback
-    return ConflictResolver::resolve_by_priority(conflicts, trains_);
+    // Per ora fallback con supporto cambio binario
+    return ConflictResolver::resolve_by_priority(conflicts, trains_, tracks_);
 }
 
 NetworkState RailwayScheduler::get_network_state() const {
@@ -416,7 +416,8 @@ void RailwayScheduler::log_event(const std::string& message) {
 
 std::vector<ScheduleAdjustment> ConflictResolver::resolve_by_priority(
     const std::vector<Conflict>& conflicts,
-    const std::unordered_map<int, Train>& trains) {
+    const std::unordered_map<int, Train>& trains,
+    const std::unordered_map<int, Track>& tracks) {
     
     std::vector<ScheduleAdjustment> adjustments;
     
@@ -428,19 +429,58 @@ std::vector<ScheduleAdjustment> ConflictResolver::resolve_by_priority(
         
         ScheduleAdjustment adj;
         
-        // Dai ritardo al treno a priorità minore
-        if (t1.priority < t2.priority) {
-            adj.train_id = t1.id;
-            adj.time_adjustment_minutes = 5.0 * conflict.severity;
-            adj.new_track_id = -1;
+        // Identifica il treno a priorità minore
+        bool t1_lower_priority = t1.priority < t2.priority;
+        const Train& lower_priority_train = t1_lower_priority ? t1 : t2;
+        const Train& higher_priority_train = t1_lower_priority ? t2 : t1;
+        
+        adj.train_id = lower_priority_train.id;
+        
+        // STRATEGIA 1: Prova cambio binario in stazione
+        bool can_change_track = false;
+        int alternative_track = -1;
+        
+        if (conflict.track_id == lower_priority_train.current_track &&
+            conflict.track_id == higher_priority_train.current_track) {
+            
+            // Verifica se il treno è vicino a una stazione
+            if (tracks.count(conflict.track_id)) {
+                const Track& current_track = tracks.at(conflict.track_id);
+                
+                if (is_near_station(lower_priority_train, current_track, 5.0)) {
+                    // Cerca binario alternativo usando la funzione helper
+                    alternative_track = find_alternative_track(
+                        lower_priority_train,
+                        conflict.track_id,
+                        tracks,
+                        trains
+                    );
+                    
+                    can_change_track = (alternative_track >= 0);
+                }
+            }
+        }
+        
+        if (can_change_track && alternative_track >= 0) {
+            // RISOLUZIONE CON CAMBIO BINARIO IN STAZIONE
+            adj.time_adjustment_minutes = 0.5; // Minimo ritardo per manovra cambio binario
+            adj.new_track_id = alternative_track;
             adj.new_platform = -1;
-            adj.reason = "Priority conflict resolution (lower priority)";
+            adj.reason = "Track switch at station to avoid conflict (priority-based)";
+            adj.confidence = 0.90; // Alta confidenza - cambio binario molto efficace
         } else {
-            adj.train_id = t2.id;
+            // RISOLUZIONE CON RITARDO TEMPORALE (fallback)
             adj.time_adjustment_minutes = 5.0 * conflict.severity;
             adj.new_track_id = -1;
             adj.new_platform = -1;
-            adj.reason = "Priority conflict resolution (lower priority)";
+            
+            if (tracks.count(conflict.track_id) && 
+                is_near_station(lower_priority_train, tracks.at(conflict.track_id), 5.0)) {
+                adj.reason = "Time delay to avoid conflict (no alternative track available at station)";
+            } else {
+                adj.reason = "Time delay to avoid conflict (not near station for track switch)";
+            }
+            adj.confidence = 0.75; // Media confidenza - solo ritardo
         }
         
         adjustments.push_back(adj);
@@ -449,12 +489,91 @@ std::vector<ScheduleAdjustment> ConflictResolver::resolve_by_priority(
     return adjustments;
 }
 
-std::vector<ScheduleAdjustment> ConflictResolver::minimize_total_delay(
-    const std::vector<Conflict>& conflicts,
+int ConflictResolver::find_alternative_track(
+    const Train& train,
+    int current_track_id,
+    const std::unordered_map<int, Track>& tracks,
     const std::unordered_map<int, Train>& trains) {
     
+    if (!tracks.count(current_track_id)) {
+        return -1;
+    }
+    
+    const Track& current_track = tracks.at(current_track_id);
+    
+    // Itera sui binari per trovare alternative
+    for (const auto& [track_id, track] : tracks) {
+        if (track_id == current_track_id) continue;
+        
+        // CRITERIO 1: Deve connettere le stesse stazioni (o stazioni compatibili)
+        bool connects_destination = false;
+        for (int station_id : track.station_ids) {
+            if (station_id == train.destination_station) {
+                connects_destination = true;
+                break;
+            }
+        }
+        
+        if (!connects_destination) {
+            continue; // Skip binari che non portano a destinazione
+        }
+        
+        // CRITERIO 2: Non deve essere congestionato
+        int trains_on_track = 0;
+        for (const auto& [tid, t] : trains) {
+            if (t.current_track == track_id) {
+                trains_on_track++;
+            }
+        }
+        
+        // Verifica capacità
+        if (trains_on_track >= track.capacity) {
+            continue; // Binario pieno
+        }
+        
+        // CRITERIO 3: Preferisci binari multi-track su single-track
+        if (track.is_single_track && !current_track.is_single_track) {
+            continue; // Evita downgrade a single-track
+        }
+        
+        // Binario alternativo valido trovato!
+        return track_id;
+    }
+    
+    return -1; // Nessun binario alternativo disponibile
+}
+
+bool ConflictResolver::is_near_station(
+    const Train& train,
+    const Track& track,
+    double max_distance_km) {
+    
+    // Verifica distanza dalle stazioni sul binario
+    // In un sistema reale, dovresti avere le posizioni esatte delle stazioni
+    // Per ora, assumiamo stazioni a inizio (0km) e fine binario (length_km)
+    
+    double distance_to_start = std::abs(train.position_km);
+    double distance_to_end = std::abs(train.position_km - track.length_km);
+    
+    // Anche stazioni intermedie ogni ~50km (semplificato)
+    double min_distance = std::min(distance_to_start, distance_to_end);
+    
+    // Verifica se c'è una stazione intermedia vicina
+    for (double station_pos = 50.0; station_pos < track.length_km; station_pos += 50.0) {
+        double distance = std::abs(train.position_km - station_pos);
+        min_distance = std::min(min_distance, distance);
+    }
+    
+    return min_distance <= max_distance_km;
+}
+
+std::vector<ScheduleAdjustment> ConflictResolver::minimize_total_delay(
+    const std::vector<Conflict>& conflicts,
+    const std::unordered_map<int, Train>& trains,
+    const std::unordered_map<int, Track>& tracks) {
+    
     // TODO: Implementare ottimizzazione globale
-    return resolve_by_priority(conflicts, trains);
+    return resolve_by_priority(conflicts, trains, tracks);
 }
 
 std::vector<ScheduleAdjustment> ConflictResolver::resolve_single_track_conflicts(
@@ -462,8 +581,125 @@ std::vector<ScheduleAdjustment> ConflictResolver::resolve_single_track_conflicts
     const std::unordered_map<int, Train>& trains,
     const std::unordered_map<int, Track>& tracks) {
     
-    // TODO: Implementare logica specifica per binari singoli
-    return resolve_by_priority(conflicts, trains);
+    std::vector<ScheduleAdjustment> adjustments;
+    
+    // Raggruppa conflitti per binario
+    std::unordered_map<int, std::vector<Conflict>> conflicts_by_track;
+    for (const auto& conflict : conflicts) {
+        conflicts_by_track[conflict.track_id].push_back(conflict);
+    }
+    
+    for (const auto& [track_id, track_conflicts] : conflicts_by_track) {
+        auto track_it = tracks.find(track_id);
+        if (track_it == tracks.end()) continue;
+        
+        const Track& track = track_it->second;
+        
+        // Caso critico: binario unico con treni in direzioni opposte
+        if (track.is_single_track && track_conflicts.size() >= 1) {
+            
+            // Identifica treni in conflitto
+            std::vector<int> conflicting_train_ids;
+            for (const auto& conflict : track_conflicts) {
+                conflicting_train_ids.push_back(conflict.train1_id);
+                if (conflict.train2_id != -1) {
+                    conflicting_train_ids.push_back(conflict.train2_id);
+                }
+            }
+            
+            // Rimuovi duplicati
+            std::sort(conflicting_train_ids.begin(), conflicting_train_ids.end());
+            conflicting_train_ids.erase(
+                std::unique(conflicting_train_ids.begin(), conflicting_train_ids.end()),
+                conflicting_train_ids.end()
+            );
+            
+            // Per ogni treno in conflitto, cerca di deviarlo in stazione
+            for (int train_id : conflicting_train_ids) {
+                auto train_it = trains.find(train_id);
+                if (train_it == trains.end()) continue;
+                
+                const Train& train = train_it->second;
+                
+                // Strategia 1: Se il treno è vicino a una stazione, devialo su binario di stazione
+                if (is_near_station(train, track, 10.0)) {  // 10km threshold per binario unico
+                    
+                    // Cerca binari di stazione disponibili (multi-track)
+                    int best_station_track = -1;
+                    int min_train_count = 9999;
+                    
+                    for (const auto& [other_track_id, other_track] : tracks) {
+                        // Cerca binari multi-track (stazioni) connessi
+                        if (other_track_id == track_id) continue;
+                        if (other_track.is_single_track) continue;
+                        
+                        // Verifica se binario connette alla destinazione del treno
+                        bool connects = false;
+                        for (int station_id : other_track.station_ids) {
+                            if (station_id == train.destination_station) {
+                                connects = true;
+                                break;
+                            }
+                        }
+                        
+                        // Preferisci binari con meno treni (meno congestione)
+                        int train_count = other_track.active_train_ids.size();
+                        if (connects && train_count < min_train_count && train_count < other_track.capacity) {
+                            min_train_count = train_count;
+                            best_station_track = other_track_id;
+                        }
+                    }
+                    
+                    if (best_station_track != -1) {
+                        // Devia il treno su binario di stazione
+                        ScheduleAdjustment adj;
+                        adj.train_id = train_id;
+                        adj.new_track_id = best_station_track;
+                        adj.time_adjustment_minutes = 1.0;  // Tempo per cambio binario
+                        adj.new_platform = -1;
+                        adj.reason = "Single-track conflict: diverted to station track " + 
+                                   std::to_string(best_station_track);
+                        adj.confidence = 0.85;
+                        adjustments.push_back(adj);
+                        continue;  // Vai al prossimo treno
+                    }
+                }
+                
+                // Strategia 2: Se non può deviare, il treno con priorità minore aspetta
+                // Trova il treno con priorità massima nel conflitto
+                int max_priority = 0;
+                int priority_train_id = -1;
+                
+                for (int id : conflicting_train_ids) {
+                    auto t_it = trains.find(id);
+                    if (t_it != trains.end() && t_it->second.priority > max_priority) {
+                        max_priority = t_it->second.priority;
+                        priority_train_id = id;
+                    }
+                }
+                
+                // Se questo non è il treno prioritario, aspetta
+                if (train_id != priority_train_id) {
+                    ScheduleAdjustment adj;
+                    adj.train_id = train_id;
+                    adj.new_track_id = -1;  // Resta sul binario
+                    adj.time_adjustment_minutes = 8.0 * (conflicting_train_ids.size() - 1);  // Aspetta
+                    adj.new_platform = -1;
+                    adj.reason = "Single-track conflict: waiting for priority train " + 
+                               std::to_string(priority_train_id);
+                    adj.confidence = 0.70;
+                    adjustments.push_back(adj);
+                }
+            }
+        }
+    }
+    
+    // Se non abbiamo trovato soluzioni specifiche, usa risoluzione standard
+    if (adjustments.empty()) {
+        return resolve_by_priority(conflicts, trains, tracks);
+    }
+    
+    return adjustments;
 }
 
 // ============================================================================

@@ -1,7 +1,7 @@
 # 🚀 Railway AI Scheduler - Stato del Progetto
 
 **Data:** 19 Novembre 2025  
-**Stato:** 🚀 PRODUCTION READY con JSON API (v1.1.0)
+**Stato:** 🚀 PRODUCTION READY con FDC Integration API v2.0
 
 ---
 
@@ -288,5 +288,80 @@ RailwayAI/
 ---
 
 **🎉 Sistema Production Ready con supporto multi-linguaggio!**
+
+_Ultimo aggiornamento: 19/11/2025_
+---
+
+## 🆕 Changelog
+
+### v2.0.0 (19/11/2025) - FDC Integration API
+
+**🏢 FDC Integration API**
+- ✅ Formato JSON potenziato per sistemi esterni (FDC, etc.)
+- ✅ 6 tipi modifiche: speed, platform, dwell_time, departure, stop_skip, route
+- ✅ **Zero-Delay Solutions**: Platform change risolve conflitti senza ritardi!
+- ✅ Impact analysis: tempo, stazioni, score passeggeri
+- ✅ Alternatives ranking: 2-3 soluzioni per conflitto con confidence
+- ✅ Conflict tracking: originali, risolti, rimasti
+- ✅ Builder pattern per risposte complesse
+- ✅ REST API FastAPI: 5 endpoint porta 8002
+- ✅ 100% compliance: `RAILWAY_AI_INTEGRATION_SPECS.md` (606 righe)
+- ✅ Test suite: 5 scenari tutti passing
+
+**Moduli:**
+- `python/integration/fdc_integration.py` (450+ righe)
+- `api/fdc_integration_api.py` (370+ righe)  
+- `examples/fdc_integration_demo.py` (380+ righe)
+- `api/test_fdc_integration_client.py` (300+ righe)
+- `FDC_API_REFERENCE.md` (400+ righe documentazione)
+
+**Endpoints:**
+- `POST /api/v2/optimize` - Ottimizzazione completa
+- `POST /api/v2/optimize/simple` - Formato minimale
+- `POST /api/v2/validate` - Validazione modifiche
+- `GET /api/v2/modification-types` - Discovery API
+- `GET /api/v2/health` - Health check
+
+### v1.2.0 (18/11/2025) - Opposite Train Scheduler
+
+**🚂 Ottimizzatore Treni Opposti**
+- ✅ Scheduling treni senso opposto su reti miste
+- ✅ REST API FastAPI porta 8001
+- ✅ Test suite realistica: 6 scenari
+- ✅ Documentazione: `OPPOSITE_TRAIN_SCHEDULER.md` (500+ righe)
+
+**Moduli:**
+- `python/scheduling/opposite_train_optimizer.py` (647 righe)
+- `api/opposite_train_api.py` (293 righe)
+- `examples/test_real_opposite_trains.py` (550 righe)
+- `examples/test_critical_crossing.py` (260 righe)
+
+### v1.1.1 (17/11/2025) - European Dataset
+
+**🌍 Dataset Multi-Paese**
+- ✅ 7 paesi: IT, FR, DE, CH, NL, AT, ES
+- ✅ GTFS Cache: 145x compressione (261MB → 1.8MB)
+- ✅ 650+ rotte, 87K fermate
+- ✅ Documentazione: `EUROPEAN_DATA.md`, `GTFS_CACHE.md`
+
+**Moduli:**
+- `python/data_acquisition/european_railways.py`
+- `python/data_acquisition/gtfs_cache_manager.py`
+- `python/data_acquisition/european_data_parser.py`
+
+### v1.1.0 (16/11/2025) - JSON API C++
+
+**JSON API Native**
+- ✅ `detect_conflicts_json()` - Rilevamento da JSON
+- ✅ `optimize_json()` - Ottimizzazione da JSON  
+- ✅ `get_statistics_json()` - Statistiche JSON
+- ✅ Parser integrato (no dipendenze)
+- ✅ Performance: <0.05ms overhead
+- ✅ Documentazione: `JSON_API_REFERENCE.md`
+- ✅ Demo C++: `examples/external_app/json_api_demo.cpp`
+
+---
+
+**🎉 Sistema Production Ready con FDC Integration API v2.0!**
 
 _Ultimo aggiornamento: 19/11/2025_

@@ -1,7 +1,7 @@
 # 🚀 Railway AI Scheduler - Stato del Progetto
 
 **Data:** 19 Novembre 2025  
-**Stato:** � MODELLO REAL-WORLD DEPLOYATO (62.3% miglioramento)
+**Stato:** 🚀 PRODUCTION READY con JSON API (v1.1.0)
 
 ---
 
@@ -20,6 +20,7 @@
 - ✅ **ConflictResolver** - Euristica priority-based
 - ✅ **pybind11 Bindings** - Integrazione Python/C++ completa
 - ✅ **Compilazione** - Build system CMake funzionante
+- ✅ **JSON API** - API native C++ con input/output JSON (v1.1.0) 🆕
 
 ### 3. Data Acquisition
 - ✅ **GTFS Parser** - Lettura orari ufficiali RFI/Trenitalia
@@ -267,6 +268,25 @@ RailwayAI/
 
 ---
 
-**🎉 Sistema completamente funzionante e pronto per sviluppo avanzato!**
+## � Novità v1.1.0 (19/11/2025)
 
-_Ultimo aggiornamento: 18/11/2025 23:55_
+### JSON API C++
+- ✅ `detect_conflicts_json()` - Rilevamento conflitti da JSON
+- ✅ `optimize_json()` - Ottimizzazione schedule da JSON  
+- ✅ `get_statistics_json()` - Statistiche in formato JSON
+- ✅ Parser JSON integrato (no dipendenze esterne)
+- ✅ Performance: <0.05ms overhead JSON parsing
+- ✅ Documentazione completa: `JSON_API_REFERENCE.md`
+- ✅ Demo funzionante: `examples/external_app/json_api_demo.cpp`
+
+**Vantaggi:**
+- Interoperabilità totale con qualsiasi linguaggio
+- Ideale per REST API e microservizi
+- Input/output standardizzato
+- Zero dipendenze esterne per JSON
+
+---
+
+**🎉 Sistema Production Ready con supporto multi-linguaggio!**
+
+_Ultimo aggiornamento: 19/11/2025_

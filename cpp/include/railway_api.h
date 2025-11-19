@@ -200,6 +200,121 @@ public:
      * @param total_optimizations Total number of optimizations performed
      */
     void get_statistics(double& avg_time_ms, int& total_optimizations) const;
+    
+    // ========================================================================
+    // JSON API Methods
+    // ========================================================================
+    
+    /**
+     * @brief Detect conflicts from JSON input and return JSON output
+     * 
+     * Input JSON format:
+     * {
+     *   "trains": [
+     *     {
+     *       "id": 101,
+     *       "position_km": 15.0,
+     *       "velocity_kmh": 120.0,
+     *       "current_track": 1,
+     *       "destination_station": 3,
+     *       "delay_minutes": 5.0,
+     *       "priority": 8,
+     *       "is_delayed": true
+     *     }
+     *   ]
+     * }
+     * 
+     * Output JSON format:
+     * {
+     *   "conflicts": [
+     *     {
+     *       "train1_id": 101,
+     *       "train2_id": 102,
+     *       "track_id": 1,
+     *       "estimated_time_min": 12.5,
+     *       "severity": 0.85
+     *     }
+     *   ],
+     *   "total_conflicts": 5,
+     *   "processing_time_ms": 1.23,
+     *   "success": true
+     * }
+     * 
+     * @param json_input JSON string with train data
+     * @return JSON string with detected conflicts
+     */
+    std::string detect_conflicts_json(const std::string& json_input);
+    
+    /**
+     * @brief Optimize schedule from JSON input and return JSON output
+     * 
+     * Input JSON format:
+     * {
+     *   "trains": [...],  // Same as detect_conflicts_json
+     *   "tracks": [       // Optional network configuration
+     *     {
+     *       "id": 1,
+     *       "length_km": 50.0,
+     *       "is_single_track": true,
+     *       "capacity": 1,
+     *       "station_ids": [0, 1]
+     *     }
+     *   ],
+     *   "stations": [     // Optional
+     *     {
+     *       "id": 0,
+     *       "name": "Milano Centrale",
+     *       "num_platforms": 8
+     *     }
+     *   ],
+     *   "max_iterations": 100  // Optional
+     * }
+     * 
+     * Output JSON format:
+     * {
+     *   "resolutions": [
+     *     {
+     *       "train_id": 101,
+     *       "time_adjustment_min": -5.2,
+     *       "new_track": 2,
+     *       "confidence": 0.92
+     *     }
+     *   ],
+     *   "remaining_conflicts": [
+     *     {
+     *       "train1_id": 103,
+     *       "train2_id": 104,
+     *       "track_id": 2,
+     *       "estimated_time_min": 8.0,
+     *       "severity": 0.45
+     *     }
+     *   ],
+     *   "total_delay_minutes": 125.3,
+     *   "optimization_time_ms": 4.56,
+     *   "success": true,
+     *   "error_message": ""
+     * }
+     * 
+     * @param json_input JSON string with train and network data
+     * @return JSON string with optimization results
+     */
+    std::string optimize_json(const std::string& json_input);
+    
+    /**
+     * @brief Get scheduler statistics in JSON format
+     * 
+     * Output JSON format:
+     * {
+     *   "version": "1.0.0",
+     *   "ml_ready": true,
+     *   "avg_optimization_time_ms": 3.45,
+     *   "total_optimizations": 1234,
+     *   "uptime_seconds": 3600.5
+     * }
+     * 
+     * @return JSON string with statistics
+     */
+    std::string get_statistics_json() const;
 
 private:
     class Impl;

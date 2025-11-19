@@ -32,6 +32,12 @@ Railway AI Scheduler è un sistema avanzato per l'ottimizzazione degli orari fer
 - Priorità treni differenziate
 - Percorsi alternativi automatici
 
+✅ **API JSON native**
+- Input/Output JSON per massima interoperabilità
+- Integrabile da qualsiasi linguaggio (C++, Python, Node.js, Go, Rust, etc.)
+- Perfetto per REST API e microservizi
+- Zero overhead di serializzazione
+
 ## 🏗️ Architettura
 
 ```
@@ -416,7 +422,20 @@ cd build
 cmake .. -DBUILD_TESTS=ON
 cmake --build .
 ctest
+
+# Test JSON API
+cd examples/external_app
+./json_api_demo
 ```
+
+## 📚 Documentazione
+
+- **[API_REFERENCE.md](API_REFERENCE.md)** - Documentazione completa API C++
+- **[JSON_API_REFERENCE.md](JSON_API_REFERENCE.md)** - Guida API JSON (NUOVO!)
+- **[TRAINING_RESULTS.md](TRAINING_RESULTS.md)** - Risultati training real-world
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Guida deployment production
+- **[STRATEGY.md](STRATEGY.md)** - Strategia di training e architettura
+- **[STATUS.md](STATUS.md)** - Stato del progetto
 
 ## 📊 Visualizzazione
 

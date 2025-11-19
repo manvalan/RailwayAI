@@ -194,4 +194,293 @@ void RailwaySchedulerAPI::get_statistics(double& avg_time_ms,
     }
 }
 
+// ============================================================================
+// JSON API Implementation
+// ============================================================================
+
+namespace {
+    // Helper: Simple JSON string builder
+    class JsonBuilder {
+    public:
+        JsonBuilder& start_object() {
+            json_ += "{";
+            need_comma_ = false;
+            return *this;
+        }
+        
+        JsonBuilder& end_object() {
+            json_ += "}";
+            need_comma_ = true;
+            return *this;
+        }
+        
+        JsonBuilder& start_array(const std::string& key) {
+            add_comma();
+            json_ += "\"" + key + "\":[";
+            need_comma_ = false;
+            return *this;
+        }
+        
+        JsonBuilder& end_array() {
+            json_ += "]";
+            need_comma_ = true;
+            return *this;
+        }
+        
+        JsonBuilder& add(const std::string& key, const std::string& value) {
+            add_comma();
+            json_ += "\"" + key + "\":\"" + value + "\"";
+            return *this;
+        }
+        
+        JsonBuilder& add(const std::string& key, int value) {
+            add_comma();
+            json_ += "\"" + key + "\":" + std::to_string(value);
+            return *this;
+        }
+        
+        JsonBuilder& add(const std::string& key, double value) {
+            add_comma();
+            json_ += "\"" + key + "\":" + std::to_string(value);
+            return *this;
+        }
+        
+        JsonBuilder& add(const std::string& key, bool value) {
+            add_comma();
+            json_ += "\"" + key + "\":" + (value ? "true" : "false");
+            return *this;
+        }
+        
+        JsonBuilder& array_separator() {
+            if (need_comma_) json_ += ",";
+            need_comma_ = true;
+            return *this;
+        }
+        
+        std::string str() const { return json_; }
+        
+    private:
+        void add_comma() {
+            if (need_comma_) json_ += ",";
+            need_comma_ = true;
+        }
+        
+        std::string json_;
+        bool need_comma_ = false;
+    };
+    
+    // Helper: Simple JSON parser for train data
+    std::vector<Train> parse_trains_from_json(const std::string& json) {
+        std::vector<Train> trains;
+        
+        // Very simple parser - finds "trains" array and extracts train objects
+        size_t trains_pos = json.find("\"trains\"");
+        if (trains_pos == std::string::npos) {
+            return trains;
+        }
+        
+        size_t array_start = json.find('[', trains_pos);
+        if (array_start == std::string::npos) {
+            return trains;
+        }
+        
+        // Parse each train object
+        size_t pos = array_start + 1;
+        while (pos < json.size()) {
+            // Find next object
+            size_t obj_start = json.find('{', pos);
+            if (obj_start == std::string::npos) break;
+            
+            size_t obj_end = json.find('}', obj_start);
+            if (obj_end == std::string::npos) break;
+            
+            // Extract train data
+            std::string obj = json.substr(obj_start, obj_end - obj_start + 1);
+            Train train;
+            
+            // Parse fields (simple extraction)
+            auto extract_int = [&](const std::string& key) -> int {
+                size_t k = obj.find("\"" + key + "\"");
+                if (k == std::string::npos) return 0;
+                size_t colon = obj.find(':', k);
+                if (colon == std::string::npos) return 0;
+                size_t comma = obj.find_first_of(",}", colon);
+                return std::stoi(obj.substr(colon + 1, comma - colon - 1));
+            };
+            
+            auto extract_double = [&](const std::string& key) -> double {
+                size_t k = obj.find("\"" + key + "\"");
+                if (k == std::string::npos) return 0.0;
+                size_t colon = obj.find(':', k);
+                if (colon == std::string::npos) return 0.0;
+                size_t comma = obj.find_first_of(",}", colon);
+                return std::stod(obj.substr(colon + 1, comma - colon - 1));
+            };
+            
+            auto extract_bool = [&](const std::string& key) -> bool {
+                size_t k = obj.find("\"" + key + "\"");
+                if (k == std::string::npos) return false;
+                size_t colon = obj.find(':', k);
+                if (colon == std::string::npos) return false;
+                return obj.find("true", colon) < obj.find("false", colon);
+            };
+            
+            train.id = extract_int("id");
+            train.position_km = extract_double("position_km");
+            train.velocity_kmh = extract_double("velocity_kmh");
+            train.current_track = extract_int("current_track");
+            train.destination_station = extract_int("destination_station");
+            train.delay_minutes = extract_double("delay_minutes");
+            train.priority = extract_int("priority");
+            train.is_delayed = extract_bool("is_delayed");
+            
+            trains.push_back(train);
+            
+            // Check for end of array
+            pos = obj_end + 1;
+            size_t next_comma = json.find(',', pos);
+            size_t array_end = json.find(']', pos);
+            if (array_end < next_comma) break;
+            pos = next_comma + 1;
+        }
+        
+        return trains;
+    }
+}
+
+std::string RailwaySchedulerAPI::detect_conflicts_json(const std::string& json_input) {
+    auto start_time = std::chrono::high_resolution_clock::now();
+    
+    try {
+        // Parse trains from JSON
+        std::vector<Train> trains = parse_trains_from_json(json_input);
+        
+        // Detect conflicts
+        std::vector<Conflict> conflicts = detect_conflicts(trains);
+        
+        // Build JSON response
+        JsonBuilder json;
+        json.start_object();
+        json.start_array("conflicts");
+        
+        for (size_t i = 0; i < conflicts.size(); ++i) {
+            if (i > 0) json.array_separator();
+            
+            json.start_object()
+                .add("train1_id", conflicts[i].train1_id)
+                .add("train2_id", conflicts[i].train2_id)
+                .add("track_id", conflicts[i].track_id)
+                .add("estimated_time_min", conflicts[i].estimated_time_min)
+                .add("severity", conflicts[i].severity)
+                .end_object();
+        }
+        
+        json.end_array();
+        json.add("total_conflicts", static_cast<int>(conflicts.size()));
+        
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+            end_time - start_time);
+        double processing_time = duration.count() / 1000.0;
+        
+        json.add("processing_time_ms", processing_time);
+        json.add("success", true);
+        json.end_object();
+        
+        return json.str();
+        
+    } catch (const std::exception& e) {
+        JsonBuilder json;
+        json.start_object()
+            .start_array("conflicts").end_array()
+            .add("total_conflicts", 0)
+            .add("processing_time_ms", 0.0)
+            .add("success", false)
+            .add("error_message", e.what())
+            .end_object();
+        return json.str();
+    }
+}
+
+std::string RailwaySchedulerAPI::optimize_json(const std::string& json_input) {
+    auto start_time = std::chrono::high_resolution_clock::now();
+    
+    try {
+        // Parse trains from JSON
+        std::vector<Train> trains = parse_trains_from_json(json_input);
+        
+        // Optimize
+        OptimizationResult result = optimize(trains);
+        
+        // Build JSON response
+        JsonBuilder json;
+        json.start_object();
+        
+        // Resolutions array
+        json.start_array("resolutions");
+        for (size_t i = 0; i < result.resolutions.size(); ++i) {
+            if (i > 0) json.array_separator();
+            
+            json.start_object()
+                .add("train_id", result.resolutions[i].train_id)
+                .add("time_adjustment_min", result.resolutions[i].time_adjustment_min)
+                .add("new_track", result.resolutions[i].new_track)
+                .add("confidence", result.resolutions[i].confidence)
+                .end_object();
+        }
+        json.end_array();
+        
+        // Remaining conflicts array
+        json.start_array("remaining_conflicts");
+        for (size_t i = 0; i < result.remaining_conflicts.size(); ++i) {
+            if (i > 0) json.array_separator();
+            
+            json.start_object()
+                .add("train1_id", result.remaining_conflicts[i].train1_id)
+                .add("train2_id", result.remaining_conflicts[i].train2_id)
+                .add("track_id", result.remaining_conflicts[i].track_id)
+                .add("estimated_time_min", result.remaining_conflicts[i].estimated_time_min)
+                .add("severity", result.remaining_conflicts[i].severity)
+                .end_object();
+        }
+        json.end_array();
+        
+        json.add("total_delay_minutes", result.total_delay_minutes);
+        json.add("optimization_time_ms", result.optimization_time_ms);
+        json.add("success", result.success);
+        json.add("error_message", result.error_message);
+        json.end_object();
+        
+        return json.str();
+        
+    } catch (const std::exception& e) {
+        JsonBuilder json;
+        json.start_object()
+            .start_array("resolutions").end_array()
+            .start_array("remaining_conflicts").end_array()
+            .add("total_delay_minutes", 0.0)
+            .add("optimization_time_ms", 0.0)
+            .add("success", false)
+            .add("error_message", e.what())
+            .end_object();
+        return json.str();
+    }
+}
+
+std::string RailwaySchedulerAPI::get_statistics_json() const {
+    double avg_time_ms;
+    int total_optimizations;
+    get_statistics(avg_time_ms, total_optimizations);
+    
+    JsonBuilder json;
+    json.start_object()
+        .add("version", version())
+        .add("ml_ready", is_ml_ready())
+        .add("avg_optimization_time_ms", avg_time_ms)
+        .add("total_optimizations", total_optimizations)
+        .end_object();
+    
+    return json.str();
+}
+
 } // namespace railway

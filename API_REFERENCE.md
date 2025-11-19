@@ -302,16 +302,27 @@ struct Conflict {
 
 ---
 
-#### `Resolution`
+#### `Resolution` / `ScheduleAdjustment`
 
 ```cpp
 struct Resolution {
     int train_id;                  // Train to adjust
-    double time_adjustment_min;    // Time adjustment (negative = slow down)
+    double time_adjustment_min;    // Time adjustment (minutes, positive = delay)
     int new_track;                 // New track (-1 = no change)
-    double confidence;             // Model confidence 0.0-1.0
+    int new_platform;              // New platform (-1 = no change)
+    std::string reason;            // Explanation of resolution strategy
+    double confidence;             // Resolution confidence 0.0-1.0 (NEW!)
+                                   // 0.90: Track switch at station (highly effective)
+                                   // 0.85: Single-track diversion (very effective)
+                                   // 0.75: Time delay fallback (effective)
+                                   // 0.70: Priority-based wait (moderately effective)
 };
 ```
+
+**Confidence Interpretation:**
+- **0.85-0.95**: High confidence (track switching strategies)
+- **0.70-0.85**: Medium confidence (priority-based or delay strategies)
+- **< 0.70**: Low confidence (complex scenarios with limited options)
 
 ---
 
@@ -449,6 +460,150 @@ if (!result.success) {
 2. **Pre-filter trains:** Only include trains near conflict zones
 3. **Adjust config:** Reduce `max_iterations` for faster (less optimal) results
 4. **Use C++ fallback:** Set `use_ml_model = false` for guaranteed low latency
+
+---
+
+## Intelligent Track Switching (NEW!)
+
+### Overview
+
+The system now includes **automatic track switching at stations** to resolve conflicts more efficiently. When trains are near stations, the system can divert them to alternative tracks instead of just applying time delays.
+
+### Key Functions
+
+#### `ConflictResolver::find_alternative_track()`
+
+Finds an available alternative track for a train at a station.
+
+```cpp
+static int find_alternative_track(
+    const Train& train,
+    int current_track_id,
+    const std::unordered_map<int, Track>& tracks,
+    const std::unordered_map<int, Train>& trains
+);
+```
+
+**Parameters:**
+- `train`: Train that needs track change
+- `current_track_id`: Current track ID
+- `tracks`: Map of all tracks in network
+- `trains`: Map of all trains (to check congestion)
+
+**Returns:** 
+- Track ID of alternative track
+- `-1` if no suitable alternative found
+
+**Selection Criteria:**
+1. Must connect to train's destination
+2. Must have available capacity
+3. Must not be congested
+4. Prefers multi-track over single-track
+
+**Example:**
+```cpp
+auto alternative = ConflictResolver::find_alternative_track(
+    train, 
+    current_track_id,
+    all_tracks,
+    all_trains
+);
+
+if (alternative >= 0) {
+    std::cout << "Switch to track " << alternative << std::endl;
+}
+```
+
+---
+
+#### `ConflictResolver::is_near_station()`
+
+Checks if a train is close enough to a station to perform track switching.
+
+```cpp
+static bool is_near_station(
+    const Train& train,
+    const Track& track,
+    double max_distance_km = 5.0
+);
+```
+
+**Parameters:**
+- `train`: Train to check
+- `track`: Current track
+- `max_distance_km`: Maximum distance threshold (default 5.0km, 10.0km for single-track)
+
+**Returns:** `true` if train is within threshold distance of a station
+
+**Example:**
+```cpp
+if (ConflictResolver::is_near_station(train, track, 5.0)) {
+    // Train can switch tracks at station
+    auto alternative = find_alternative_track(...);
+}
+```
+
+---
+
+### Resolution Strategies
+
+The system uses a **two-tier strategy** for conflict resolution:
+
+#### Strategy 1: Track Switch at Station (Preferred)
+- **Trigger:** Train within 5-10km of station + alternative track available
+- **Action:** Switch to alternative track
+- **Delay:** 0.5-1.0 minutes (maneuver time only)
+- **Confidence:** 85-90%
+- **Reason:** `"Track switch at station to avoid conflict"`
+
+#### Strategy 2: Time Delay (Fallback)
+- **Trigger:** Track switching not possible
+- **Action:** Apply time delay to lower-priority train
+- **Delay:** 5-8 minutes × conflict severity
+- **Confidence:** 70-75%
+- **Reason:** `"Time delay to avoid conflict (no alternative track available)"`
+
+---
+
+### Special Case: Single-Track with Multi-Track Stations
+
+For the critical scenario of **bidirectional single-track lines converging at multi-track stations**:
+
+```
+Line A (single) ←--[Train 1]-- STATION (4 tracks) --[Train 2]--→ Line B (single)
+```
+
+**Enhanced Resolution:**
+- Threshold increased to **10km** for single-track conflicts
+- System prioritizes station track diversion
+- Prevents deadlock on bidirectional single-track sections
+- Minimizes delays (1min vs 8min)
+
+**Example:**
+```cpp
+// resolve_single_track_conflicts() automatically applies this logic
+auto adjustments = ConflictResolver::resolve_single_track_conflicts(
+    conflicts,
+    trains,
+    tracks
+);
+
+for (const auto& adj : adjustments) {
+    std::cout << "Train " << adj.train_id 
+              << " confidence: " << adj.confidence
+              << " reason: " << adj.reason << std::endl;
+}
+```
+
+---
+
+### Benefits
+
+✅ **Reduced Delays:** 0.5-1min (track switch) vs 5-8min (time delay)  
+✅ **Deadlock Prevention:** Intelligent handling of bidirectional single-track  
+✅ **Station Capacity Utilization:** Efficient use of multi-track stations  
+✅ **Confidence Scoring:** Measurable quality of each resolution (0.0-1.0)  
+✅ **Priority Respect:** Lower-priority trains yield to higher-priority  
 
 ---
 

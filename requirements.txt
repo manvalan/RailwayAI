@@ -14,6 +14,11 @@ seaborn>=0.12.0
 requests>=2.31.0
 networkx>=3.1
 
+# API Server
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+pydantic>=2.0.0
+
 # Progress bars & utilities
 tqdm>=4.65.0
 

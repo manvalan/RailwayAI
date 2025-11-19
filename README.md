@@ -34,12 +34,14 @@ Railway AI Scheduler è un sistema avanzato per l'ottimizzazione degli orari fer
 - Priorità treni differenziate
 - Percorsi alternativi automatici
 - **Gestione stazioni multi-binario + linee a binario unico** (NEW!)
+- **🚂 Ottimizzatore Treni Opposti**: Scheduling intelligente per treni in senso opposto su reti miste (NEW!)
 
 ✅ **API JSON native**
 - Input/Output JSON per massima interoperabilità
 - Integrabile da qualsiasi linguaggio (C++, Python, Node.js, Go, Rust, etc.)
 - Perfetto per REST API e microservizi
 - Zero overhead di serializzazione
+- **REST API FastAPI per ottimizzazione treni opposti** (NEW!)
 
 ## 🏗️ Architettura
 
@@ -50,8 +52,14 @@ RailwayAI/
 │   │   └── scheduler_network.py
 │   ├── training/             # Scripts di training
 │   │   └── train_model.py
-│   └── data/                 # Generazione dati
-│       └── data_generator.py
+│   ├── data/                 # Generazione dati
+│   │   └── data_generator.py
+│   ├── data_acquisition/     # 🌍 Acquisizione dati europei
+│   │   ├── european_railways.py
+│   │   ├── gtfs_cache_manager.py
+│   │   └── gtfs_parser.py
+│   └── scheduling/           # 🚂 Ottimizzatori avanzati
+│       └── opposite_train_optimizer.py  # NEW!
 │
 ├── cpp/                      # Core C++
 │   ├── include/             # Headers
@@ -60,7 +68,13 @@ RailwayAI/
 │       ├── railway_scheduler.cpp
 │       └── bindings.cpp     # Bindings pybind11
 │
+├── api/                      # 📡 REST API Services
+│   ├── opposite_train_api.py        # Endpoint treni opposti (NEW!)
+│   └── test_opposite_train_client.py
+│
 ├── data/                     # Dataset
+│   ├── gtfs_cache/          # Cache compresso dati europei
+│   └── european/            # Dati GTFS raw (git-ignored)
 ├── models/                   # Modelli addestrati
 ├── tests/                    # Test suite
 ├── examples/                 # Esempi d'uso
@@ -598,16 +612,77 @@ Contribuzioni benvenute! Per favore:
 4. Push al branch (`git push origin feature/amazing-feature`)
 5. Apri una Pull Request
 
-## 📝 TODO / Roadmap
+## � Nuovo: Ottimizzatore Treni Opposti
 
+Sistema avanzato per scheduling di treni che viaggiano in **senso opposto** su linee con sezioni miste **singolo/doppio binario**. 
+
+### Caratteristiche
+- 🔍 Analisi topologia rete (single vs double track)
+- ⏰ Ottimizzazione orari partenza con conflitto detection
+- 🚉 Identificazione automatica punti incrocio ottimali
+- 📊 Ranking proposte con confidence scoring
+- 📡 REST API FastAPI (porta 8001)
+- ⚡ Tempo calcolo < 5ms per scenari realistici
+
+### Quick Start
+
+```bash
+# Avvia API server
+python api/opposite_train_api.py
+
+# Test con client demo
+python api/test_opposite_train_client.py
+
+# Documentazione interattiva
+open http://localhost:8001/docs
+```
+
+### Esempio Uso
+
+```python
+from python.scheduling.opposite_train_optimizer import (
+    OppositeTrainScheduler, TrackSection, TrainPath
+)
+
+# Definisci rete (40 km, 2 sezioni singolo binario)
+sections = [
+    TrackSection(1, 0.0, 5.0, num_tracks=2, can_cross=True),
+    TrackSection(2, 5.0, 20.0, num_tracks=1),  # SINGOLO
+    TrackSection(3, 20.0, 25.0, num_tracks=2, can_cross=True),
+]
+
+# Treni opposti
+train1 = TrainPath("IC 501", "forward", 0.0, 25.0, 100.0)
+train2 = TrainPath("IC 502", "backward", 25.0, 0.0, 100.0)
+
+# Ottimizza
+scheduler = OppositeTrainScheduler(sections)
+proposals = scheduler.find_optimal_schedule(
+    train1, train2, start_time, end_time, frequency_minutes=30
+)
+
+# Migliore soluzione
+print(f"IC 501: {proposals[0].train1_departure}")
+print(f"IC 502: {proposals[0].train2_departure}")
+print(f"Incrocio: km {proposals[0].crossing_point_km}")
+```
+
+📖 **Documentazione completa**: [OPPOSITE_TRAIN_SCHEDULER.md](OPPOSITE_TRAIN_SCHEDULER.md)
+
+## �📝 TODO / Roadmap
+
+- [x] ✅ Ottimizzatore treni opposti con REST API
+- [x] ✅ Dataset multi-paese europeo (7 nazioni)
+- [x] ✅ Sistema cache GTFS compresso (145x riduzione)
+- [x] ✅ Cambio binario automatico in stazioni
 - [ ] Integrazione LibTorch per inferenza C++
 - [ ] Algoritmo pathfinding per percorsi alternativi
 - [ ] Ottimizzazione globale multi-obiettivo
 - [ ] Dashboard web real-time
 - [ ] Export modello ONNX
 - [ ] Supporto GPU acceleration
-- [ ] API REST per integrazione
 - [ ] Visualizzazione 3D della rete
+- [ ] Multi-train optimization (>2 treni simultanei)
 
 ## 📄 Licenza
 

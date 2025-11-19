@@ -321,17 +321,47 @@ total_loss = time_loss + 2.0 × track_loss + 3.0 × conflict_loss
 
 ## ⚡ Performance
 
-### Benchmarks
+### Benchmarks Runtime
 - **Rilevamento conflitti**: < 1ms per 50 treni
-- **Risoluzione ML**: ~5ms per scenario
+- **Risoluzione ML**: ~1.5ms per scenario (inferenza)
 - **Throughput**: > 200 aggiornamenti/sec
 - **Memoria**: ~100MB per rete completa
+
+### Risultati Training
+
+#### Modello Real-World (Italian + UK Networks)
+Addestrato su 1050 scenari realistici da 7 reti ferroviarie (4 italiane + 3 UK):
+
+**Reti Italiane:**
+- Milano-Bologna (219km, 6 stazioni, 120 treni/giorno)
+- Roma-Napoli (225km, 4 stazioni, 100 treni/giorno)
+- Torino-Milano (143km, 3 stazioni, 90 treni/giorno)
+- Firenze-Roma (261km, 4 stazioni, 85 treni/giorno)
+
+**Reti UK:**
+- London-Birmingham (160km, 3 stazioni, 150 treni/giorno)
+- London-Manchester (320km, 4 stazioni, 110 treni/giorno)
+- Edinburgh-Glasgow (75km, 3 stazioni, 200 treni/giorno)
+
+**Prestazioni:**
+```
+Training: 150 epoche
+Best Val Loss: 2.5174 (epoch 40)
+Parametri: 1,359,034
+
+Confronto vs C++ Solver:
+- ML Model:     189.6 min ritardo medio
+- C++ Solver:   502.5 min ritardo medio
+- Improvement:  62.3% più efficiente ✅
+- Win rate:     50% scenari (10/20)
+```
 
 ### Ottimizzazioni
 - Core C++ per algoritmi critici
 - LSTM per sequenze temporali
 - Attention mechanism per conflitti
 - Batch processing per training
+- Supervised learning con target realistici
 
 ## 🔧 Configurazione Avanzata
 

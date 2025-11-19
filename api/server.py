@@ -11,6 +11,7 @@ Endpoints:
 """
 
 import sys
+import os
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -154,11 +155,15 @@ class ModelInfo(BaseModel):
 # Model Management
 # ============================================================================
 
-def load_model(checkpoint_path: str = 'models/scheduler_supervised_best.pth'):
+def load_model(checkpoint_path: str = 'models/scheduler_real_world.pth'):
     """Load the trained ML model"""
     global model, model_config, metrics
     
     try:
+        # Preferisci modello real-world se esiste, altrimenti fallback a supervised
+        if not os.path.exists(checkpoint_path):
+            checkpoint_path = 'models/scheduler_supervised_best.pth'
+            
         logger.info(f"Loading model from {checkpoint_path}")
         checkpoint = torch.load(checkpoint_path, map_location='cpu')
         

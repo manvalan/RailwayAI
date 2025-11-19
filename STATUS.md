@@ -1,7 +1,7 @@
 # 🚀 Railway AI Scheduler - Stato del Progetto
 
-**Data:** 18 Novembre 2025  
-**Stato:** 🎯 MODELLO PRONTO PER DEPLOYMENT
+**Data:** 19 Novembre 2025  
+**Stato:** � MODELLO REAL-WORLD DEPLOYATO (62.3% miglioramento)
 
 ---
 
@@ -30,19 +30,31 @@
 ### 4. Dataset
 - ✅ **Supervised Training:** 1000 samples con soluzioni C++ engine (27.8 conflitti/scenario avg)
 - ✅ **Supervised Validation:** 200 samples (29.8 conflitti/scenario avg)
+- ✅ **Real-World Training:** 1050 samples da 7 reti realistiche IT+UK (15.7 conflitti/scenario avg, 19.5% delay rate)
+- ✅ **Real-World Validation:** 210 samples multi-country (15.6 conflitti/scenario avg, 19.9% delay rate)
 - ✅ Synthetic (originale): 100 train + 20 val samples
 - ✅ Format: `.npz` con network_states (80), train_states (50x8), conflict_matrices (50x50), time_targets, track_targets
 
 ### 5. Modelli Addestrati
 - ✅ `scheduler_minimal.pth` - Rete semplificata (60K params, val_loss: 3.94)
-- ✅ `scheduler_supervised_best.pth` - **PRODUCTION READY** (1.36M params, val_loss: 231.12, **40.3% migliore del C++**)
+- ✅ `scheduler_supervised_best.pth` - Synthetic data (1.36M params, val_loss: 231.12, **40.3% migliore del C++**)
+- ✅ `scheduler_real_world.pth` - **PRODUCTION READY** (1.36M params, val_loss: 2.52, **62.3% migliore del C++**) 🏆
 
 ### 6. Benchmark Performance
+
+#### Modello Real-World (IT+UK Networks)
+- ✅ **Throughput:** ~700 scenari/secondo
+- ✅ **Latenza:** 1.44ms (singolo scenario)
+- ✅ **Memoria:** 5.55 MB totali
+- ✅ **Qualità:** 189.6 min delay medio (ML) vs 502.5 min (C++) = **62.3% miglioramento** 🏆
+- ✅ **Win Rate:** 50% scenari (10/20 migliori del C++)
+- ✅ **Training:** 150 epoche, best val_loss 2.5174 (epoch 40)
+
+#### Modello Synthetic (baseline)
 - ✅ **Throughput:** 1067-4454 scenari/secondo (batch 1-32)
 - ✅ **Latenza:** 0.94ms (singolo scenario)
-- ✅ **Memoria:** 5.55 MB totali
 - ✅ **Qualità:** 194 min delay medio (ML) vs 325 min (C++) = **40.3% miglioramento**
-- ℹ️ **Nota:** C++ 14x più veloce per inference, ma ML **40% più efficiente** sui risultati
+- ℹ️ **Nota:** C++ 14x più veloce per inference, ma ML molto più efficiente sui risultati
 
 ---
 

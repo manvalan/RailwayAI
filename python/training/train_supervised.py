@@ -41,6 +41,7 @@ class SupervisedDataset(Dataset):
 def train_supervised(
     train_path='data/supervised_training_data.npz',
     val_path='data/supervised_validation_data.npz',
+    output_path='models/scheduler_supervised_best.pth',
     epochs=100,
     batch_size=32,
     lr=0.0001,
@@ -195,7 +196,7 @@ def train_supervised(
                     'num_tracks': 50,
                     'num_stations': 30
                 }
-            }, 'models/scheduler_supervised_best.pth')
+            }, output_path)
             marker = " 💾"
         
         history['train_loss'].append(train_loss)
@@ -215,7 +216,7 @@ def train_supervised(
     print(f"📊 Risultati finali:")
     print(f"  • Best validation loss: {best_val_loss:.4f}")
     print(f"  • Epoche completate: {epoch+1}")
-    print(f"  • Modello salvato: models/scheduler_supervised_best.pth")
+    print(f"  • Modello salvato: {output_path}")
     print()
     
     return model, history
@@ -226,6 +227,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--train', type=str, default='data/supervised_training_data.npz')
     parser.add_argument('--val', type=str, default='data/supervised_validation_data.npz')
+    parser.add_argument('--output', type=str, default='models/scheduler_supervised_best.pth')
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--lr', type=float, default=0.0001)
@@ -234,6 +236,7 @@ if __name__ == "__main__":
     train_supervised(
         train_path=args.train,
         val_path=args.val,
+        output_path=args.output,
         epochs=args.epochs,
         batch_size=args.batch_size,
         lr=args.lr

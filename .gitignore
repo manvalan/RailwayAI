@@ -79,3 +79,6 @@ temp/
 # Documentation
 docs/_build/
 site/
+
+# GTFS data files (too large for GitHub)
+data/european/*.zip

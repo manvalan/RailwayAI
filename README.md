@@ -9,6 +9,7 @@ Railway AI Scheduler è un sistema avanzato per l'ottimizzazione degli orari fer
 - **Execution Engine C++**: Algoritmi ottimizzati per elaborazione in tempo reale
 - **Gestione Binari Singoli**: Logica specializzata per linee a binario unico
 - **Rilevamento Conflitti**: Detection automatica di sovrapposizioni e collisioni
+- **🌍 Dataset Multi-Paese Europeo**: Training su 7 nazioni (Italia, Francia, Germania, Svizzera, Paesi Bassi, Austria, Spagna) per massima generalizzazione
 
 ### Caratteristiche Principali
 
@@ -143,7 +144,32 @@ python python/data_acquisition/download_real_data.py --all
 - 🗺️ **OpenStreetMap**: Grafo infrastruttura ferroviaria
 - ⏱️ **viaggiatreno.it API**: Dati real-time e ritardi
 
-### 2. Genera Dataset Sintetico (Alternativa)
+### 2. Scarica Dati Europei Multi-Paese (Nuovo! 🇪🇺)
+
+Il sistema supporta ora dati da **7 paesi europei** per migliorare la generalizzazione:
+
+```bash
+# Mostra paesi disponibili
+python python/data_acquisition/european_railways.py --list
+
+# Scarica dati GTFS (Francia, Paesi Bassi, etc.)
+python python/data_acquisition/european_railways.py \
+  --countries france_sncf netherlands_ns switzerland_sbb
+
+# Parsa e genera dataset unificato
+python python/data_acquisition/european_data_parser.py
+
+# Output: data/european_training_data.npz
+# - 650+ rotte da Francia + Paesi Bassi
+# - 87K fermate
+# - 5K scenari conflitto
+```
+
+**Paesi supportati**: 🇮🇹 Italia, 🇫🇷 Francia, 🇩🇪 Germania, 🇨🇭 Svizzera, 🇳🇱 Paesi Bassi, 🇦🇹 Austria, 🇪🇸 Spagna
+
+📖 **Documentazione completa**: Vedi [EUROPEAN_DATA.md](EUROPEAN_DATA.md)
+
+### 3. Genera Dataset Sintetico (Alternativa Rapida)
 
 Se non hai accesso ai dati reali, usa il generatore sintetico:
 
@@ -157,10 +183,16 @@ generate_training_dataset(
 )
 ```
 
-### 3. Addestra Rete Neurale
+### 4. Addestra Rete Neurale
 
 ```bash
+# Training standard (dati italiani)
 python python/training/train_model.py
+
+# Training multi-paese europeo (consigliato per migliore generalizzazione)
+python python/training/train_european.py --epochs 50 --batch-size 64
+
+# Output: models/scheduler_european.pth
 ```
 
 Questo addestrerà il modello e salverà il checkpoint in `models/scheduler_best.pth`.
@@ -172,6 +204,8 @@ config = {
     # ... resto configurazione
 }
 ```
+
+**Training multi-paese**: Il nuovo `train_european.py` combina automaticamente dati da Italia, UK e nuovi paesi europei con weighted sampling per bilanciare le fonti.
 
 ### 4. Usa lo Scheduler C++
 

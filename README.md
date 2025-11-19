@@ -58,8 +58,10 @@ RailwayAI/
 │   │   ├── european_railways.py
 │   │   ├── gtfs_cache_manager.py
 │   │   └── gtfs_parser.py
-│   └── scheduling/           # 🚂 Ottimizzatori avanzati
-│       └── opposite_train_optimizer.py  # NEW!
+│   ├── scheduling/           # 🚂 Ottimizzatori avanzati
+│   │   └── opposite_train_optimizer.py  # NEW!
+│   └── integration/          # 🏢 Integrazioni sistemi esterni
+│       └── fdc_integration.py        # FDC v2.0 format (NEW!)
 │
 ├── cpp/                      # Core C++
 │   ├── include/             # Headers
@@ -70,7 +72,9 @@ RailwayAI/
 │
 ├── api/                      # 📡 REST API Services
 │   ├── opposite_train_api.py        # Endpoint treni opposti (NEW!)
-│   └── test_opposite_train_client.py
+│   ├── fdc_integration_api.py       # 🏢 FDC Integration API v2.0 (NEW!)
+│   ├── test_opposite_train_client.py
+│   └── test_fdc_integration_client.py
 │
 ├── data/                     # Dataset
 │   ├── gtfs_cache/          # Cache compresso dati europei
@@ -612,7 +616,163 @@ Contribuzioni benvenute! Per favore:
 4. Push al branch (`git push origin feature/amazing-feature`)
 5. Apri una Pull Request
 
-## � Nuovo: Ottimizzatore Treni Opposti
+## 🏢 NUOVO: FDC Integration API v2.0
+
+**API di integrazione avanzata** con formato JSON potenziato per sistemi esterni (Ferrovie della Contea, etc.).
+
+### Perché FDC API v2.0?
+
+Le versioni precedenti restituivano solo **ritardi generici** (`delay_minutes`), costringendo i sistemi esterni a "spostare ciecamente tutti i fermate". 
+
+**FDC v2.0** fornisce **modifiche dettagliate e actionable**:
+- ✅ **DOVE** applicare le modifiche (stazione, tratta specifica)
+- ✅ **COME** risolvere il conflitto (6 tipi: velocità, binario, sosta, partenza, skip, percorso)
+- ✅ **PARAMETRI** esatti (quale binario, quale velocità, quale stazione)
+- ✅ **IMPATTO** dettagliato (tempo aggiunto, stazioni coinvolte, passeggeri)
+- ✅ **ALTERNATIVE** multiple con ranking (2-3 soluzioni per conflitto)
+- ✅ **ANALISI CONFLITTI** (originali, risolti, rimasti)
+
+### 🎯 Innovazione Chiave: Zero-Delay Solutions
+
+**Esempio**: Due treni arrivano contemporaneamente allo stesso binario
+- ❌ **Vecchio approccio**: Ritarda uno dei due → +3 minuti
+- ✅ **FDC v2.0**: Cambia binario al secondo treno → **0 minuti di ritardo!**
+
+### Modifiche Supportate
+
+```
+1️⃣ speed_reduction/increase    → Cambia velocità su tratta specifica
+2️⃣ platform_change             → Riassegna binario in stazione  
+3️⃣ dwell_time_increase/decrease → Modifica tempo di sosta
+4️⃣ departure_delay/advance     → Anticipa/ritarda partenza
+5️⃣ stop_skip                   → Salta fermata intermedia
+6️⃣ route_change                → Cambia percorso completo
+```
+
+### Quick Start
+
+```bash
+# Avvia API server (porta 8002)
+python api/fdc_integration_api.py
+
+# In un altro terminale, test
+python api/test_fdc_integration_client.py
+
+# Documentazione interattiva
+open http://localhost:8002/docs
+```
+
+### Esempio Richiesta
+
+```bash
+curl -X POST http://localhost:8002/api/v2/optimize \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conflicts": [{
+      "conflict_type": "platform_conflict",
+      "location": "MONZA",
+      "trains": [
+        {"train_id": "IC101", "platform": 1, "priority": 8},
+        {"train_id": "R203", "platform": 1, "priority": 5}
+      ],
+      "severity": "high",
+      "time_overlap_seconds": 60
+    }],
+    "network": {
+      "stations": ["MILANO_CENTRALE", "MONZA", "COMO"],
+      "available_platforms": {"MONZA": [1, 2, 3]},
+      "max_speeds": {"MILANO_MONZA": 140.0}
+    }
+  }'
+```
+
+### Esempio Risposta
+
+```json
+{
+  "success": true,
+  "total_impact_minutes": 0.0,  // ZERO DELAY!
+  "ml_confidence": 0.96,
+  "modifications": [{
+    "train_id": "R203",
+    "modification_type": "platform_change",
+    "section": {"station": "MONZA"},
+    "parameters": {
+      "new_platform": 2,
+      "original_platform": 1
+    },
+    "impact": {
+      "time_increase_seconds": 0,
+      "affected_stations": ["MONZA"],
+      "passenger_impact_score": 0.1
+    },
+    "reason": "Cambio binario risolve conflitto a MONZA",
+    "confidence": 0.95
+  }],
+  "conflict_analysis": {
+    "original_conflicts": [{"type": "platform_conflict", ...}],
+    "resolved_conflicts": 1,
+    "remaining_conflicts": 0
+  },
+  "alternatives": [
+    {"description": "Ritarda R203 di 2 minuti", "confidence": 0.80, ...}
+  ]
+}
+```
+
+### Endpoints
+
+| Endpoint | Descrizione |
+|----------|-------------|
+| `POST /api/v2/optimize` | Ottimizzazione completa con conflitti multipli |
+| `POST /api/v2/optimize/simple` | Formato minimale backward-compatible |
+| `GET /api/v2/modification-types` | Lista tipi modifiche supportate |
+| `POST /api/v2/validate` | Validazione pre-flight modifiche |
+| `GET /api/v2/health` | Health check |
+| `GET /docs` | Documentazione interattiva Swagger |
+
+### Integrazione Python
+
+```python
+from python.integration.fdc_integration import (
+    FDCIntegrationBuilder, ModificationType
+)
+
+# Builder pattern per costruire risposte
+builder = FDCIntegrationBuilder()
+builder.set_ml_confidence(0.95)
+
+# Aggiungi modifica (cambio binario)
+builder.add_platform_change(
+    train_id="IC101",
+    station="MONZA",
+    new_platform=2,
+    original_platform=1,
+    affected_stations=["MONZA"],
+    reason="Risolve conflitto",
+    confidence=0.96
+)
+
+# Traccia conflitto originale
+builder.add_conflict(
+    conflict_type=ConflictType.PLATFORM_CONFLICT,
+    location="MONZA",
+    trains=["IC101", "R203"],
+    severity="high"
+)
+
+# Genera risposta JSON
+response = builder.build_success()
+print(response.to_dict())
+```
+
+📖 **Specifiche complete**: [RAILWAY_AI_INTEGRATION_SPECS.md](RAILWAY_AI_INTEGRATION_SPECS.md)
+🎬 **Demo esempi**: `examples/fdc_integration_demo.py`
+🧪 **Test suite**: `api/test_fdc_integration_client.py` (5 scenari, tutti passing ✅)
+
+---
+
+## 🚂 Ottimizzatore Treni Opposti
 
 Sistema avanzato per scheduling di treni che viaggiano in **senso opposto** su linee con sezioni miste **singolo/doppio binario**. 
 
@@ -669,12 +829,13 @@ print(f"Incrocio: km {proposals[0].crossing_point_km}")
 
 📖 **Documentazione completa**: [OPPOSITE_TRAIN_SCHEDULER.md](OPPOSITE_TRAIN_SCHEDULER.md)
 
-## �📝 TODO / Roadmap
+##  TODO / Roadmap
 
 - [x] ✅ Ottimizzatore treni opposti con REST API
 - [x] ✅ Dataset multi-paese europeo (7 nazioni)
 - [x] ✅ Sistema cache GTFS compresso (145x riduzione)
 - [x] ✅ Cambio binario automatico in stazioni
+- [x] ✅ **FDC Integration API v2.0** con formato JSON potenziato (NEW!)
 - [ ] Integrazione LibTorch per inferenza C++
 - [ ] Algoritmo pathfinding per percorsi alternativi
 - [ ] Ottimizzazione globale multi-obiettivo

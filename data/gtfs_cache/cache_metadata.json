@@ -1,0 +1,32 @@
+{
+  "france_sncf_essential": {
+    "country_code": "france_sncf",
+    "original_file": "data/european/france_sncf_gtfs.zip",
+    "original_size_mb": 3.0598602294921875,
+    "cache_size_mb": 0.17070960998535156,
+    "compression_ratio": 17.92,
+    "created_at": "2025-11-19T01:51:47.182351",
+    "file_hash": "1ded09e3266641508a75f1038dc4973727154da52d6108e8628237aa9e50c5ef",
+    "statistics": {
+      "total_stops": 9196,
+      "total_train_routes": 466,
+      "sampled_trips": 1000,
+      "avg_stops_per_trip": 9.3
+    }
+  },
+  "netherlands_ns_essential": {
+    "country_code": "netherlands_ns",
+    "original_file": "data/european/netherlands_ns_gtfs.zip",
+    "original_size_mb": 258.1865587234497,
+    "cache_size_mb": 1.5828533172607422,
+    "compression_ratio": 163.11,
+    "created_at": "2025-11-19T01:51:57.203070",
+    "file_hash": "2ce46a8c732c9ef6eb3dd9d52ef376f352a0fb9d3de932b792b4be89b6cc9a79",
+    "statistics": {
+      "total_stops": 78650,
+      "total_train_routes": 184,
+      "sampled_trips": 1000,
+      "avg_stops_per_trip": 10.1
+    }
+  }
+}

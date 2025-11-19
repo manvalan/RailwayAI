@@ -37,6 +37,12 @@ data/*.csv
 data/*.json
 !data/.gitkeep
 
+# GTFS raw data (too large for Git)
+data/european/*.zip
+
+# GTFS cache (compressed, Git-friendly) - NOT ignored, will be committed
+# data/gtfs_cache/*.pkl.gz
+
 # Models
 models/*.pth
 models/*.onnx

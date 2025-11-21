@@ -20,6 +20,26 @@ Railway AI Scheduler è un sistema avanzato per l'ottimizzazione degli orari fer
 - **Python Bindings**: API completa via pybind11 v2.11.1
 - **🌍 Dataset Multi-Paese Europeo**: Training su 7 nazioni (Italia, Francia, Germania, Svizzera, Paesi Bassi, Austria, Spagna)
 
+### 🔧 Modalità di Utilizzo
+
+Railway AI Scheduler può essere integrato in **3 modalità**:
+
+1. **📚 Libreria C++ Statica/Dinamica** ([Guida](LIBRARY_USAGE.md))
+   - Integrazione diretta nel tuo codice C++
+   - Performance massime (< 1ms latency)
+   - Zero overhead
+   - Librerie: `librailway_scheduler_core.a` (statica), `librailwayai.dylib/.so/.dll` (dinamica)
+
+2. **🐍 Python Bindings**
+   - API Pythonica completa via pybind11
+   - Type hints, NumPy integration
+   - Ideale per data science e ML
+
+3. **🌐 REST API** (FastAPI)
+   - HTTP/JSON endpoints
+   - Multi-language support
+   - Microservices architecture
+
 ### 🎯 Caratteristiche Principali
 
 #### Phase 4 - Advanced Features (5/8 completate) ✅
@@ -171,6 +191,28 @@ pip install -r requirements.txt
 cd build
 python3 -c "import fdc_scheduler_py; print('✅ Success!')"
 ```
+
+#### 🚀 Quick Start: Uso come Libreria C++
+
+```bash
+# 1. Compila la libreria
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
+
+# 2. Le librerie sono pronte in build/:
+#    - librailway_scheduler_core.a (statica)
+#    - librailwayai.dylib/.so/.dll (dinamica)
+
+# 3. Esempio di compilazione con libreria statica
+g++ -std=c++17 my_app.cpp \
+    -I../cpp/include \
+    -L. -lrailway_scheduler_core \
+    -lboost_graph -lpthread \
+    -o my_app
+```
+
+📚 **Guida completa**: Vedi [LIBRARY_USAGE.md](LIBRARY_USAGE.md) per esempi dettagliati, API reference e integrazione CMake.
 
 ### ⚡ Quick Setup (Alternativa)
 

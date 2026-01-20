@@ -267,9 +267,7 @@ def load_model(checkpoint_path: Optional[str] = None):
         model.eval()
         metrics['model_loaded_at'] = datetime.now().isoformat()
         
-        logger.info(f"Model loaded successfully (epoch {checkpoint['epoch']}, "
-                   f"val_loss: {checkpoint['val_loss']:.4f})")
-        
+        logger.info(f"Model loaded successfully from {checkpoint_path}")
         return True
         
     except Exception as e:
@@ -277,13 +275,6 @@ def load_model(checkpoint_path: Optional[str] = None):
         return False
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize model on startup"""
-    logger.info("Starting Railway AI Scheduler API...")
-    success = load_model()
-    if not success:
-        logger.warning("Model not loaded - API will return errors")
 
 
 # ============================================================================

@@ -237,21 +237,32 @@ def load_model(checkpoint_path: Optional[str] = None):
                 checkpoint_path = 'models/scheduler_supervised_best.pth'
             
         logger.info(f"Loading model from {checkpoint_path}")
-        checkpoint = torch.load(checkpoint_path, map_location='cpu')
+        try:
+            # Tenta di caricare come TorchScript prima
+            model = torch.jit.load(checkpoint_path, map_location='cpu')
+            logger.info("Detected TorchScript model.")
+            # Default config for JIT models
+            model_config = {
+                'input_dim': 256, 'hidden_dim': 512, 
+                'num_trains': 50, 'num_tracks': 50, 'num_stations': 30
+            }
+        except Exception:
+            # Fallback a caricamento state_dict (checkpoint classico)
+            checkpoint = torch.load(checkpoint_path, map_location='cpu')
+            if 'model_state_dict' in checkpoint:
+                model_config = checkpoint['config']
+                model = SchedulerNetwork(
+                    input_dim=model_config['input_dim'],
+                    hidden_dim=model_config['hidden_dim'],
+                    num_trains=model_config['num_trains'],
+                    num_tracks=model_config['num_tracks'],
+                    num_stations=model_config['num_stations']
+                )
+                model.load_state_dict(checkpoint['model_state_dict'])
+            else:
+                raise ValueError("Unsupported model format")
         
-        model_config = checkpoint['config']
-        
-        model = SchedulerNetwork(
-            input_dim=model_config['input_dim'],
-            hidden_dim=model_config['hidden_dim'],
-            num_trains=model_config['num_trains'],
-            num_tracks=model_config['num_tracks'],
-            num_stations=model_config['num_stations']
-        )
-        
-        model.load_state_dict(checkpoint['model_state_dict'])
         model.eval()
-        
         metrics['model_loaded_at'] = datetime.now().isoformat()
         
         logger.info(f"Model loaded successfully (epoch {checkpoint['epoch']}, "

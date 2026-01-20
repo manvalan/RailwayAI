@@ -11,13 +11,9 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=60
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PYTHONPATH=/app
-      # Forza il codice a leggere il file corretto
-      - MODEL_PATH=/app/python/models/scheduler_real_world.pt
     volumes:
+      # Montiamo solo la cartella principale, senza alias complicati
       - /opt/docker-projects/railway-ai:/app
-      # Questo crea un "ponte" diretto al file che GitHub ha scaricato
-      - /opt/docker-projects/railway-ai/python/models/scheduler_real_world.pt:/app/api/models/scheduler_supervised_best.pth
-    # Il comando ora punta correttamente al file dentro la struttura /app
     command: sh -c "pip install -r requirements.txt && python api/server.py"
     restart: always
 

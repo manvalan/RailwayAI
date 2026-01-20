@@ -14,31 +14,45 @@ def export_to_torchscript(model_path, output_path):
     """
     print(f"Loading model from {model_path}...")
     
-    # Initialize model (parameters should match the trained model)
-    # These are example parameters, in a real scenario we'd load them from a config
+    # Model parameters from train_model.py
+    input_dim = 256
+    hidden_dim = 512
+    num_trains = 50
+    num_tracks = 20
+    num_stations = 10
+    
     model = SchedulerNetwork(
-        input_size=10, 
-        hidden_size=64, 
-        num_layers=2, 
-        output_size=5
+        input_dim=input_dim,
+        hidden_dim=hidden_dim,
+        num_trains=num_trains,
+        num_tracks=num_tracks,
+        num_stations=num_stations
     )
     
-    # Load state dict
+    # Load state dict (handle both raw state_dict and checkpoint dict)
     try:
-        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+        data = torch.load(model_path, map_location=torch.device('cpu'))
+        if 'model_state_dict' in data:
+            model.load_state_dict(data['model_state_dict'])
+        else:
+            model.load_state_dict(data)
+            
         model.eval()
         print("Model loaded successfully.")
     except Exception as e:
         print(f"Error loading model: {e}")
         return False
 
-    # Create dummy input for tracing
-    # Shape: (batch_size, sequence_length, input_size)
-    dummy_input = torch.randn(1, 10, 10)
+    # Create dummy inputs for tracing
+    # network_state: [batch, num_tracks + num_stations] -> [1, 30]
+    # train_states: [batch, num_trains, 8] -> [1, 50, 8]
+    dummy_network = torch.randn(1, num_tracks + num_stations)
+    dummy_trains = torch.randn(1, num_trains, 8)
     
     print(f"Tracing model...")
     try:
-        traced_script_module = torch.jit.trace(model, dummy_input)
+        # Trace with multiple inputs
+        traced_script_module = torch.jit.trace(model, (dummy_network, dummy_trains))
         
         # Save the traced model
         traced_script_module.save(output_path)
@@ -50,12 +64,17 @@ def export_to_torchscript(model_path, output_path):
 
 if __name__ == "__main__":
     # Example usage
-    model_dir = Path("python/models")
+    model_dir = Path("models")
     best_model = model_dir / "scheduler_real_world.pth"
     output_model = model_dir / "scheduler_real_world.pt"
     
     if best_model.exists():
         export_to_torchscript(str(best_model), str(output_model))
     else:
-        print(f"Model file not found: {best_model}")
-        print("Please ensure you have trained the model first.")
+        # Try best_supervised if real_world is missing
+        best_model = model_dir / "scheduler_supervised_best.pth"
+        if best_model.exists():
+            export_to_torchscript(str(best_model), str(output_model))
+        else:
+            print(f"Model file not found in {model_dir}")
+            print("Please ensure you have trained the model first.")

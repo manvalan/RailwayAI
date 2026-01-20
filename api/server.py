@@ -15,15 +15,19 @@ import os
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 import torch
 import numpy as np
 from datetime import datetime
 import time
+import asyncio
 import logging
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+from fastapi.staticfiles import StaticFiles
+from python.integration.auth import get_current_user, create_access_token
+from fastapi.security import OAuth2PasswordRequestForm
 
 from python.models.scheduler_network import SchedulerNetwork
 
@@ -38,10 +42,70 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Railway AI Scheduler API",
     description="ML-powered train schedule optimization",
-    version="1.0.0",
+    version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Servire file statici
+app.mount("/static", StaticFiles(directory="api/static"), name="static")
+
+# ==================== Connection Manager ====================
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                pass
+
+manager = ConnectionManager()
+
+async def event_poller():
+    """Trasmette aggiornamenti periodici ai client WebSocket"""
+    while True:
+        try:
+            await manager.broadcast({
+                "type": "state_update",
+                "timestamp": datetime.now().isoformat(),
+                "status": "active"
+            })
+        except Exception:
+            pass
+        await asyncio.sleep(5)
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Starting Railway AI Scheduler API v2.0.0...")
+    load_model()
+    asyncio.create_task(event_poller())
+
+@app.websocket("/ws/monitoring")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+@app.post("/token")
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    if form_data.username == "admin" and form_data.password == "admin":
+        access_token = create_access_token(data={"sub": form_data.username})
+        return {"access_token": access_token, "token_type": "bearer"}
+    raise HTTPException(status_code=401, detail="Incorrect username or password")
 
 # CORS middleware
 app.add_middleware(
@@ -264,7 +328,11 @@ async def get_model_info():
 
 
 @app.post("/api/v1/optimize", response_model=OptimizationResponse, tags=["Optimization"])
-async def optimize_schedule(request: OptimizationRequest, background_tasks: BackgroundTasks):
+async def optimize_schedule(
+    request: OptimizationRequest, 
+    background_tasks: BackgroundTasks,
+    current_user: str = Depends(get_current_user)
+):
     """
     Optimize train schedule using ML model
     
@@ -393,7 +461,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "server:app",
         host="0.0.0.0",
-        port=8000,
+        port=8002,
         reload=True,
         log_level="info"
     )

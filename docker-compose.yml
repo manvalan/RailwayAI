@@ -3,22 +3,15 @@ version: '3.8'
 services:
   railway-api:
     build: .
-    container_name: railway-scheduler-api
     ports:
-      - "8000:8000"
-    volumes:
-      - ./models:/app/models:ro
-      - ./logs:/app/logs
+      - "8002:8002"
     environment:
-      - PYTHONUNBUFFERED=1
-      - MODEL_PATH=/app/models/scheduler_supervised_best.pth
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/api/v1/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      - SECRET_KEY=${SECRET_KEY:-RailwayAISecureKeyDefault2026}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+    volumes:
+      - ./python/models:/app/python/models
+      - ./server.log:/app/server.log
+    restart: always
 
 networks:
   default:

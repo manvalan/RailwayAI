@@ -42,7 +42,7 @@ Railway AI Scheduler può essere integrato in **3 modalità**:
 
 ### 🎯 Caratteristiche Principali
 
-#### Phase 4 - Advanced Features (5/8 completate) ✅
+#### Phase 4 - Advanced Features (7/8 completate - 87.5%) ✅
 
 ✅ **Python Bindings (Phase 4.1)**
 - Interfaccia completa via pybind11 v2.11.1
@@ -74,6 +74,12 @@ Railway AI Scheduler può essere integrato in **3 modalità**:
 - 5 tipi di schedule adjustments
 - 3 modalità: CONSERVATIVE, BALANCED, AGGRESSIVE
 - Sistema callback per eventi real-time
+
+✅ **API Security & Monitoring (Phase 4.7)** 🆕
+- **JWT Authentication**: Protezione degli endpoint con token sicuri.
+- **WebSocket Monitoring**: Streaming live dello stato della rete e log.
+- **Thread-Safety**: Core C++ protetto da mutex per uso concorrente.
+- **LibTorch Inference**: Esecuzione modelli AI direttamente in C++.
 
 #### Core Features
 
@@ -192,12 +198,55 @@ cd build
 python3 -c "import fdc_scheduler_py; print('✅ Success!')"
 ```
 
-#### 🚀 Quick Start: Uso come Libreria C++
-
 ```bash
 # 1. Compila la libreria
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_LIBTORCH=ON
+cmake --build . -j$(nproc)
+```
+
+### 🔒 Autenticazione API
+
+L'API ora richiede un token JWT per gli endpoint di ottimizzazione.
+
+1. **Ottieni il token**:
+```bash
+curl -X POST "http://localhost:8002/token" \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -d "username=admin&password=admin"
+```
+
+2. **Usa il token**:
+```bash
+curl -X POST "http://localhost:8002/api/v2/optimize" \
+     -H "Authorization: Bearer <TUO_TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d '{"conflicts": [...], "network": {...}}'
+```
+
+### 📡 Monitoraggio Live
+
+Puoi monitorare il sistema in tempo reale in due modi:
+- **Dashboard Web**: Naviga su `http://localhost:8002/static/monitoring.html`
+- **WebSocket**: Connettiti a `ws://localhost:8002/ws/monitoring`
+
+### 🐳 Docker Deployment
+
+Per avviare l'intero stack in un container isolato:
+
+```bash
+docker-compose up --build -d
+```
+
+L'API sarà disponibile su `http://localhost:8002`.
+
+### 📦 Creazione Release (.tgz)
+
+Per creare un pacchetto di distribuzione pronto per il server di produzione (include l'esportazione automatica dei modelli ML):
+
+```bash
+./scripts/package_release.sh
+```
 make -j$(nproc)
 
 # 2. Le librerie sono pronte in build/:

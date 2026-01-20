@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RailwayAI - Monitoraggio Real-time</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --log-bg: #000;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--card-bg);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .connected { background-color: #22c55e; color: white; }
+        .disconnected { background-color: #ef4444; color: white; }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 20px;
+            flex-grow: 1;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        h2 { margin-top: 0; color: var(--accent-color); font-size: 1.2em; }
+        
+        #log-container {
+            background-color: var(--log-bg);
+            color: #10b981;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-y: auto;
+            flex-grow: 1;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        .log-entry { margin-bottom: 4px; border-left: 2px solid #334155; padding-left: 8px; }
+        .log-time { color: #64748b; margin-right: 8px; font-size: 0.85em; }
+        
+        #stats-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 8px;
+        }
+        .stat-value { font-weight: bold; color: var(--accent-color); }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>RailwayAI <span style="font-weight: 300; font-size: 0.7em;">Live Monitoring</span></h1>
+        <div id="status" class="status-badge disconnected">Disconnected</div>
+    </header>
+
+    <div class="dashboard">
+        <div class="card">
+            <h2>Event Log</h2>
+            <div id="log-container">
+                <div class="log-entry">Waiting for connection...</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Network Stats</h2>
+            <div id="stats-container">
+                <div class="stat-item">
+                    <span>Active Trains</span>
+                    <span id="train-count" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Last Update</span>
+                    <span id="last-update" class="stat-value">--:--:--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const logContainer = document.getElementById('log-container');
+        const statusBadge = document.getElementById('status');
+        const trainCount = document.getElementById('train-count');
+        const lastUpdate = document.getElementById('last-update');
+        
+        const socket = new WebSocket('ws://' + window.location.host + '/ws/monitoring');
+
+        socket.onopen = () => {
+            statusBadge.textContent = 'Connected';
+            statusBadge.className = 'status-badge connected';
+            addLogEntry('Connection established.');
+        };
+
+        socket.onclose = () => {
+            statusBadge.textContent = 'Disconnected';
+            statusBadge.className = 'status-badge disconnected';
+            addLogEntry('Connection closed.', true);
+        };
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            const now = new Date().toLocaleTimeString();
+            
+            if (data.type === 'log') {
+                addLogEntry(data.content);
+            } else if (data.type === 'state_update') {
+                trainCount.textContent = data.train_count;
+                lastUpdate.textContent = now;
+            }
+        };
+
+        function addLogEntry(content, isError = false) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            if (isError) entry.style.color = '#ef4444';
+            
+            const time = document.createElement('span');
+            time.className = 'log-time';
+            time.textContent = new Date().toLocaleTimeString();
+            
+            entry.appendChild(time);
+            entry.appendChild(document.createTextNode(content));
+            
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>

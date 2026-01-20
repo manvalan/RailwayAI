@@ -1,37 +1,67 @@
-# Railway AI Scheduler - Dockerfile
+# Stage 1: Build C++ Core
+FROM ubuntu:22.04 AS builder
 
-FROM python:3.11-slim
+# Prevent interactive prompts during build
+ENV DEBIAN_FRONTEND=noninteractive
 
-LABEL maintainer="Railway AI Team"
-LABEL description="Railway AI Scheduler REST API"
-
-# Set working directory
-WORKDIR /app
-
-# Install system dependencies
+# Install dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
-    g++ \
+    git \
+    wget \
+    unzip \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY requirements.txt .
+# Install LibTorch (CPU version for maximum compatibility)
+WORKDIR /opt
+RUN wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx-shared-with-deps-2.1.0%2Bcpu.zip \
+    && unzip libtorch-cxx-shared-with-deps-2.1.0+cpu.zip \
+    && rm libtorch-cxx-shared-with-deps-2.1.0+cpu.zip
+
+ENV Torch_DIR=/opt/libtorch
+
+# Build RailwayAI C++ Core
+WORKDIR /app/build
+COPY . /app
+RUN cmake .. -DUSE_LIBTORCH=ON -DCMAKE_BUILD_TYPE=Release \
+    && make -j$(nproc)
+
+# Stage 2: Runtime Environment
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install runtime dependencies for C++ libraries
+RUN apt-get update && apt-get install -y \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy build artifacts from builder stage
+COPY --from=builder /app/python/railway_cpp*.so /app/python/
+COPY --from=builder /app/build/railwayai.so* /usr/local/lib/
+# If there are standalone binaries, copy them too
+# COPY --from=builder /app/build/bin/* /usr/local/bin/
 
 # Install Python dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY python/ ./python/
-COPY models/ ./models/
-COPY api/ ./api/
+# Copy application source
+COPY api/ /app/api/
+COPY python/ /app/python/
+COPY .env* /app/
 
-# Expose API port
-EXPOSE 8000
+# Create models directory if not exists (in case it's empty in source)
+RUN mkdir -p /app/python/models
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/api/v1/health')"
+# Set up environment
+ENV LD_LIBRARY_PATH=/usr/local/lib:/app/python
+ENV PYTHONPATH=/app
 
-# Run API server
-CMD ["uvicorn", "api.server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Expose API and WebSocket ports
+EXPOSE 8002
+
+# Run the server
+CMD ["python", "api/fdc_integration_api.py"]

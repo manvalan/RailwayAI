@@ -15,7 +15,8 @@ namespace railway {
 // ============================================================================
 
 RailwayScheduler::RailwayScheduler(int num_tracks, int num_stations)
-    : ml_model_handle_(nullptr), ml_model_loaded_(false) {
+    : ml_model_loaded_(false) {
+    ml_engine_ = std::make_unique<MLInferenceEngine>();
     // Inizializzazione
     log_event("RailwayScheduler initialized with " + 
               std::to_string(num_tracks) + " tracks and " + 
@@ -30,6 +31,7 @@ void RailwayScheduler::initialize_network(
     const std::vector<Track>& tracks,
     const std::vector<Station>& stations) {
     
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     tracks_.clear();
     stations_.clear();
     
@@ -46,6 +48,7 @@ void RailwayScheduler::initialize_network(
 }
 
 void RailwayScheduler::add_train(const Train& train) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     trains_[train.id] = train;
     
     // Aggiorna track
@@ -58,6 +61,7 @@ void RailwayScheduler::add_train(const Train& train) {
 }
 
 void RailwayScheduler::remove_train(int train_id) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     if (trains_.count(train_id)) {
         int track_id = trains_[train_id].current_track;
         trains_.erase(train_id);
@@ -79,6 +83,7 @@ void RailwayScheduler::update_train_state(int train_id,
                                           double position_km,
                                           double velocity_kmh,
                                           bool is_delayed) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     if (trains_.count(train_id)) {
         trains_[train_id].position_km = position_km;
         trains_[train_id].velocity_kmh = velocity_kmh;
@@ -88,6 +93,7 @@ void RailwayScheduler::update_train_state(int train_id,
 }
 
 std::vector<Conflict> RailwayScheduler::detect_conflicts() const {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     std::vector<Conflict> conflicts;
     
     // Raggruppa treni per binario
@@ -158,6 +164,9 @@ std::vector<Conflict> RailwayScheduler::detect_conflicts() const {
 }
 
 bool RailwayScheduler::are_trains_in_conflict(int train1_id, int train2_id) const {
+    // Note: detect_conflicts already locks, but we need to be careful with nested locks if we call detect_conflicts()
+    // However, detect_conflicts is public. Internal methods should be private and unlocked.
+    // For now, let's keep it simple and assume detect_conflicts is the source of truth.
     auto conflicts = detect_conflicts();
     
     for (const auto& conflict : conflicts) {
@@ -173,6 +182,7 @@ bool RailwayScheduler::are_trains_in_conflict(int train1_id, int train2_id) cons
 std::vector<Conflict> RailwayScheduler::predict_future_conflicts(
     double time_horizon_minutes) const {
     
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     std::vector<Conflict> future_conflicts;
     
     // Simula posizioni future dei treni
@@ -203,10 +213,16 @@ std::vector<Conflict> RailwayScheduler::predict_future_conflicts(
 std::vector<ScheduleAdjustment> RailwayScheduler::resolve_conflicts(
     const std::vector<Conflict>& conflicts) {
     
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     if (ml_model_loaded_) {
-        // Usa ML model se disponibile
+        // Usa ML model reale tramite LibTorch
         NetworkState state = get_network_state();
-        return predict_with_ml(state, conflicts);
+        auto ml_adjustments = ml_engine_->predict_adjustments(state, conflicts);
+        if (!ml_adjustments.empty()) {
+            return ml_adjustments;
+        }
+        // Fallback a euristiche se il modello non produce risultati
+        return ConflictResolver::resolve_by_priority(conflicts, trains_, tracks_);
     } else {
         // Fallback ad euristiche con supporto cambio binario
         return ConflictResolver::resolve_by_priority(conflicts, trains_, tracks_);
@@ -216,6 +232,7 @@ std::vector<ScheduleAdjustment> RailwayScheduler::resolve_conflicts(
 void RailwayScheduler::apply_adjustments(
     const std::vector<ScheduleAdjustment>& adjustments) {
     
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     for (const auto& adj : adjustments) {
         if (trains_.count(adj.train_id)) {
             Train& train = trains_[adj.train_id];
@@ -254,7 +271,17 @@ void RailwayScheduler::apply_adjustments(
 
 void RailwayScheduler::optimize_network() {
     // Ottimizzazione globale della rete
-    auto conflicts = detect_conflicts();
+    // Note: detect_conflicts(), resolve_conflicts() and apply_adjustments() all lock inside.
+    // To avoid deadlocks we should have internal unlocked versions or use a recursive mutex.
+    // Given the current structure, let's just use the public methods but beware of deadlock if recursive mutex is not used.
+    // Actually, I defined mutex_ as std::mutex, which is NOT recursive.
+    // I should probably switch to std::recursive_mutex or create internal implementation methods.
+    
+    // Changing to internal implementations is better practice. 
+    // But for brevity, I will call the methods that don't lock if I refactor them.
+    // Wait, let's use internal unlocked helpers.
+    
+    auto conflicts = detect_conflicts(); 
     
     if (!conflicts.empty()) {
         auto adjustments = resolve_conflicts(conflicts);
@@ -266,11 +293,18 @@ void RailwayScheduler::optimize_network() {
 }
 
 bool RailwayScheduler::load_ml_model(const std::string& model_path) {
-    // TODO: Implementazione con LibTorch
-    // Per ora stub
-    log_event("ML model loading from: " + model_path);
-    ml_model_loaded_ = false;
-    return false;
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    log_event("Attempting to load ML model from: " + model_path);
+    
+    if (ml_engine_->load(model_path)) {
+        ml_model_loaded_ = true;
+        log_event("ML model loaded successfully");
+        return true;
+    } else {
+        ml_model_loaded_ = false;
+        log_event("Failed to load ML model");
+        return false;
+    }
 }
 
 std::vector<ScheduleAdjustment> RailwayScheduler::predict_with_ml(
@@ -283,6 +317,7 @@ std::vector<ScheduleAdjustment> RailwayScheduler::predict_with_ml(
 }
 
 NetworkState RailwayScheduler::get_network_state() const {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     NetworkState state;
     
     state.timestamp = std::chrono::system_clock::now();
@@ -303,6 +338,7 @@ NetworkState RailwayScheduler::get_network_state() const {
 }
 
 Train RailwayScheduler::get_train_info(int train_id) const {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     if (trains_.count(train_id)) {
         return trains_.at(train_id);
     }
@@ -310,6 +346,7 @@ Train RailwayScheduler::get_train_info(int train_id) const {
 }
 
 RailwayScheduler::Statistics RailwayScheduler::get_statistics() const {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     Statistics stats;
     
     stats.total_trains = trains_.size();
@@ -341,6 +378,7 @@ RailwayScheduler::Statistics RailwayScheduler::get_statistics() const {
 }
 
 std::vector<std::string> RailwayScheduler::get_event_log(int max_events) const {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     int start = std::max(0, static_cast<int>(event_log_.size()) - max_events);
     return std::vector<std::string>(event_log_.begin() + start, event_log_.end());
 }
@@ -352,31 +390,45 @@ std::vector<std::string> RailwayScheduler::get_event_log(int max_events) const {
 bool RailwayScheduler::check_single_track_collision(
     const Train& t1, const Train& t2, const Track& track) const {
     
-    // Determina direzione treni
-    bool t1_forward = t1.position_km < track.length_km / 2.0;
-    bool t2_forward = t2.position_km < track.length_km / 2.0;
+    // Determina se si muovono l'uno verso l'altro
+    double distance = t1.position_km - t2.position_km;
+    double relative_velocity = t1.velocity_kmh - t2.velocity_kmh;
     
-    // Se stessa direzione, no collisione frontale
-    if (t1_forward == t2_forward) {
-        return false;
-    }
+    // Se la velocità relativa tende a ridurre la distanza, c'è pericolo
+    // distance > 0 e relative_velocity < 0 (t1 davanti a t2, t2 più veloce) -> Overtaking
+    // distance < 0 e relative_velocity > 0 (t2 davanti a t1, t1 più veloce) -> Overtaking
     
-    // Direzioni opposte: calcola tempo di incontro
+    // Per collisione frontale (head-on):
+    // t1_forward (v1 > 0), t2_backward (v2 < 0)
+    // Se t1.pos < t2.pos (dist < 0) e v1 > 0, v2 < 0 -> si muovono l'uno verso l'altro
+    
+    if (t1.current_track != t2.current_track) return false;
+
+    // Semplificato: calcola tempo di incontro
     double meeting_time = calculate_meeting_time(t1, t2);
     
-    // Conflitto se incontro entro 5 minuti
-    return meeting_time < 5.0 && meeting_time > 0;
+    // Conflitto se incontro entro 10 minuti (più conservativo)
+    return meeting_time < 10.0 && meeting_time > 0;
 }
 
 double RailwayScheduler::calculate_meeting_time(const Train& t1, const Train& t2) const {
     double distance = std::abs(t1.position_km - t2.position_km);
-    double relative_velocity = t1.velocity_kmh + t2.velocity_kmh;
     
-    if (relative_velocity < 0.1) {
+    // Velocità di avvicinamento:
+    // Se t1.pos < t2.pos, si avvicinano se v1 > v2
+    // Se t1.pos > t2.pos, si avvicinano se v2 > v1
+    double v_approach;
+    if (t1.position_km < t2.position_km) {
+        v_approach = t1.velocity_kmh - t2.velocity_kmh;
+    } else {
+        v_approach = t2.velocity_kmh - t1.velocity_kmh;
+    }
+    
+    if (v_approach <= 0.001) { // Non si avvicinano o fermi
         return std::numeric_limits<double>::infinity();
     }
     
-    return (distance / relative_velocity) * 60.0; // in minuti
+    return (distance / v_approach) * 60.0; // in minuti
 }
 
 std::vector<int> RailwayScheduler::find_alternative_route(
@@ -400,6 +452,7 @@ std::vector<Conflict> RailwayScheduler::prioritize_conflicts(
 }
 
 void RailwayScheduler::log_event(const std::string& message) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     auto now = std::chrono::system_clock::now();
     std::string timestamp = format_timestamp(now);
     event_log_.push_back("[" + timestamp + "] " + message);

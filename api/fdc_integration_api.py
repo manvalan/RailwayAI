@@ -4,10 +4,15 @@ API REST per integrazione FDC.
 Endpoint conformi a RAILWAY_AI_INTEGRATION_SPECS.md
 """
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+import asyncio
+import time
+from fastapi import FastAPI, HTTPException, Depends, status, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+from fastapi.security import OAuth2PasswordRequestForm
+from python.integration.auth import create_access_token, get_current_user, ACCESS_TOKEN_EXPIRE_MINUTES
 import sys
 from pathlib import Path
 
@@ -25,8 +30,96 @@ app = FastAPI(
     version="2.0.0"
 )
 
+# Servire file statici (Dashboard di monitoraggio)
+app.mount("/static", StaticFiles(directory="api/static"), name="static")
 
-# ==================== Pydantic Models ====================
+# ==================== Connection Manager ====================
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                # Connection might be stale
+                pass
+
+manager = ConnectionManager()
+
+# Global scheduler instance (for persistent monitoring)
+from python.railway_cpp import RailwayScheduler
+global_scheduler = RailwayScheduler()
+
+async def event_poller():
+    """Polla periodicamente gli eventi dal core C++ e li trasmette."""
+    last_log_size = 0
+    while True:
+        try:
+            logs = global_scheduler.get_event_log(100)
+            if len(logs) > last_log_size:
+                new_logs = logs[last_log_size:]
+                for log in new_logs:
+                    await manager.broadcast({
+                        "type": "log",
+                        "content": log,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                last_log_size = len(logs)
+                
+                # Limitiamo la dimensione del log interno se cresce troppo (>1000 entry)
+                if last_log_size > 1000:
+                    # Implementazione futura: global_scheduler.clear_old_logs(500)
+                    last_log_size = 500 
+            
+            # Broadcast network state periodically
+            state = global_scheduler.get_network_state()
+            await manager.broadcast({
+                "type": "state_update",
+                "train_count": len(state.trains),
+                "timestamp": datetime.now().isoformat()
+            })
+            
+        except Exception as e:
+            print(f"Poller error: {e}")
+            
+        await asyncio.sleep(2)
+
+async def log_cleanup_task():
+    """Rimuove periodicamente i file di log vecchi per risparmiare spazio."""
+    while True:
+        try:
+            log_file = Path("server.log")
+            if log_file.exists() and log_file.stat().st_size > 10 * 1024 * 1024: # 10MB
+                # Ruota il log: rinomina il vecchio e ricomincia
+                backup = Path(f"server.log.{datetime.now().strftime('%Y%m%d%H%M%S')}")
+                log_file.rename(backup)
+                print(f"Log rotated to {backup}")
+                
+                # Rimuovi backup più vecchi di 3 giorni
+                current_time = time.time()
+                for p in Path(".").glob("server.log.*"):
+                    if current_time - p.stat().st_mtime > 3 * 24 * 3600:
+                        p.unlink()
+                        print(f"Old log removed: {p}")
+        except Exception as e:
+            print(f"Cleanup error: {e}")
+        
+        await asyncio.sleep(3600) # Controlla ogni ora
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(event_poller())
+    asyncio.create_task(log_cleanup_task())
 
 class TrainInfo(BaseModel):
     """Informazioni su un treno."""
@@ -85,8 +178,32 @@ async def health_check():
     }
 
 
+@app.post("/token")
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    Endpoint per ottenere il token JWT.
+    In produzione, verificare le credenziali su DB sicuro.
+    """
+    # Esempio semplificato: admin/admin
+    if form_data.username != "admin" or form_data.password != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": form_data.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
 @app.post("/api/v2/optimize")
-async def optimize_conflicts(request: OptimizationRequest):
+async def optimize_conflicts(
+    request: OptimizationRequest,
+    current_user: str = Depends(get_current_user)
+):
     """
     Ottimizza conflitti e restituisce modifiche dettagliate.
     
@@ -236,7 +353,10 @@ class SimpleOptimizationRequest(BaseModel):
 
 
 @app.post("/api/v2/optimize/simple")
-async def optimize_simple(request: SimpleOptimizationRequest):
+async def optimize_simple(
+    request: SimpleOptimizationRequest,
+    current_user: str = Depends(get_current_user)
+):
     """
     Endpoint semplificato per ottimizzazione minimale.
     
@@ -275,7 +395,10 @@ class ValidationRequest(BaseModel):
 
 
 @app.post("/api/v2/validate")
-async def validate_modifications(request: ValidationRequest):
+async def validate_modifications(
+    request: ValidationRequest,
+    current_user: str = Depends(get_current_user)
+):
     """
     Valida modifiche prima di applicarle.
     
@@ -316,6 +439,21 @@ async def validate_modifications(request: ValidationRequest):
             "valid": True,
             "message": f"Tutte le {len(modifications)} modifiche sono valide"
         }
+
+
+@app.websocket("/ws/monitoring")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    Endpoint WebSocket per il monitoraggio in tempo reale.
+    """
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive and receive optional messages
+            data = await websocket.receive_text()
+            # Handle client commands if needed
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 
 @app.get("/api/v2/modification-types")

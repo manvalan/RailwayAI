@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(RailwaySchedulerCpp VERSION 0.1.0 LANGUAGES CXX)
+project(RailwaySchedulerCpp VERSION 2.0.0 LANGUAGES CXX)
 
 # C++ Standard
 set(CMAKE_CXX_STANDARD 17)
@@ -51,6 +51,7 @@ endif()
 
 add_library(railway_scheduler_core STATIC
     cpp/src/railway_scheduler.cpp
+    cpp/src/ml_inference.cpp
 )
 
 target_include_directories(railway_scheduler_core PUBLIC
@@ -71,6 +72,7 @@ endif()
 add_library(railwayai SHARED
     cpp/src/railway_api.cpp
     cpp/src/railway_scheduler.cpp
+    cpp/src/ml_inference.cpp
 )
 
 target_include_directories(railwayai PUBLIC

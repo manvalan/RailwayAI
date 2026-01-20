@@ -11,6 +11,8 @@
 #include <memory>
 #include <chrono>
 #include <unordered_map>
+#include <mutex>
+#include "ml_inference.h"
 
 namespace railway {
 
@@ -25,7 +27,7 @@ struct Train {
     int id;
     int current_track;
     double position_km;
-    double velocity_kmh;
+    double velocity_kmh; // Positivo: direzione crescente km, Negativo: direzione decrescente km
     double scheduled_arrival_minutes;
     int destination_station;
     int priority;
@@ -238,12 +240,13 @@ private:
     
     std::unordered_map<int, Train> trains_;
     std::unordered_map<int, Track> tracks_;
-    std::unordered_map<int, Station> stations_;
     
     std::vector<std::string> event_log_;
     
-    // ML model handle (opaco, gestito da pybind11)
-    void* ml_model_handle_;
+    mutable std::recursive_mutex mutex_; // Mutex per thread-safety
+    
+    // ML model handle
+    std::unique_ptr<MLInferenceEngine> ml_engine_;
     bool ml_model_loaded_;
     
     // ========================================

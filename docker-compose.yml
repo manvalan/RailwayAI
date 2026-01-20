@@ -5,17 +5,14 @@ services:
     build: .
     container_name: railway-ai
     ports:
-      - "8080:8002" # Espone l'app sulla porta 8080 (quella che abbiamo aperto)
+      - "8080:8002"
     environment:
       - SECRET_KEY=${SECRET_KEY:-RailwayAISecureKeyDefault2026}
       - ACCESS_TOKEN_EXPIRE_MINUTES=60
-      - OPENAI_API_KEY=tua_chiave_qui # Aggiungila qui se ce l'hai
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
-      # Monta l'intera cartella del progetto dentro il container
-      - /opt/docker-projects/railway-ai:/app
-    working_dir: /app
-    # Questo comando forza l'avvio corretto puntando alla sottocartella api/
-    command: sh -c "pip install -r requirements.txt && python api/server.py"
+      - ./python/models:/app/python/models
+      - ./server.log:/app/server.log
     restart: always
 
 networks:

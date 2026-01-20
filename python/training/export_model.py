@@ -14,24 +14,34 @@ def export_to_torchscript(model_path, output_path):
     """
     print(f"Loading model from {model_path}...")
     
-    # Model parameters from train_model.py
-    input_dim = 256
-    hidden_dim = 512
-    num_trains = 50
-    num_tracks = 20
-    num_stations = 10
-    
-    model = SchedulerNetwork(
-        input_dim=input_dim,
-        hidden_dim=hidden_dim,
-        num_trains=num_trains,
-        num_tracks=num_tracks,
-        num_stations=num_stations
-    )
-    
-    # Load state dict (handle both raw state_dict and checkpoint dict)
+    # Load data first to get config
     try:
         data = torch.load(model_path, map_location=torch.device('cpu'))
+        if 'config' in data:
+            config = data['config']
+            input_dim = config.get('input_dim', 256)
+            hidden_dim = config.get('hidden_dim', 512)
+            num_trains = config.get('num_trains', 50)
+            num_tracks = config.get('num_tracks', 20)
+            num_stations = config.get('num_stations', 10)
+            print(f"Using parameters from checkpoint: hidden={hidden_dim}, trains={num_trains}, tracks={num_tracks}, stations={num_stations}")
+        else:
+            # Fallback for old models or raw state dicts
+            input_dim = 256
+            hidden_dim = 512
+            num_trains = 50
+            num_tracks = 20
+            num_stations = 10
+            print("Warning: No config found in checkpoint, using defaults.")
+            
+        model = SchedulerNetwork(
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            num_trains=num_trains,
+            num_tracks=num_tracks,
+            num_stations=num_stations
+        )
+        
         if 'model_state_dict' in data:
             model.load_state_dict(data['model_state_dict'])
         else:
@@ -43,11 +53,9 @@ def export_to_torchscript(model_path, output_path):
         print(f"Error loading model: {e}")
         return False
 
-    # Create dummy inputs for tracing
-    # network_state: [batch, num_tracks + num_stations] -> [1, 30]
-    # train_states: [batch, num_trains, 8] -> [1, 50, 8]
-    dummy_network = torch.randn(1, num_tracks + num_stations)
-    dummy_trains = torch.randn(1, num_trains, 8)
+    # Create dummy inputs for tracing (use parameters from model instance)
+    dummy_network = torch.randn(1, model.num_tracks + model.num_stations)
+    dummy_trains = torch.randn(1, model.num_trains, 8)
     
     print(f"Tracing model...")
     try:

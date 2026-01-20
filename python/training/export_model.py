@@ -60,7 +60,7 @@ def export_to_torchscript(model_path, output_path):
     print(f"Tracing model...")
     try:
         # Trace with multiple inputs
-        traced_script_module = torch.jit.trace(model, (dummy_network, dummy_trains))
+        traced_script_module = torch.jit.trace(model, (dummy_network, dummy_trains), strict=False)
         
         # Save the traced model
         traced_script_module.save(output_path)

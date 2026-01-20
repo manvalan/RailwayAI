@@ -10,10 +10,12 @@ services:
       - SECRET_KEY=${SECRET_KEY:-RailwayAISecureKeyDefault2026}
       - ACCESS_TOKEN_EXPIRE_MINUTES=60
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PYTHONPATH=/app # Aggiunto direttamente qui per sicurezza
     volumes:
-      - ./python/models:/app/python/models
-      - ./server.log:/app/server.log
-    command: sh -c "export PYTHONPATH=/app && pip install -r requirements.txt && python api/server.py"
+      # MODIFICA QUI: Monta l'intera cartella del progetto
+      - /opt/docker-projects/railway-ai:/app
+    # Il comando ora punta correttamente al file dentro la struttura /app
+    command: sh -c "pip install -r requirements.txt && python api/server.py"
     restart: always
 
 networks:

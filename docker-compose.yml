@@ -13,6 +13,7 @@ services:
     volumes:
       - ./python/models:/app/python/models
       - ./server.log:/app/server.log
+    command: sh -c "export PYTHONPATH=/app && pip install -r requirements.txt && python api/server.py"
     restart: always
 
 networks:

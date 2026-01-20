@@ -219,14 +219,22 @@ class ModelInfo(BaseModel):
 # Model Management
 # ============================================================================
 
-def load_model(checkpoint_path: str = 'models/scheduler_real_world.pth'):
+def load_model(checkpoint_path: Optional[str] = None):
     """Load the trained ML model"""
     global model, model_config, metrics
     
     try:
-        # Preferisci modello real-world se esiste, altrimenti fallback a supervised
-        if not os.path.exists(checkpoint_path):
-            checkpoint_path = 'models/scheduler_supervised_best.pth'
+        # Priorità 1: Variabile d'ambiente MODEL_PATH
+        env_path = os.getenv("MODEL_PATH")
+        if env_path:
+            checkpoint_path = env_path
+            logger.info(f"Using MODEL_PATH from environment: {checkpoint_path}")
+        
+        # Priorità 2: Fallback ai percorsi predefiniti se non specificato
+        if not checkpoint_path:
+            checkpoint_path = 'models/scheduler_real_world.pth'
+            if not os.path.exists(checkpoint_path):
+                checkpoint_path = 'models/scheduler_supervised_best.pth'
             
         logger.info(f"Loading model from {checkpoint_path}")
         checkpoint = torch.load(checkpoint_path, map_location='cpu')

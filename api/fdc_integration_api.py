@@ -119,7 +119,9 @@ async def log_cleanup_task():
 @app.on_event("startup")
 async def startup_event():
     # Carica il modello ML all'avvio
-    model_path = "models/scheduler_real_world.pt"
+    # Priorità alla variabile d'ambiente MODEL_PATH
+    model_path = os.getenv("MODEL_PATH", "models/scheduler_real_world.pt")
+    
     if global_scheduler.load_ml_model(model_path):
         print(f"✅ Modello ML caricato con successo da {model_path}")
     else:

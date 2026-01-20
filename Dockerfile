@@ -51,6 +51,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application source
 COPY api/ /app/api/
 COPY python/ /app/python/
+COPY models/ /app/models/
 COPY .env* /app/
 
 # Create models directory if not exists (in case it's empty in source)

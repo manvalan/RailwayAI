@@ -232,9 +232,11 @@ def load_model(checkpoint_path: Optional[str] = None):
         
         # Priorità 2: Fallback ai percorsi predefiniti se non specificato
         if not checkpoint_path:
-            checkpoint_path = 'models/scheduler_real_world.pth'
+            # Prova prima il nuovo path in api/models/
+            checkpoint_path = 'api/models/scheduler_supervised_best.pth'
             if not os.path.exists(checkpoint_path):
-                checkpoint_path = 'models/scheduler_supervised_best.pth'
+                # Fallback per compatibilità
+                checkpoint_path = 'models/scheduler_real_world.pth'
             
         logger.info(f"Loading model from {checkpoint_path}")
         try:

@@ -1,0 +1,79 @@
+{
+    "trains": [
+        {
+            "current_track": 0,
+            "id": 0,
+            "position_km": 0,
+            "destination_station": 1,
+            "is_delayed": false,
+            "priority": 5,
+            "delay_minutes": 4,
+            "velocity_kmh": 136
+        },
+        {
+            "current_track": 0,
+            "id": 1,
+            "position_km": 0,
+            "destination_station": 11,
+            "is_delayed": false,
+            "priority": 5,
+            "delay_minutes": 0,
+            "velocity_kmh": 136
+        }
+    ],
+    "stations": [
+        {
+            "id": 0,
+            "name": "Greenfield",
+            "num_platforms": 4
+        },
+        {
+            "id": 1,
+            "name": "Nobottle",
+            "num_platforms": 2
+        },
+        {
+            "id": 2,
+            "name": "Longcleve",
+            "num_platforms": 2
+        },
+        {
+            "id": 11,
+            "name": "Bywater",
+            "num_platforms": 4
+        }
+    ],
+    "tracks": [
+        {
+            "id": 0,
+            "length_km": 20,
+            "capacity": 1,
+            "is_single_track": true,
+            "station_ids": [
+                0,
+                2
+            ]
+        },
+        {
+            "id": 1,
+            "length_km": 24,
+            "capacity": 1,
+            "is_single_track": true,
+            "station_ids": [
+                1,
+                43
+            ]
+        },
+        {
+            "id": 2,
+            "length_km": 26,
+            "capacity": 1,
+            "is_single_track": true,
+            "station_ids": [
+                1,
+                2
+            ]
+        }
+    ],
+    "max_iterations": 100
+}

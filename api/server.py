@@ -34,6 +34,8 @@ from python.scheduling.route_planner import RoutePlanner
 from python.scheduling.temporal_simulator import TemporalSimulator
 from python.scheduling.network_analyzer import NetworkAnalyzer
 from python.scheduling.schedule_optimizer import ScheduleOptimizer
+from python.scheduling.conflict_resolver import ConflictResolver
+
 
 # Configure logging
 logging.basicConfig(
@@ -613,58 +615,48 @@ async def optimize_scheduled_trains(
             time_step_minutes=1.0
         )
         
-        logger.info(f"Detected {len(future_conflicts)} future conflicts")
         
-        # Generate resolutions for conflicts
-        resolutions = []
-        processed_trains = set()
-        
-        for conflict in future_conflicts[:10]:  # Limit to first 10 conflicts
-            train1_id = conflict['train1_id']
-            train2_id = conflict['train2_id']
+        # Use genetic algorithm to resolve conflicts
+        if future_conflicts:
+            logger.info(f"Resolving {len(future_conflicts)} conflicts using genetic algorithm")
             
-            # Skip if we've already adjusted one of these trains
-            if train1_id in processed_trains and train2_id in processed_trains:
-                continue
+            # Initialize conflict resolver
+            conflict_resolver = ConflictResolver(temporal_simulator, route_planner)
             
-            # Find the trains
-            train1 = next((t for t in request.trains if t.id == train1_id), None)
-            train2 = next((t for t in request.trains if t.id == train2_id), None)
+            # Resolve conflicts
+            resolution_result = conflict_resolver.resolve_conflicts(
+                trains_with_routes,
+                time_horizon_minutes=time_horizon,
+                max_iterations=100,
+                population_size=30
+            )
             
-            if not train1 or not train2:
-                continue
+            resolutions = []
+            for res in resolution_result['resolutions']:
+                # Find track where conflict occurred
+                track_id = None
+                for conflict in future_conflicts:
+                    if conflict['train1_id'] == res['train_id'] or conflict['train2_id'] == res['train_id']:
+                        track_id = conflict['track_id']
+                        break
+                
+                resolutions.append(Resolution(
+                    train_id=res['train_id'],
+                    time_adjustment_min=res['time_adjustment_min'],
+                    track_assignment=track_id,
+                    confidence=res['confidence']
+                ))
             
-            # Determine which train to delay based on priority
-            if train1.priority < train2.priority:
-                lower_priority_train = train1
-            elif train2.priority < train1.priority:
-                lower_priority_train = train2
-            else:
-                # Equal priority - use ID as tie-breaker
-                lower_priority_train = train1 if train1.id > train2.id else train2
+            total_delay = resolution_result['total_delay']
+            conflicts_resolved = resolution_result['conflicts_resolved']
             
-            # Skip if already processed
-            if lower_priority_train.id in processed_trains:
-                continue
-            
-            # Calculate delay needed
-            delay_minutes = conflict['time_offset_minutes'] + 10.0
-            
-            # For single-track conflicts, add more delay
-            if conflict['conflict_type'] == 'single_track':
-                delay_minutes += 5.0
-            
-            resolutions.append(Resolution(
-                train_id=lower_priority_train.id,
-                time_adjustment_min=delay_minutes,
-                track_assignment=conflict['track_id'],
-                confidence=0.85 if conflict['conflict_type'] == 'single_track' else 0.75
-            ))
-            
-            processed_trains.add(lower_priority_train.id)
-            
-            logger.info(f"Resolution: Delay train {lower_priority_train.id} by {delay_minutes:.1f} min "
-                       f"to avoid {conflict['conflict_type']} conflict at t={conflict['time_offset_minutes']:.1f} min")
+            logger.info(f"Genetic algorithm completed: {conflicts_resolved} conflicts resolved, "
+                       f"total delay={total_delay:.1f} min")
+        else:
+            resolutions = []
+            total_delay = 0.0
+            conflicts_resolved = 0
+
         
         # Calculate metrics
         inference_time = (time.time() - start_time) * 1000.0

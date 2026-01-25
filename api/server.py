@@ -32,6 +32,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from python.models.scheduler_network import SchedulerNetwork
 from python.scheduling.route_planner import RoutePlanner
 from python.scheduling.temporal_simulator import TemporalSimulator
+from python.scheduling.network_analyzer import NetworkAnalyzer
+from python.scheduling.schedule_optimizer import ScheduleOptimizer
 
 # Configure logging
 logging.basicConfig(
@@ -177,6 +179,65 @@ class OptimizationRequest(BaseModel):
     tracks: Optional[List[Track]] = Field(None, description="Track configuration (optional)")
     stations: Optional[List[Station]] = Field(None, description="Station configuration (optional)")
     max_iterations: int = Field(100, ge=1, le=1000, description="Max optimization iterations")
+
+
+class TimeWindow(BaseModel):
+    """Time window for schedule optimization"""
+    start: str = Field(..., description="Start time HH:MM:SS")
+    end: str = Field(..., description="End time HH:MM:SS")
+
+
+class OptimizationParams(BaseModel):
+    """Parameters for genetic algorithm optimization"""
+    max_iterations: int = Field(1000, ge=100, le=10000, description="Maximum iterations")
+    population_size: int = Field(50, ge=10, le=200, description="Population size")
+    mutation_rate: float = Field(0.1, ge=0.0, le=1.0, description="Mutation rate")
+
+
+class ScheduleSuggestionRequest(BaseModel):
+    """Request for schedule suggestion with capacity planning"""
+    trains: List[Train] = Field(..., description="Trains to schedule (without departure times)")
+    tracks: List[Track] = Field(..., description="Track configuration")
+    stations: List[Station] = Field(..., description="Station configuration")
+    time_window: TimeWindow = Field(..., description="Time window for scheduling")
+    target_capacity_utilization: float = Field(0.66, ge=0.1, le=1.0, description="Target capacity utilization")
+    optimization_params: OptimizationParams = Field(default_factory=OptimizationParams)
+
+
+class SuggestedTrain(BaseModel):
+    """Train with suggested departure time"""
+    train_id: int
+    suggested_departure_time: str
+    estimated_arrival_time: Optional[str] = None
+    route: List[int]
+    conflicts: int
+
+
+class NetworkMetrics(BaseModel):
+    """Network-wide capacity metrics"""
+    average_capacity_utilization: float
+    peak_capacity_utilization: float
+    total_conflicts: int
+    temporal_distribution_score: float
+
+
+class TrackUtilization(BaseModel):
+    """Utilization metrics for a single track"""
+    track_id: int
+    utilization: float
+    is_bottleneck: bool
+    theoretical_capacity: float
+    demand: int
+
+
+class ScheduleSuggestionResponse(BaseModel):
+    """Response with suggested schedule"""
+    success: bool
+    suggested_schedule: List[SuggestedTrain]
+    network_metrics: NetworkMetrics
+    track_utilization: List[TrackUtilization]
+    optimization_info: Dict
+    timestamp: str
 
 
 class Resolution(BaseModel):
@@ -636,6 +697,109 @@ async def optimize_scheduled_trains(
         metrics['failed_optimizations'] += 1
         logger.error(f"Scheduled optimization failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/suggest_schedule", response_model=ScheduleSuggestionResponse, tags=["Optimization"])
+async def suggest_schedule(
+    request: ScheduleSuggestionRequest,
+    background_tasks: BackgroundTasks,
+    current_user: str = Depends(get_current_user)
+):
+    """Suggest optimal train schedule to achieve target capacity utilization."""
+    global route_planner, temporal_simulator
+    
+    start_time = time.time()
+    metrics['total_requests'] += 1
+    
+    try:
+        if route_planner is None or temporal_simulator is None:
+            route_planner = RoutePlanner(
+                [t.dict() for t in request.tracks],
+                [s.dict() for s in request.stations]
+            )
+            temporal_simulator = TemporalSimulator({t.id: t.dict() for t in request.tracks})
+        
+        analyzer = NetworkAnalyzer([t.dict() for t in request.tracks], [s.dict() for s in request.stations])
+        
+        start_h, start_m, start_s = map(int, request.time_window.start.split(':'))
+        end_h, end_m, end_s = map(int, request.time_window.end.split(':'))
+        window_hours = ((end_h * 60 + end_m) - (start_h * 60 + start_m)) / 60.0
+        
+        network_metrics = analyzer.analyze_capacity([t.dict() for t in request.trains], window_hours)
+        bottlenecks = analyzer.identify_bottlenecks(network_metrics)
+        
+        trains_with_routes = []
+        for train in request.trains:
+            train_dict = train.dict()
+            if train.origin_station and train.destination_station:
+                route_plan = route_planner.plan_route(
+                    train.origin_station, train.destination_station,
+                    avg_speed_kmh=train.velocity_kmh if train.velocity_kmh > 0 else 120.0
+                )
+                if route_plan:
+                    train_dict['planned_route'] = route_plan['track_ids']
+            trains_with_routes.append(train_dict)
+        
+        optimizer = ScheduleOptimizer(
+            network_metrics, trains_with_routes, request.time_window.dict(),
+            request.target_capacity_utilization, route_planner, temporal_simulator
+        )
+        
+        result = optimizer.optimize(
+            request.optimization_params.max_iterations,
+            request.optimization_params.population_size,
+            request.optimization_params.mutation_rate
+        )
+        
+        suggested_trains = [
+            SuggestedTrain(
+                train_id=t['id'],
+                suggested_departure_time=t['scheduled_departure_time'],
+                route=t.get('planned_route', []),
+                conflicts=0
+            ) for t in result['schedule']
+        ]
+        
+        track_utilization = [
+            TrackUtilization(
+                track_id=tid, utilization=m['utilization'],
+                is_bottleneck=m['is_bottleneck'],
+                theoretical_capacity=m['theoretical_capacity'],
+                demand=m['demand']
+            ) for tid, m in network_metrics.items()
+        ]
+        
+        network_stats = analyzer.calculate_network_utilization(network_metrics)
+        computation_time = (time.time() - start_time) * 1000.0
+        metrics['successful_optimizations'] += 1
+        
+        return ScheduleSuggestionResponse(
+            success=True,
+            suggested_schedule=suggested_trains,
+            network_metrics=NetworkMetrics(
+                average_capacity_utilization=result['metrics']['average_capacity_utilization'],
+                peak_capacity_utilization=network_stats['max'],
+                total_conflicts=result['metrics']['total_conflicts'],
+                temporal_distribution_score=result['metrics']['temporal_distribution_score']
+            ),
+            track_utilization=track_utilization,
+            optimization_info={
+                'iterations': result['iterations'],
+                'convergence_score': result['convergence'],
+                'computation_time_ms': computation_time,
+                'bottlenecks_identified': len(bottlenecks)
+            },
+            timestamp=datetime.now().isoformat()
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        metrics['failed_optimizations'] += 1
+        logger.error(f"Schedule suggestion failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 
 

@@ -270,12 +270,11 @@ class ConflictResolver:
         initial_conflicts_count = len(self.temporal_simulator.detect_future_conflicts(
             trains, time_horizon_minutes=120.0, time_step_minutes=1.0))
         
-        # Apply the best solution to get final conflicts count
-        # (This is a bit expensive but ensures accurate reporting)
+        # Apply the final solution to get conflicts count
         final_conflicts_count = 0
-        if best_solution:
-            # Simple approximation for efficiency
-            final_conflicts_count = int(max(0, -fitness / 2000.0))
+        if solution:
+            # Simple approximation for efficiency (2000 is the penalty per conflict)
+            final_conflicts_count = int(max(0, (-fitness // 2000)))
             
         resolved_count = max(0, initial_conflicts_count - final_conflicts_count)
         

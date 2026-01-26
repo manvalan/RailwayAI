@@ -156,9 +156,10 @@ class ConflictResolver:
                 params = solution[train['id']]
                 dep_delay = params['departure_delay']
                 
-                # Apply departure delay
-                if 'scheduled_departure_time' in train_copy:
-                    h, m, s = map(int, train_copy['scheduled_departure_time'].split(':'))
+                # Apply departure delay only if a scheduled time exists
+                scheduled_time = train_copy.get('scheduled_departure_time')
+                if scheduled_time:
+                    h, m, s = map(int, scheduled_time.split(':'))
                     total_minutes = h * 60 + m + dep_delay
                     new_h = int(total_minutes // 60) % 24
                     new_m = int(total_minutes % 60)

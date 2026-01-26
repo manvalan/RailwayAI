@@ -202,6 +202,18 @@ class ConflictResolver:
         
         return fitness
     
+    def _select_parents(self, population: List[Dict], fitness_scores: List[float], num_parents: int) -> List[Dict]:
+        """Tournament selection"""
+        parents = []
+        tournament_size = 3
+        
+        for _ in range(num_parents):
+            tournament = random.sample(list(zip(population, fitness_scores)), tournament_size)
+            winner = max(tournament, key=lambda x: x[1])
+            parents.append(deepcopy(winner[0]))
+        
+        return parents
+
     def _create_offspring(self, parents: List[Dict], offspring_size: int) -> List[Dict]:
         """Create offspring with deep crossover and mutation."""
         offspring = []

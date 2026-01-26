@@ -561,9 +561,10 @@ async def optimize_scheduled_trains(
         raise HTTPException(status_code=503, detail="Model not loaded")
     
     try:
-        # Initialize route planner and simulator if needed
-        if (route_planner is None or temporal_simulator is None) and request.tracks and request.stations:
-            logger.info("Initializing route planner and temporal simulator")
+        # ALWAYS Initialize route planner and simulator if tracks/stations are provided
+        # to ensure we use the current network configuration from the request
+        if request.tracks and request.stations:
+            logger.info(f"Initializing planners with {len(request.tracks)} tracks and {len(request.stations)} stations")
             route_planner = RoutePlanner(
                 [t.dict() for t in request.tracks],
                 [s.dict() for s in request.stations]

@@ -67,9 +67,6 @@ class ConflictResolver:
         # Initialize population of solutions
         population = self._initialize_population(trains, initial_conflicts, population_size)
         
-        # Add a "no delay" solution to the population as a baseline
-        population[0] = {train['id']: 0.0 for train in trains}
-        
         best_solution = None
         best_fitness = -float('inf')
         

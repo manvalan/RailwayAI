@@ -129,7 +129,9 @@ class ConflictResolver:
                 train = next((t for t in trains if t['id'] == train_id), None)
                 if not train: continue
                 
-                num_intermediate_stations = max(0, len(train.get('planned_route', [])) - 1)
+                # Use 'or []' because key might be None in the dict
+                planned_route = train.get('planned_route') or []
+                num_intermediate_stations = max(0, len(planned_route) - 1)
                 
                 # First solution is always zero delay (baseline)
                 if p_idx == 0:

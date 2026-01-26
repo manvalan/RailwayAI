@@ -70,8 +70,8 @@ class TemporalSimulator:
         
         # Find which track segment the train is on
         remaining_time = time_offset_minutes
-        planned_route = train.get('planned_route', [])
-        dwell_delays = train.get('dwell_delays', [])  # List of delays at each intermediate station
+        planned_route = train.get('planned_route') or []
+        dwell_delays = train.get('dwell_delays') or []  # Ensure it's a list even if None in dict
         
         # If no planned route, use the single track logic
         if not planned_route:

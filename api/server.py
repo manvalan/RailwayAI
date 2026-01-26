@@ -131,27 +131,14 @@ async def release_api_key(current_user: str = Depends(get_current_user)):
         "notice": "Questa chiave è ora persistente nel database."
     }
 
-@app.post("/api/v1/register", status_code=status.HTTP_201_CREATED)
-async def register_user(
-    request: UserRegistrationRequest,
-    current_user: str = Depends(get_current_user)
-):
-    """
-    Registra un nuovo utente. 
-    Nota: Per ora ogni utente autenticato può creare altri utenti (Admin only logic da implementare se serve).
-    """
-    # Verifica permessi (opzionale: solo 'admin' può registrare)
-    if current_user != "admin":
-        raise HTTPException(status_code=403, detail="Only 'admin' can register new users")
-        
-    if UserService.get_user(request.username):
-        raise HTTPException(status_code=400, detail="Username already exists")
-        
-    success = UserService.create_user(request.username, request.password)
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to create user")
-        
-    return {"message": f"User {request.username} created successfully"}
+# ============================================================================
+# Request/Response Models
+# ============================================================================
+
+class UserRegistrationRequest(BaseModel):
+    """Request for new user registration"""
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=6)
 
 # CORS middleware
 app.add_middleware(
@@ -225,10 +212,25 @@ class OptimizationRequest(BaseModel):
     ga_population_size: Optional[int] = Field(80, ge=10, le=500, description="GA population size")
 
 
-class UserRegistrationRequest(BaseModel):
-    """Request for new user registration"""
-    username: str = Field(..., min_length=3, max_length=50)
-    password: str = Field(..., min_length=6)
+@app.post("/api/v1/register", status_code=status.HTTP_201_CREATED)
+async def register_user(
+    request: UserRegistrationRequest,
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Registra un nuovo utente. 
+    """
+    if current_user != "admin":
+        raise HTTPException(status_code=403, detail="Only 'admin' can register new users")
+        
+    if UserService.get_user(request.username):
+        raise HTTPException(status_code=400, detail="Username already exists")
+        
+    success = UserService.create_user(request.username, request.password)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to create user")
+        
+    return {"message": f"User {request.username} created successfully"}
 
 class TimeWindow(BaseModel):
     """Time window for schedule optimization"""

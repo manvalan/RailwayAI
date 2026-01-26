@@ -30,8 +30,8 @@ class ConflictResolver:
     def resolve_conflicts(self,
                          trains: List[Dict],
                          time_horizon_minutes: float = 120.0,
-                         max_iterations: int = 100,
-                         population_size: int = 30) -> Dict:
+                         max_iterations: int = 200,
+                         population_size: int = 80) -> Dict:
         """
         Resolve conflicts using genetic algorithm.
         
@@ -102,8 +102,12 @@ class ConflictResolver:
             elite = [population[i] for i in elite_indices]
             
             population = elite + offspring[:population_size - elite_count]
+            
+            if iteration % 10 == 0:
+                logger.info(f"GA Iteration {iteration}: Best Fitness = {best_fitness:.2f}")
         
-        # Format result
+        # Final log
+        logger.info(f"GA Completed after {iteration+1} iterations. Final Best Fitness = {best_fitness:.2f}")
         return self._format_result(best_solution, trains, iteration, best_fitness, time_horizon_minutes)
     
     def _initialize_population(self, trains: List[Dict], conflicts: List[Dict], size: int) -> List[Dict]:
@@ -230,8 +234,8 @@ class ConflictResolver:
                 else:
                     child[tid] = deepcopy(parent2.get(tid, {'departure_delay': 0, 'dwell_delays': []}))
             
-            # Mutation
-            if random.random() < 0.4:
+            # Mutation - increased probability for faster convergence
+            if random.random() < 0.6:
                 if child:
                     tid = random.choice(list(child.keys()))
                     # Mutate departure delay OR one dwell delay

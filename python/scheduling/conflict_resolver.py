@@ -111,9 +111,9 @@ class ConflictResolver:
     
     def _initialize_population(self, trains: List[Dict], conflicts: List[Dict], size: int) -> List[Dict]:
         """
-        Initialize population of delay solutions.
+        Initialize population of solutions.
         
-        Each solution is a dict: {train_id: delay_minutes}
+        Each solution is a dict: {train_id: {'departure_delay': float, 'dwell_delays': [float, ...]}}
         """
         population = []
         
@@ -123,41 +123,52 @@ class ConflictResolver:
             conflict_train_ids.add(conflict['train1_id'])
             conflict_train_ids.add(conflict['train2_id'])
         
-        for _ in range(size):
+        for p_idx in range(size):
             solution = {}
             for train_id in conflict_train_ids:
-                # Random delay between 0 and 60 minutes
-                solution[train_id] = random.uniform(0, 60)
+                train = next((t for t in trains if t['id'] == train_id), None)
+                if not train: continue
+                
+                num_intermediate_stations = max(0, len(train.get('planned_route', [])) - 1)
+                
+                # First solution is always zero delay (baseline)
+                if p_idx == 0:
+                    solution[train_id] = {
+                        'departure_delay': 0.0,
+                        'dwell_delays': [0.0] * num_intermediate_stations
+                    }
+                else:
+                    # Random delays
+                    solution[train_id] = {
+                        'departure_delay': random.uniform(0, 60),
+                        'dwell_delays': [random.uniform(0, 15) for _ in range(num_intermediate_stations)]
+                    }
             population.append(solution)
         
         return population
     
     def _evaluate_fitness(self, solution: Dict, trains: List[Dict], time_horizon: float) -> float:
-        """
-        Evaluate fitness of a solution.
-        
-        Fitness components:
-        1. Number of conflicts (minimize)
-        2. Total delay (minimize)
-        3. Max delay for single train (minimize)
-        
-        Returns:
-            Fitness score (higher is better, 1.0 = perfect)
-        """
+        """Evaluate fitness of a multi-parameter solution."""
         # Apply delays to trains
         adjusted_trains = []
         for train in trains:
             train_copy = deepcopy(train)
             if train['id'] in solution:
-                delay = solution[train['id']]
-                # Adjust scheduled_departure_time
+                params = solution[train['id']]
+                dep_delay = params['departure_delay']
+                
+                # Apply departure delay
                 if 'scheduled_departure_time' in train_copy:
                     h, m, s = map(int, train_copy['scheduled_departure_time'].split(':'))
-                    total_minutes = h * 60 + m + delay
+                    total_minutes = h * 60 + m + dep_delay
                     new_h = int(total_minutes // 60) % 24
                     new_m = int(total_minutes % 60)
                     train_copy['scheduled_departure_time'] = f"{new_h:02d}:{new_m:02d}:{s:02d}"
-                train_copy['delay_minutes'] = train_copy.get('delay_minutes', 0) + delay
+                train_copy['delay_minutes'] = train_copy.get('delay_minutes', 0) + dep_delay
+                
+                # Apply dwell delays
+                train_copy['dwell_delays'] = params['dwell_delays']
+                
             adjusted_trains.append(train_copy)
         
         # Detect conflicts with adjusted schedule
@@ -165,86 +176,83 @@ class ConflictResolver:
             conflicts = self.temporal_simulator.detect_future_conflicts(
                 adjusted_trains,
                 time_horizon_minutes=time_horizon,
-                time_step_minutes=1.0  # Finer evaluation
+                time_step_minutes=1.0
             )
         except Exception as e:
             logger.warning(f"Error in conflict detection: {e}")
-            return -1000.0
+            return -10000.0
         
         # Calculate fitness components
         num_conflicts = len(conflicts)
-        total_delay = sum(solution.values())
-        max_delay = max(solution.values()) if solution else 0
         
-        # HEAVY penalty for conflicts
-        # Each conflict costs as much as 1000 minutes of delay
-        conflict_penalty = num_conflicts * 1000.0
+        total_dep_delay = sum(s['departure_delay'] for s in solution.values())
+        total_dwell_delay = sum(sum(s['dwell_delays']) for s in solution.values())
+        total_delay = total_dep_delay + total_dwell_delay
         
-        # Fitness is negative - we want to maximize it (bring it closer to 0)
-        # We want 0 conflicts AND minimum delay
+        max_delay = 0
+        if solution:
+            max_delay = max(s['departure_delay'] + sum(s['dwell_delays']) for s in solution.values())
+        
+        # Extreme penalty for conflicts
+        conflict_penalty = num_conflicts * 2000.0
+        
+        # Fitness: maximize (closer to 0 is better)
+        # We value resolving conflicts significantly more than saving minutes
         fitness = -(conflict_penalty + (total_delay * 0.1) + (max_delay * 0.5))
         
         return fitness
     
-    def _select_parents(self, population: List[Dict], fitness_scores: List[float], num_parents: int) -> List[Dict]:
-        """Tournament selection"""
-        parents = []
-        tournament_size = 3
-        
-        for _ in range(num_parents):
-            tournament = random.sample(list(zip(population, fitness_scores)), tournament_size)
-            winner = max(tournament, key=lambda x: x[1])
-            parents.append(deepcopy(winner[0]))
-        
-        return parents
-    
     def _create_offspring(self, parents: List[Dict], offspring_size: int) -> List[Dict]:
-        """Create offspring through crossover and mutation"""
+        """Create offspring with deep crossover and mutation."""
         offspring = []
         
-        while len(offspring) < offspring_size:
-            if len(parents) < 2:
-                break
-            
+        while len(offspring) < offspring_size and len(parents) >= 2:
             parent1, parent2 = random.sample(parents, 2)
             
-            # Crossover
+            # Crossover: per-train basis
             child = {}
-            all_keys = set(parent1.keys()) | set(parent2.keys())
-            for key in all_keys:
+            all_train_ids = set(parent1.keys()) | set(parent2.keys())
+            for tid in all_train_ids:
                 if random.random() < 0.5:
-                    child[key] = parent1.get(key, 0)
+                    child[tid] = deepcopy(parent1.get(tid, {'departure_delay': 0, 'dwell_delays': []}))
                 else:
-                    child[key] = parent2.get(key, 0)
+                    child[tid] = deepcopy(parent2.get(tid, {'departure_delay': 0, 'dwell_delays': []}))
             
-            # Mutation (40% chance of mutation - higher for better exploration)
+            # Mutation
             if random.random() < 0.4:
                 if child:
-                    mutate_key = random.choice(list(child.keys()))
-                    # Randomly change delay: either a small tweak or a completely new random value
-                    if random.random() < 0.7:
-                        child[mutate_key] = max(0, child[mutate_key] + random.uniform(-15, 15))
+                    tid = random.choice(list(child.keys()))
+                    # Mutate departure delay OR one dwell delay
+                    if random.random() < 0.5:
+                        child[tid]['departure_delay'] = max(0, child[tid]['departure_delay'] + random.uniform(-10, 10))
                     else:
-                        child[mutate_key] = random.uniform(0, 90)
+                        dd = child[tid]['dwell_delays']
+                        if dd:
+                            idx = random.randrange(len(dd))
+                            dd[idx] = max(0, dd[idx] + random.uniform(-5, 5))
             
             offspring.append(child)
         
         return offspring
     
     def _format_result(self, solution: Dict, trains: List[Dict], iterations: int, fitness: float) -> Dict:
-        """Format the result"""
+        """Format the result including dwell delay details."""
         resolutions = []
         
-        for train_id, delay in solution.items():
-            if delay > 0.5:  # Only include significant delays
+        for train_id, params in solution.items():
+            dep_delay = params['departure_delay']
+            dwell_delays = params['dwell_delays']
+            
+            # Check if there's any adjustment
+            if dep_delay > 0.1 or any(d > 0.1 for d in dwell_delays):
                 resolutions.append({
                     'train_id': train_id,
-                    'time_adjustment_min': delay,
-                    'track_assignment': None,  # Will be filled by caller
-                    'confidence': fitness
+                    'time_adjustment_min': dep_delay,
+                    'dwell_delays': dwell_delays,
+                    'confidence': 1.0 if fitness > -100 else 0.8
                 })
         
-        total_delay = sum(solution.values())
+        total_delay = sum(s['departure_delay'] + sum(s['dwell_delays']) for s in solution.values())
         
         return {
             'resolutions': resolutions,

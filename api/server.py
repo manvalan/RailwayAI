@@ -213,6 +213,7 @@ class SuggestedTrain(BaseModel):
     estimated_arrival_time: Optional[str] = None
     route: List[int]
     conflicts: int
+    dwell_delays: List[float] = []
 
 
 class NetworkMetrics(BaseModel):
@@ -246,8 +247,9 @@ class Resolution(BaseModel):
     """Resolution action for a train"""
     train_id: int
     time_adjustment_min: float
-    track_assignment: int
+    track_assignment: Optional[int] = None
     confidence: float = Field(..., ge=0.0, le=1.0)
+    dwell_delays: List[float] = []
 
 
 class OptimizationResponse(BaseModel):
@@ -645,7 +647,8 @@ async def optimize_scheduled_trains(
                     train_id=res['train_id'],
                     time_adjustment_min=res['time_adjustment_min'],
                     track_assignment=track_id,
-                    confidence=res['confidence']
+                    confidence=res['confidence'],
+                    dwell_delays=res.get('dwell_delays', [])
                 ))
             
             total_delay = resolution_result['total_delay']

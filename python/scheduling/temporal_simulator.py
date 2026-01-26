@@ -68,10 +68,13 @@ class TemporalSimulator:
         velocity_kmh = train.get('velocity_kmh', 120.0)
         distance_traveled = (velocity_kmh / 60.0) * time_offset_minutes
         
-        # Get planned route
-        planned_route = train.get('planned_route')
+        # Find which track segment the train is on
+        remaining_time = time_offset_minutes
+        planned_route = train.get('planned_route', [])
+        dwell_delays = train.get('dwell_delays', [])  # List of delays at each intermediate station
+        
+        # If no planned route, use the single track logic
         if not planned_route:
-            # No planned route - assume single track
             current_track = train.get('current_track', 0)
             track = self.tracks.get(current_track)
             if not track:
@@ -86,20 +89,29 @@ class TemporalSimulator:
                 }
             
             track_length = track['length_km']
-            position = min(distance_traveled, track_length)
+            time_to_traverse = (track_length / velocity_kmh) * 60.0
             
-            return {
-                'train_id': train_id,
-                'current_track': current_track,
-                'position_km': position,
-                'velocity_kmh': velocity_kmh if position < track_length else 0.0,
-                'route_index': 0,
-                'has_arrived': position >= track_length
-            }
-        
-        # Find which track segment the train is on
-        cumulative_distance = 0.0
-        
+            if remaining_time <= time_to_traverse:
+                position = (remaining_time / 60.0) * velocity_kmh
+                return {
+                    'train_id': train_id,
+                    'current_track': current_track,
+                    'position_km': position,
+                    'velocity_kmh': velocity_kmh,
+                    'route_index': 0,
+                    'has_arrived': False
+                }
+            else:
+                return {
+                    'train_id': train_id,
+                    'current_track': current_track,
+                    'position_km': track_length,
+                    'velocity_kmh': 0.0,
+                    'route_index': 0,
+                    'has_arrived': True
+                }
+
+        # Simulation with route and intermediate dwell times
         for idx, track_id in enumerate(planned_route):
             track = self.tracks.get(track_id)
             if not track:
@@ -107,10 +119,11 @@ class TemporalSimulator:
                 continue
             
             track_length = track['length_km']
+            time_to_traverse = (track_length / velocity_kmh) * 60.0
             
-            if cumulative_distance + track_length >= distance_traveled:
-                # Train is on this track
-                position_on_track = distance_traveled - cumulative_distance
+            # Check if train is currently on this track
+            if remaining_time <= time_to_traverse:
+                position_on_track = (remaining_time / 60.0) * velocity_kmh
                 return {
                     'train_id': train_id,
                     'current_track': track_id,
@@ -120,9 +133,31 @@ class TemporalSimulator:
                     'has_arrived': False
                 }
             
-            cumulative_distance += track_length
+            remaining_time -= time_to_traverse
+            
+            # Check for dwell time at the station AFTER this track
+            # Only if it's not the final destination
+            if idx < len(planned_route) - 1:
+                # Default dwell time (e.g., 2 minutes) + adjustment from GA
+                base_dwell = 2.0 
+                adjustment = dwell_delays[idx] if idx < len(dwell_delays) else 0.0
+                dwell_time = base_dwell + adjustment
+                
+                if remaining_time <= dwell_time:
+                    # Train is stopped at the station (exit of this track)
+                    return {
+                        'train_id': train_id,
+                        'current_track': track_id,
+                        'position_km': track_length,
+                        'velocity_kmh': 0.0,
+                        'route_index': idx,
+                        'has_arrived': False,
+                        'is_stopped_at_station': True
+                    }
+                
+                remaining_time -= dwell_time
         
-        # Train has reached destination (traveled beyond all tracks)
+        # Train has reached destination
         last_track_id = planned_route[-1]
         last_track = self.tracks.get(last_track_id, {'length_km': 0})
         

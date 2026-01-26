@@ -67,8 +67,13 @@ class ConflictResolver:
         # Initialize population of solutions
         population = self._initialize_population(trains, initial_conflicts, population_size)
         
+        # Add a "no delay" solution to the population as a baseline
+        population[0] = {train['id']: 0.0 for train in trains}
+        
         best_solution = None
         best_fitness = -float('inf')
+        
+        logger.info(f"GA running: pop_size={population_size}, max_iter={max_iterations}")
         
         for iteration in range(max_iterations):
             # Evaluate fitness
@@ -160,30 +165,24 @@ class ConflictResolver:
             conflicts = self.temporal_simulator.detect_future_conflicts(
                 adjusted_trains,
                 time_horizon_minutes=time_horizon,
-                time_step_minutes=2.0  # Faster evaluation
+                time_step_minutes=1.0  # Finer evaluation
             )
         except Exception as e:
             logger.warning(f"Error in conflict detection: {e}")
-            return 0.0
+            return -1000.0
         
         # Calculate fitness components
         num_conflicts = len(conflicts)
         total_delay = sum(solution.values())
         max_delay = max(solution.values()) if solution else 0
         
-        # Weights
-        w_conflicts = 0.6
-        w_total_delay = 0.3
-        w_max_delay = 0.1
+        # HEAVY penalty for conflicts
+        # Each conflict costs as much as 1000 minutes of delay
+        conflict_penalty = num_conflicts * 1000.0
         
-        # Normalize and invert (we want to minimize)
-        conflict_score = 1.0 / (1.0 + num_conflicts)
-        delay_score = 1.0 / (1.0 + total_delay / 100.0)  # Normalize by 100 minutes
-        max_delay_score = 1.0 / (1.0 + max_delay / 60.0)  # Normalize by 60 minutes
-        
-        fitness = (w_conflicts * conflict_score +
-                  w_total_delay * delay_score +
-                  w_max_delay * max_delay_score)
+        # Fitness is negative - we want to maximize it (bring it closer to 0)
+        # We want 0 conflicts AND minimum delay
+        fitness = -(conflict_penalty + (total_delay * 0.1) + (max_delay * 0.5))
         
         return fitness
     
@@ -218,12 +217,15 @@ class ConflictResolver:
                 else:
                     child[key] = parent2.get(key, 0)
             
-            # Mutation (20% chance)
-            if random.random() < 0.2:
+            # Mutation (40% chance of mutation - higher for better exploration)
+            if random.random() < 0.4:
                 if child:
                     mutate_key = random.choice(list(child.keys()))
-                    # Add random value between -10 and +10 minutes
-                    child[mutate_key] = max(0, child[mutate_key] + random.uniform(-10, 10))
+                    # Randomly change delay: either a small tweak or a completely new random value
+                    if random.random() < 0.7:
+                        child[mutate_key] = max(0, child[mutate_key] + random.uniform(-15, 15))
+                    else:
+                        child[mutate_key] = random.uniform(0, 90)
             
             offspring.append(child)
         

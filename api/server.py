@@ -124,6 +124,11 @@ async def websocket_endpoint(websocket: WebSocket):
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     user = UserService.get_user(form_data.username)
     if user and UserService.verify_password(form_data.password, user['hashed_password']):
+        if not user.get('is_active', True):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail="Account is inactive. Please contact administrator."
+            )
         access_token = create_access_token(data={"sub": form_data.username})
         return {
             "access_token": access_token, 

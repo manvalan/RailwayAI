@@ -25,17 +25,30 @@ class UserService:
         )
 
     @staticmethod
-    def create_user(username: str, password: str) -> bool:
+    def create_user(username: str, password: str, is_active: int = 1) -> bool:
         """Create a new user with hashed password."""
         hashed = UserService.get_password_hash(password)
         try:
             db.execute(
-                "INSERT INTO users (username, hashed_password) VALUES (?, ?)",
-                (username, hashed)
+                "INSERT INTO users (username, hashed_password, is_active) VALUES (?, ?, ?)",
+                (username, hashed, is_active)
             )
             return True
         except Exception as e:
             logger.error(f"Failed to create user {username}: {e}")
+            return False
+
+    @staticmethod
+    def set_user_status(username: str, is_active: bool) -> bool:
+        """Attiva o disattiva un utente."""
+        try:
+            db.execute(
+                "UPDATE users SET is_active = ? WHERE username = ?",
+                (1 if is_active else 0, username)
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update status for {username}: {e}")
             return False
 
     @staticmethod

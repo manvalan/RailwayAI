@@ -24,10 +24,12 @@ def initialize():
     if UserService.get_user(username):
         print(f"User {username} already exists. Skipping.")
     else:
-        success = UserService.create_user(username, password)
+        # Crea l'admin come DISATTIVATO (is_active=0) come richiesto
+        success = UserService.create_user(username, password, is_active=0)
         if success:
-            print(f"✓ User {username} created successfully.")
+            print(f"✓ User {username} created successfully (STATUS: INACTIVE).")
             print(f"  Password: {password}")
+            print(f"  NOTA: Devi attivarlo manualmente per poter accedere.")
         else:
             print(f"✗ Failed to create user {username}.")
             sys.exit(1)

@@ -35,6 +35,7 @@ from python.scheduling.route_planner import RoutePlanner
 from python.scheduling.temporal_simulator import TemporalSimulator
 from python.scheduling.network_analyzer import NetworkAnalyzer
 from python.scheduling.schedule_optimizer import ScheduleOptimizer
+from contextlib import asynccontextmanager
 from python.scheduling.conflict_resolver import ConflictResolver
 
 
@@ -45,13 +46,29 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    logger.info("Starting Railway AI Scheduler API v2.0.0...")
+    load_model()
+    poller_task = asyncio.create_task(event_poller())
+    yield
+    # Shutdown logic
+    poller_task.cancel()
+    try:
+        await poller_task
+    except asyncio.CancelledError:
+        pass
+    logger.info("Server shutting down...")
+
 # Initialize FastAPI
 app = FastAPI(
     title="Railway AI Scheduler API",
     description="ML-powered train schedule optimization",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # Servire file statici
@@ -92,11 +109,7 @@ async def event_poller():
             pass
         await asyncio.sleep(5)
 
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Starting Railway AI Scheduler API v2.0.0...")
-    load_model()
-    asyncio.create_task(event_poller())
+# Note: on_event is deprecated. Using lifespan instead.
 
 @app.websocket("/ws/monitoring")
 async def websocket_endpoint(websocket: WebSocket):

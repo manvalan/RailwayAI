@@ -30,8 +30,8 @@ class ConflictResolver:
     def resolve_conflicts(self,
                          trains: List[Dict],
                          time_horizon_minutes: float = 120.0,
-                         max_iterations: int = 200,
-                         population_size: int = 80) -> Dict:
+                         max_iterations: int = 300,
+                         population_size: int = 100) -> Dict:
         """
         Resolve conflicts using genetic algorithm.
         
@@ -151,18 +151,18 @@ class ConflictResolver:
                         'dwell_delays': [0.0] * num_intermediate_stations
                     }
                 else:
-                    # Random delays - increased range for better resolution of long bottlenecks
+                    # Random delays - increased range slightly to ensure solutions are found
+                    # but fitness function will still drive it towards the minimum delay needed.
                     solution[train_id] = {
-                        'departure_delay': random.uniform(0, 120),
-                        'dwell_delays': [random.uniform(0, 60) for _ in range(num_intermediate_stations)]
+                        'departure_delay': random.uniform(0, 60),
+                        'dwell_delays': [random.uniform(0, 30) for _ in range(num_intermediate_stations)]
                     }
             population.append(solution)
         
         return population
     
-    def _evaluate_fitness(self, solution: Dict, trains: List[Dict], time_horizon: float, baseline: float = 0.0) -> float:
-        """Evaluate fitness of a multi-parameter solution."""
-        # Apply delays to trains
+    def _apply_solution_to_trains(self, solution: Dict, trains: List[Dict]) -> List[Dict]:
+        """Apply a GA solution to a list of trains."""
         adjusted_trains = []
         for train in trains:
             train_copy = deepcopy(train)
@@ -170,20 +170,27 @@ class ConflictResolver:
                 params = solution[train['id']]
                 dep_delay = params['departure_delay']
                 
-                # Apply departure delay only if a scheduled time exists
+                # Update scheduled departure time
                 scheduled_time = train_copy.get('scheduled_departure_time')
                 if scheduled_time:
-                    h, m, s = map(int, scheduled_time.split(':'))
-                    total_minutes = h * 60 + m + dep_delay
-                    new_h = int(total_minutes // 60) % 24
-                    new_m = int(total_minutes % 60)
-                    train_copy['scheduled_departure_time'] = f"{new_h:02d}:{new_m:02d}:{s:02d}"
-                train_copy['delay_minutes'] = train_copy.get('delay_minutes', 0) + dep_delay
+                    try:
+                        h, m, s = map(int, scheduled_time.split(':'))
+                        total_minutes = h * 60 + m + dep_delay
+                        new_h = int(total_minutes // 60) % 24
+                        new_m = int(total_minutes % 60)
+                        train_copy['scheduled_departure_time'] = f"{new_h:02d}:{new_m:02d}:{s:02d}"
+                    except Exception: pass
                 
-                # Apply dwell delays
+                train_copy['delay_minutes'] = train_copy.get('delay_minutes', 0) + dep_delay
                 train_copy['dwell_delays'] = params['dwell_delays']
                 
             adjusted_trains.append(train_copy)
+        return adjusted_trains
+
+    def _evaluate_fitness(self, solution: Dict, trains: List[Dict], time_horizon: float, baseline: float = 0.0) -> float:
+        """Evaluate fitness of a multi-parameter solution."""
+        # Use helper for consistent adjustments
+        adjusted_trains = self._apply_solution_to_trains(solution, trains)
         
         # Detect conflicts with adjusted schedule
         try:
@@ -208,12 +215,12 @@ class ConflictResolver:
         if solution:
             max_delay = max(s['departure_delay'] + sum(s['dwell_delays']) for s in solution.values())
         
-        # Extreme penalty for conflicts
-        conflict_penalty = num_conflicts * 2000.0
+        # Extremely high penalty for conflicts to ensure resolution is the #1 priority
+        conflict_penalty = num_conflicts * 5000.0
         
         # Fitness: maximize (closer to 0 is better)
-        # We value resolving conflicts significantly more than saving minutes
-        fitness = -(conflict_penalty + (total_delay * 0.1) + (max_delay * 0.5))
+        # We penalize delay to encourage minimum impact, but ONLY after conflicts are resolved.
+        fitness = -(conflict_penalty + (total_delay * 0.5) + (max_delay * 1.0))
         
         return fitness
     
@@ -245,25 +252,35 @@ class ConflictResolver:
                 else:
                     child[tid] = deepcopy(parent2.get(tid, {'departure_delay': 0, 'dwell_delays': []}))
             
-            # Mutation - enhanced for large networks
-            if random.random() < 0.7:
+            # Mutation - enhanced for large networks and precision
+            if random.random() < 0.8:
                 if child:
                     tid = random.choice(list(child.keys()))
-                    # Mutation types:
                     m_type = random.random()
-                    if m_type < 0.2:
-                        # 1. Mutate departure delay
-                        child[tid]['departure_delay'] = max(0, child[tid]['departure_delay'] + random.uniform(-15, 15))
-                    elif m_type < 0.6:
-                        # 2. Mutate a SINGLE dwell delay
+                    
+                    if m_type < 0.15:
+                        # 1. Broad mutation - departure
+                        child[tid]['departure_delay'] = max(0, child[tid]['departure_delay'] + random.uniform(-20, 20))
+                    elif m_type < 0.4:
+                        # 2. Broad mutation - single dwell
                         dd = child[tid]['dwell_delays']
                         if dd:
                             idx = random.randrange(len(dd))
-                            dd[idx] = max(0, dd[idx] + random.uniform(-10, 10))
+                            dd[idx] = max(0, dd[idx] + random.uniform(-15, 15))
+                    elif m_type < 0.7:
+                        # 3. Fine-tuning - precise adjustment (+/- 1-2 mins)
+                        # This is crucial for "minimum impact" success
+                        if random.random() < 0.5:
+                            child[tid]['departure_delay'] = max(0, child[tid]['departure_delay'] + random.uniform(-2, 2))
+                        else:
+                            dd = child[tid]['dwell_delays']
+                            if dd:
+                                idx = random.randrange(len(dd))
+                                dd[idx] = max(0, dd[idx] + random.uniform(-2, 2))
                     else:
-                        # 3. Mutate ALL dwell delays (block shift) for complex bottlenecks
+                        # 4. Block shift
                         dd = child[tid]['dwell_delays']
-                        shift = random.uniform(-5, 5)
+                        shift = random.uniform(-10, 10)
                         child[tid]['dwell_delays'] = [max(0, d + shift) for d in dd]
             
             offspring.append(child)
@@ -296,15 +313,8 @@ class ConflictResolver:
         # Calculate final conflicts accurately by simulating the best solution
         final_conflicts_count = initial_conflicts_count
         if solution:
-            # Apply adjustments to a copy of trains to count actual remaining conflicts
-            adjusted_trains = []
-            for train in trains:
-                train_copy = deepcopy(train)
-                if train['id'] in solution:
-                    params = solution[train['id']]
-                    train_copy['delay_minutes'] = train_copy.get('delay_minutes', 0) + params['departure_delay']
-                    train_copy['dwell_delays'] = params['dwell_delays']
-                adjusted_trains.append(train_copy)
+            # Use same helper for final validation
+            adjusted_trains = self._apply_solution_to_trains(solution, trains)
             
             final_conflicts = self.temporal_simulator.detect_future_conflicts(
                 adjusted_trains, time_horizon_minutes=time_horizon, time_step_minutes=1.0, baseline_minutes=baseline)

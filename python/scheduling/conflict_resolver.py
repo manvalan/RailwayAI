@@ -104,7 +104,7 @@ class ConflictResolver:
             population = elite + offspring[:population_size - elite_count]
         
         # Format result
-        return self._format_result(best_solution, trains, iteration, best_fitness)
+        return self._format_result(best_solution, trains, iteration, best_fitness, time_horizon_minutes)
     
     def _initialize_population(self, trains: List[Dict], conflicts: List[Dict], size: int) -> List[Dict]:
         """
@@ -247,7 +247,7 @@ class ConflictResolver:
         
         return offspring
     
-    def _format_result(self, solution: Dict, trains: List[Dict], iterations: int, fitness: float) -> Dict:
+    def _format_result(self, solution: Dict, trains: List[Dict], iterations: int, fitness: float, time_horizon: float) -> Dict:
         """Format the result including dwell delay details."""
         resolutions = []
         
@@ -268,13 +268,24 @@ class ConflictResolver:
         
         # Calculate actual conflicts resolved
         initial_conflicts_count = len(self.temporal_simulator.detect_future_conflicts(
-            trains, time_horizon_minutes=120.0, time_step_minutes=1.0))
+            trains, time_horizon_minutes=time_horizon, time_step_minutes=1.0))
         
-        # Apply the final solution to get conflicts count
-        final_conflicts_count = 0
+        # Calculate final conflicts accurately by simulating the best solution
+        final_conflicts_count = initial_conflicts_count
         if solution:
-            # Simple approximation for efficiency (2000 is the penalty per conflict)
-            final_conflicts_count = int(max(0, (-fitness // 2000)))
+            # Apply adjustments to a copy of trains to count actual remaining conflicts
+            adjusted_trains = []
+            for train in trains:
+                train_copy = deepcopy(train)
+                if train['id'] in solution:
+                    params = solution[train['id']]
+                    train_copy['delay_minutes'] = train_copy.get('delay_minutes', 0) + params['departure_delay']
+                    train_copy['dwell_delays'] = params['dwell_delays']
+                adjusted_trains.append(train_copy)
+            
+            final_conflicts = self.temporal_simulator.detect_future_conflicts(
+                adjusted_trains, time_horizon_minutes=time_horizon, time_step_minutes=1.0)
+            final_conflicts_count = len(final_conflicts)
             
         resolved_count = max(0, initial_conflicts_count - final_conflicts_count)
         

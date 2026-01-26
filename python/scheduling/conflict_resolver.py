@@ -64,19 +64,29 @@ class ConflictResolver:
         
         logger.info(f"Detected {len(initial_conflicts)} initial conflicts")
         
+        # Determine baseline for consistent simulation across iterations
+        all_deps = []
+        for t_obj in trains:
+            d_str = t_obj.get('scheduled_departure_time', "00:00:00")
+            try:
+                dh, dm, ds = map(int, d_str.split(':'))
+                all_deps.append(dh * 60 + dm + ds/60.0)
+            except: pass
+        baseline = min(all_deps) if all_deps else 0.0
+        
         # Initialize population of solutions
         population = self._initialize_population(trains, initial_conflicts, population_size)
         
         best_solution = None
         best_fitness = -float('inf')
         
-        logger.info(f"GA running: pop_size={population_size}, max_iter={max_iterations}")
+        logger.info(f"GA running: pop_size={population_size}, max_iter={max_iterations}, baseline={baseline}")
         
         for iteration in range(max_iterations):
             # Evaluate fitness
             fitness_scores = []
             for solution in population:
-                fitness = self._evaluate_fitness(solution, trains, time_horizon_minutes)
+                fitness = self._evaluate_fitness(solution, trains, time_horizon_minutes, baseline=baseline)
                 fitness_scores.append(fitness)
                 
                 if fitness > best_fitness:
@@ -108,7 +118,7 @@ class ConflictResolver:
         
         # Final log
         logger.info(f"GA Completed after {iteration+1} iterations. Final Best Fitness = {best_fitness:.2f}")
-        return self._format_result(best_solution, trains, iteration, best_fitness, time_horizon_minutes)
+        return self._format_result(best_solution, trains, iteration, best_fitness, time_horizon_minutes, baseline=baseline)
     
     def _initialize_population(self, trains: List[Dict], conflicts: List[Dict], size: int) -> List[Dict]:
         """
@@ -150,7 +160,7 @@ class ConflictResolver:
         
         return population
     
-    def _evaluate_fitness(self, solution: Dict, trains: List[Dict], time_horizon: float) -> float:
+    def _evaluate_fitness(self, solution: Dict, trains: List[Dict], time_horizon: float, baseline: float = 0.0) -> float:
         """Evaluate fitness of a multi-parameter solution."""
         # Apply delays to trains
         adjusted_trains = []
@@ -180,7 +190,8 @@ class ConflictResolver:
             conflicts = self.temporal_simulator.detect_future_conflicts(
                 adjusted_trains,
                 time_horizon_minutes=time_horizon,
-                time_step_minutes=1.0
+                time_step_minutes=1.0,
+                baseline_minutes=baseline
             )
         except Exception as e:
             logger.warning(f"Error in conflict detection: {e}")
@@ -234,24 +245,32 @@ class ConflictResolver:
                 else:
                     child[tid] = deepcopy(parent2.get(tid, {'departure_delay': 0, 'dwell_delays': []}))
             
-            # Mutation - increased probability for faster convergence
-            if random.random() < 0.6:
+            # Mutation - enhanced for large networks
+            if random.random() < 0.7:
                 if child:
                     tid = random.choice(list(child.keys()))
-                    # Mutate departure delay OR one dwell delay
-                    if random.random() < 0.5:
-                        child[tid]['departure_delay'] = max(0, child[tid]['departure_delay'] + random.uniform(-10, 10))
-                    else:
+                    # Mutation types:
+                    m_type = random.random()
+                    if m_type < 0.2:
+                        # 1. Mutate departure delay
+                        child[tid]['departure_delay'] = max(0, child[tid]['departure_delay'] + random.uniform(-15, 15))
+                    elif m_type < 0.6:
+                        # 2. Mutate a SINGLE dwell delay
                         dd = child[tid]['dwell_delays']
                         if dd:
                             idx = random.randrange(len(dd))
-                            dd[idx] = max(0, dd[idx] + random.uniform(-5, 5))
+                            dd[idx] = max(0, dd[idx] + random.uniform(-10, 10))
+                    else:
+                        # 3. Mutate ALL dwell delays (block shift) for complex bottlenecks
+                        dd = child[tid]['dwell_delays']
+                        shift = random.uniform(-5, 5)
+                        child[tid]['dwell_delays'] = [max(0, d + shift) for d in dd]
             
             offspring.append(child)
         
         return offspring
     
-    def _format_result(self, solution: Dict, trains: List[Dict], iterations: int, fitness: float, time_horizon: float) -> Dict:
+    def _format_result(self, solution: Dict, trains: List[Dict], iterations: int, fitness: float, time_horizon: float, baseline: float = 0.0) -> Dict:
         """Format the result including dwell delay details."""
         resolutions = []
         
@@ -272,7 +291,7 @@ class ConflictResolver:
         
         # Calculate actual conflicts resolved
         initial_conflicts_count = len(self.temporal_simulator.detect_future_conflicts(
-            trains, time_horizon_minutes=time_horizon, time_step_minutes=1.0))
+            trains, time_horizon_minutes=time_horizon, time_step_minutes=1.0, baseline_minutes=baseline))
         
         # Calculate final conflicts accurately by simulating the best solution
         final_conflicts_count = initial_conflicts_count
@@ -288,7 +307,7 @@ class ConflictResolver:
                 adjusted_trains.append(train_copy)
             
             final_conflicts = self.temporal_simulator.detect_future_conflicts(
-                adjusted_trains, time_horizon_minutes=time_horizon, time_step_minutes=1.0)
+                adjusted_trains, time_horizon_minutes=time_horizon, time_step_minutes=1.0, baseline_minutes=baseline)
             final_conflicts_count = len(final_conflicts)
             
         resolved_count = max(0, initial_conflicts_count - final_conflicts_count)

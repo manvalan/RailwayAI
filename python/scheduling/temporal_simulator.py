@@ -138,8 +138,9 @@ class TemporalSimulator:
             # Check for dwell time at the station AFTER this track
             # Only if it's not the final destination
             if idx < len(planned_route) - 1:
-                # Default dwell time (e.g., 2 minutes) + adjustment from GA
-                base_dwell = 2.0 
+                # Default dwell time (e.g., 3 minutes) + adjustment from GA
+                # Increased to 3.0 to match the Swift FdC Railway Manager app
+                base_dwell = 3.0 
                 adjustment = dwell_delays[idx] if idx < len(dwell_delays) else 0.0
                 dwell_time = base_dwell + adjustment
                 
@@ -173,7 +174,8 @@ class TemporalSimulator:
     def detect_future_conflicts(self, 
                                 trains: List[Dict], 
                                 time_horizon_minutes: float = 60.0,
-                                time_step_minutes: float = 1.0) -> List[Dict]:
+                                time_step_minutes: float = 1.0,
+                                baseline_minutes: Optional[float] = None) -> List[Dict]:
         """
         Detect conflicts over a time horizon by simulating train positions.
         
@@ -181,6 +183,8 @@ class TemporalSimulator:
             trains: List of train dicts with planned routes
             time_horizon_minutes: How far into the future to simulate (default: 60 min)
             time_step_minutes: Time resolution for simulation (default: 1 min)
+            baseline_minutes: Optional absolute baseline (minutes since midnight). 
+                             If None, it's calculated from the earliest train departure.
         
         Returns:
             List of conflict dicts with:
@@ -200,15 +204,40 @@ class TemporalSimulator:
         logger.info(f"Simulating {len(trains)} trains over {time_horizon_minutes} minutes "
                    f"with {time_step_minutes} min steps ({num_steps} steps)")
         
+        # Find the common baseline (earliest departure)
+        if baseline_minutes is not None:
+            start_minutes = baseline_minutes
+        else:
+            all_deps = []
+            for t_obj in trains:
+                d_str = t_obj.get('scheduled_departure_time', "00:00:00")
+                try:
+                    dh, dm, ds = map(int, d_str.split(':'))
+                    all_deps.append(dh * 60 + dm + ds/60.0)
+                except: pass
+            start_minutes = min(all_deps) if all_deps else 0.0
+        
         # Simulate at each time step
         for step in range(num_steps + 1):
-            t = step * time_step_minutes
+            t_relative = step * time_step_minutes
+            t_absolute = start_minutes + t_relative
             
-            # Get all train positions at time t
+            # Get all train positions at this absolute time
             positions_by_track = {}
             
             for train in trains:
-                pos = self.simulate_train_position(train, t)
+                # Convert this train's scheduled_departure_time to minutes since midnight
+                dep_time = train.get('scheduled_departure_time', "00:00:00")
+                try:
+                    h, m, s = map(int, dep_time.split(':'))
+                    dep_minutes = h * 60 + m + (s / 60.0)
+                except Exception:
+                    dep_minutes = 0.0
+                
+                # Offset for this train relative to ITS departure
+                train_t = t_absolute - dep_minutes
+                
+                pos = self.simulate_train_position(train, train_t)
                 
                 # Skip trains that have arrived
                 if pos['has_arrived']:
@@ -244,7 +273,7 @@ class TemporalSimulator:
                                 min(pos1['train_id'], pos2['train_id']),
                                 max(pos1['train_id'], pos2['train_id']),
                                 track_id,
-                                int(t)  # Round to minute
+                                int(t_relative)  # Round to minute
                             )
                             
                             if conflict_id in conflict_set:
@@ -269,7 +298,7 @@ class TemporalSimulator:
                                 severity = 6
                             
                             conflicts.append({
-                                'time_offset_minutes': t,
+                                'time_offset_minutes': t_relative,
                                 'track_id': track_id,
                                 'train1_id': pos1['train_id'],
                                 'train2_id': pos2['train_id'],

@@ -71,11 +71,15 @@ def test_bywater_nobottle_scenario():
         "stations": [
             {"id": 1, "name": "Nobottle", "num_platforms": 2},
             {"id": 11, "name": "Bywater", "num_platforms": 4},
+            {"id": 26, "name": "Waymeet", "num_platforms": 2},
+            {"id": 41, "name": "Overhill", "num_platforms": 2},
             {"id": 42, "name": "Little Delvings", "num_platforms": 2},
             {"id": 43, "name": "Gamwich", "num_platforms": 2},
             {"id": 44, "name": "Tightfield", "num_platforms": 2},
+            {"id": 50, "name": "Haysend", "num_platforms": 2},
             {"id": 51, "name": "Withwell", "num_platforms": 2},
-            {"id": 52, "name": "Tuck", "num_platforms": 2}
+            {"id": 52, "name": "Tuck", "num_platforms": 2},
+            {"id": 56, "name": "Staddle", "num_platforms": 2}
         ],
         "tracks": [
             {"id": 1, "length_km": 24, "is_single_track": True, "capacity": 1, "station_ids": [1, 43]},
@@ -86,9 +90,10 @@ def test_bywater_nobottle_scenario():
             {"id": 59, "length_km": 22, "is_single_track": True, "capacity": 1, "station_ids": [43, 44]},
             {"id": 64, "length_km": 14, "is_single_track": True, "capacity": 1, "station_ids": [50, 51]},
             {"id": 65, "length_km": 10, "is_single_track": True, "capacity": 1, "station_ids": [51, 52]},
-            {"id": 66, "length_km": 0.3, "is_single_track": True, "capacity": 1, "station_ids": [52, 56]}
+            {"id": 66, "length_km": 0.3, "is_single_track": True, "capacity": 1, "station_ids": [52, 56]},
+            {"id": 70, "length_km": 15, "is_single_track": True, "capacity": 1, "station_ids": [56, 42]}
         ],
-        "max_iterations": 60  # 60 minute time horizon
+        "max_iterations": 120  # 120 minute time horizon
     }
     
     print("2. Sending optimization request...")
@@ -127,6 +132,8 @@ def test_bywater_nobottle_scenario():
             print(f"   Resolution {i}:")
             print(f"     Train ID: {resolution['train_id']}")
             print(f"     Delay: {resolution['time_adjustment_min']:.1f} minutes")
+            if resolution.get('dwell_delays'):
+                print(f"     Dwell Delays: {[f'{d:.1f}' for d in resolution['dwell_delays']]} (min)")
             print(f"     Track: {resolution['track_assignment']}")
             print(f"     Confidence: {resolution['confidence']:.2%}")
             print()

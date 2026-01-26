@@ -180,7 +180,9 @@ class OptimizationRequest(BaseModel):
     trains: List[Train] = Field(..., description="List of trains to optimize")
     tracks: Optional[List[Track]] = Field(None, description="Track configuration (optional)")
     stations: Optional[List[Station]] = Field(None, description="Station configuration (optional)")
-    max_iterations: int = Field(100, ge=1, le=1000, description="Max optimization iterations")
+    max_iterations: int = Field(100, ge=1, le=1000, description="Max simulation horizon (minutes)")
+    ga_max_iterations: Optional[int] = Field(200, ge=10, le=1000, description="Max GA iterations")
+    ga_population_size: Optional[int] = Field(80, ge=10, le=500, description="GA population size")
 
 
 class TimeWindow(BaseModel):
@@ -630,8 +632,8 @@ async def optimize_scheduled_trains(
             resolution_result = conflict_resolver.resolve_conflicts(
                 trains_with_routes,
                 time_horizon_minutes=time_horizon,
-                max_iterations=100,
-                population_size=30
+                max_iterations=getattr(request, 'ga_max_iterations', None) or 200,
+                population_size=getattr(request, 'ga_population_size', None) or 80
             )
             
             resolutions = []
@@ -642,6 +644,9 @@ async def optimize_scheduled_trains(
                     if conflict['train1_id'] == res['train_id'] or conflict['train2_id'] == res['train_id']:
                         track_id = conflict['track_id']
                         break
+                
+                logger.info(f"Adding resolution for train {res['train_id']}: dep_delay={res['time_adjustment_min']:.1f}m, "
+                            f"dwell_delays={res.get('dwell_delays', [])}")
                 
                 resolutions.append(Resolution(
                     train_id=res['train_id'],
@@ -683,7 +688,7 @@ async def optimize_scheduled_trains(
             total_delay_minutes=total_delay,
             inference_time_ms=inference_time,
             conflicts_detected=len(future_conflicts),
-            conflicts_resolved=len(resolutions),
+            conflicts_resolved=conflicts_resolved,
             timestamp=datetime.now().isoformat()
         )
         

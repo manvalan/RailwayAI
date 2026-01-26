@@ -143,8 +143,8 @@ class ConflictResolver:
                 else:
                     # Random delays - increased range for better resolution of long bottlenecks
                     solution[train_id] = {
-                        'departure_delay': random.uniform(0, 90),
-                        'dwell_delays': [random.uniform(0, 45) for _ in range(num_intermediate_stations)]
+                        'departure_delay': random.uniform(0, 120),
+                        'dwell_delays': [random.uniform(0, 60) for _ in range(num_intermediate_stations)]
                     }
             population.append(solution)
         

@@ -14,6 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-monitoring').addEventListener('click', () => switchView('monitoring'));
     document.getElementById('nav-training').addEventListener('click', () => switchView('training'));
 
+    document.getElementById('nav-logout').addEventListener('click', () => {
+        localStorage.removeItem('access_token');
+        location.reload();
+    });
+
     // Training Control Actions
     document.getElementById('start-train-btn').addEventListener('click', startScenarioGeneration);
 });

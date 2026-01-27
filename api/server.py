@@ -588,6 +588,7 @@ async def reactivate_user(
         raise HTTPException(status_code=500, detail=f"Failed to reactivate user {username}")
         
     return {"message": f"User {username} reactivated successfully"}
+@app.post("/api/v1/train", tags=["Training"])
 async def trigger_training(
     request: TrainingRequest,
     background_tasks: BackgroundTasks,
@@ -597,8 +598,8 @@ async def trigger_training(
     Trigger MARL training on a scenario.
     The training runs in the background.
     """
-    if current_user != "admin":
-        raise HTTPException(status_code=403, detail="Only admin can trigger training")
+    if str(current_user).lower() != "admin":
+        raise HTTPException(status_code=403, detail=f"Only admin can trigger training (logged as: {current_user})")
         
     # Logic to trigger train_mappo.py (as subprocess or imported function)
     import subprocess

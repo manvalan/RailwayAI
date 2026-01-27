@@ -8,7 +8,6 @@ import torch
 # Setup paths
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(os.path.join(PROJECT_ROOT, "python/marl_scheduling"))
-sys.path.append(os.path.join(PROJECT_ROOT, "build/python"))
 
 class TestRailwayAISystem(unittest.TestCase):
 

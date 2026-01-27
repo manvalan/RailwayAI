@@ -25,7 +25,8 @@ COPY . .
 # Compila il core C++
 RUN mkdir -p build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make -j$(nproc)
+    make -j$(nproc) && \
+    cp python/*.so $(python3 -c "import site; print(site.getsitepackages()[0])")
 
 # Espone la porta usata da FastAPI (porta interna del container)
 EXPOSE 8002

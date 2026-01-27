@@ -8,8 +8,7 @@ import sys
 import os
 import networkx as nx
 
-# Add build/python to path for railway_cpp
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../build/python'))
+# The railway_cpp backend should be installed in site-packages or available via PYTHONPATH
 
 try:
     import railway_cpp

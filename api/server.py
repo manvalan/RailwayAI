@@ -139,11 +139,21 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
                 detail="Account is inactive. Please contact administrator."
             )
         access_token = create_access_token(data={"sub": form_data.username})
+        await manager.broadcast({
+            "type": "log", 
+            "message": f"Login effettuato: l'utente '{form_data.username}' è ora attivo.", 
+            "level": "info"
+        })
         return {
             "access_token": access_token, 
             "token_type": "bearer",
             "message": "Login effettuato con successo via database."
         }
+    await manager.broadcast({
+        "type": "log", 
+        "message": f"Tentativo di login fallito per l'utente '{form_data.username}'.", 
+        "level": "warning"
+    })
     raise HTTPException(status_code=401, detail="Incorrect username or password")
 
 @app.post("/api/v1/generate-key")
@@ -281,6 +291,12 @@ async def register_user(
     success = UserService.create_user(request.username, request.password)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to create user")
+    
+    await manager.broadcast({
+        "type": "log", 
+        "message": f"Admin Action: Creato nuovo utente '{request.username}'.", 
+        "level": "success"
+    })
         
     return {"message": f"User {request.username} created successfully"}
 
@@ -299,6 +315,12 @@ async def delete_user(
     success = UserService.delete_user(username)
     if not success:
         raise HTTPException(status_code=500, detail=f"Failed to delete user {username}")
+    
+    await manager.broadcast({
+        "type": "log", 
+        "message": f"Admin Action: Eliminato utente '{username}'.", 
+        "level": "warning"
+    })
         
     return {"message": f"User {username} deleted successfully"}
 

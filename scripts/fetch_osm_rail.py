@@ -61,7 +61,6 @@ def process_to_scenario(osm_data: dict, out_file: str):
     ways = [w for w in elements if w['type'] == 'way']
     
     # 1. Identify Station Nodes
-    station_nodes = []
     for node_id, node in nodes.items():
         if 'tags' in node and ('railway' in node['tags'] and node['tags']['railway'] in ['station', 'halt']):
             s_id = len(scenario['stations'])
@@ -73,16 +72,16 @@ def process_to_scenario(osm_data: dict, out_file: str):
                 "lon": node['lon'],
                 "osm_id": node_id
             })
-            station_nodes.append(node)
             
     if not scenario['stations']:
         logger.warning("No stations found. Creating dummy endpoints.")
-        scenario['stations'].append({"id": 0, "name": "Source", "num_platforms": 2})
-        scenario['stations'].append({"id": 1, "name": "Sink", "num_platforms": 2})
+        scenario['stations'].append({"id": 0, "name": "Source", "num_platforms": 2, "lat": 45.0, "lon": 9.0})
+        scenario['stations'].append({"id": 1, "name": "Sink", "num_platforms": 2, "lat": 45.1, "lon": 9.1})
+
+    station_osm_ids = {s['osm_id']: s['id'] for s in scenario['stations'] if 'osm_id' in s}
+    all_station_ids = [s['id'] for s in scenario['stations']]
 
     # 2. Process Tracks (Ways)
-    station_osm_ids = {s['osm_id']: s['id'] for s in scenario['stations'] if 'osm_id' in s}
-    
     for way in ways:
         way_nodes = way.get('nodes', [])
         if len(way_nodes) < 2: continue
@@ -101,27 +100,34 @@ def process_to_scenario(osm_data: dict, out_file: str):
         
         if length < 0.1: continue # Skip very short segments
         
-        # Link to stations
-        connected_stations = []
+        # Map to exactly 2 distinct stations
+        connected = set()
+        
+        # Check nodes on the way
         for wn_id in way_nodes:
             if wn_id in station_osm_ids:
-                connected_stations.append(station_osm_ids[wn_id])
+                connected.add(station_osm_ids[wn_id])
+                if len(connected) >= 2: break
         
-        if not connected_stations:
-             # Find nearest station to endpoints
-             for n_end in [start_node, end_node]:
-                 min_dist = 999
-                 best_s = 0
-                 for s in scenario['stations']:
-                     if 'lat' in s:
-                         d = haversine(n_end['lat'], n_end['lon'], s['lat'], s['lon'])
-                         if d < min_dist:
-                             min_dist = d
-                             best_s = s['id']
-                 connected_stations.append(best_s)
-
-        if len(connected_stations) < 2:
-            connected_stations.append((connected_stations[0]+1)%max(1, len(scenario['stations'])))
+        # If not enough, find nearest stations to endpoints
+        if len(connected) < 2:
+            for n_end in [start_node, end_node]:
+                min_dist = 999
+                best_s = -1
+                for s in scenario['stations']:
+                    if 'lat' in s:
+                        d = haversine(n_end['lat'], n_end['lon'], s['lat'], s['lon'])
+                        if d < min_dist:
+                            min_dist = d
+                            best_s = s['id']
+                if best_s != -1:
+                    connected.add(best_s)
+                if len(connected) >= 2: break
+        
+        # Still not enough? Pick random distinct stations
+        while len(connected) < 2:
+            candidate = random.choice(all_station_ids)
+            connected.add(candidate)
 
         track_id = len(scenario['tracks'])
         scenario['tracks'].append({
@@ -129,21 +135,20 @@ def process_to_scenario(osm_data: dict, out_file: str):
             "length_km": round(length, 2),
             "capacity": int(way.get('tags', {}).get('tracks', 1)),
             "is_single_track": way.get('tags', {}).get('railway:traffic_mode') == 'single' or int(way.get('tags', {}).get('tracks', 1)) == 1,
-            "station_ids": list(set(connected_stations[:2]))
+            "station_ids": list(connected)[:2]
         })
         
-    # 3. Inject synthetic traffic (Max 100 trains)
+    # 3. Inject synthetic traffic
     num_trains = min(100, len(scenario['tracks']) // 2)
     track_ids = [t['id'] for t in scenario['tracks']]
-    station_ids = [s['id'] for s in scenario['stations']]
     
-    if track_ids and station_ids:
+    if track_ids and all_station_ids:
         for i in range(num_trains):
             scenario['trains'].append({
                 "id": i,
                 "current_track": random.choice(track_ids),
                 "position_km": 0.0,
-                "destination_station": random.choice(station_ids),
+                "destination_station": random.choice(all_station_ids),
                 "priority": random.randint(1, 10),
                 "velocity_kmh": random.choice([100, 120, 160, 200]),
                 "planned_route": []
@@ -151,7 +156,7 @@ def process_to_scenario(osm_data: dict, out_file: str):
 
     with open(out_file, 'w') as f:
         json.dump(scenario, f, indent=2)
-    logger.info(f"Scenario saved to {out_file} with {len(scenario['tracks'])} tracks.")
+    logger.info(f"Scenario saved to {out_file} with {len(scenario['tracks'])} tracks and {len(scenario['trains'])} trains.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -159,7 +164,6 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=str, default="scenarios/lombardy_real.json")
     
     args = parser.parse_args()
-    
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
     
     data = fetch_railway_data(args.area)

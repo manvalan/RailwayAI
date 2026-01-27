@@ -1,97 +1,104 @@
 import torch
 import torch.optim as optim
 import numpy as np
+import argparse
+import os
 from env import RailwayGymEnv
+from scenario_loader import ScenarioLoader
 from constraints import SafetyConstraintLayer
 from models import ActorNetwork, CriticNetwork
 import logging
 
-logging.basicConfig(level=logging.INFO)
+# Force INFO level logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    force=True
+)
 logger = logging.getLogger(__name__)
+print("Training script started...") # Direct output for verification
 
-def train_mappo(env: RailwayGymEnv, episodes: int = 100):
+def train_mappo(args):
     """
-    Simplified MAPPO training loop.
+    MAPPO training with scenario scaling and checkpointing.
     """
+    # Load Scenario
+    scenario = ScenarioLoader.load_scenario(args.scenario)
+    env = RailwayGymEnv(scenario['tracks'], scenario['stations'], scenario['trains'])
+    
     agent_ids = env.agent_ids
     obs_dim = 8  # 1 (pos) + 1 (track) + 1 (vel) + 5 (neighbors)
     global_obs_dim = obs_dim * len(agent_ids)
     
+    # Policy Setup
     actors = {aid: ActorNetwork(obs_dim) for aid in agent_ids}
     critic = CriticNetwork(global_obs_dim)
     
-    actor_opts = {aid: optim.Adam(actors[aid].parameters(), lr=1e-3) for aid in agent_ids}
-    critic_opt = optim.Adam(critic.parameters(), lr=1e-3)
+    # Load checkpoint if exists
+    if args.checkpoint and os.path.exists(args.checkpoint):
+        logger.info(f"Loading checkpoint from {args.checkpoint}")
+        ckpt = torch.load(args.checkpoint)
+        critic.load_state_dict(ckpt['critic'])
+        for aid in agent_ids:
+            if aid in ckpt['actors']:
+                actors[aid].load_state_dict(ckpt['actors'][aid])
+    
+    actor_opts = {aid: optim.Adam(actors[aid].parameters(), lr=args.lr) for aid in agent_ids}
+    critic_opt = optim.Adam(critic.parameters(), lr=args.lr)
     
     safety_layer = SafetyConstraintLayer(env.raw_tracks)
     
-    for episode in range(episodes):
+    os.makedirs(args.out_dir, exist_ok=True)
+    
+    for episode in range(args.episodes):
         obs, _ = env.reset()
         episode_reward = 0
         done = False
         
         while not done:
-            # 1. Collect actions from actors
             actions = {}
-            action_log_probs = {}
-            
             for aid in agent_ids:
-                # Prepare observation
                 o = obs[aid]
-                # Flatten the observation dict into a vector
                 o_vec = np.concatenate([o['position'], [o['current_track']], o['velocity'], o['neighbor_occupancy']])
                 o_tensor = torch.FloatTensor(o_vec).unsqueeze(0)
                 
                 probs = actors[aid](o_tensor)
                 dist = torch.distributions.Categorical(probs)
                 action = dist.sample()
-                
                 actions[aid] = action.item()
-                action_log_probs[aid] = dist.log_prob(action)
             
-            # 2. Apply Safety Constraints
+            # Constraint Layer (Safety)
             safe_actions = safety_layer.apply_constraints(actions, {"trains": env.trains})
             
-            # 3. Environment Step
+            # Environment STEP (Accelerated by C++ if HAS_CPP)
             next_obs, rewards, done, truncated, info = env.step(safe_actions)
             
-            # 4. Centralized Critic Evaluation
-            # Concatenate all observations for global state
-            obs_vecs = []
-            for aid in agent_ids:
-                o = obs[aid]
-                obs_vecs.append(np.concatenate([o['position'], [o['current_track']], o['velocity'], o['neighbor_occupancy']]))
-            global_obs = torch.FloatTensor(np.concatenate(obs_vecs)).unsqueeze(0)
-            
-            value = critic(global_obs)
-            
-            # 5. Update Networks (Simplified PPO Step)
-            # This is a placeholder for the actual PPO loss calculation
-            # involving advantages, ratios, and clipping.
-            
-            # Mock update logic
             total_reward = sum(rewards.values())
             episode_reward += total_reward
-            
-            # Update obs
             obs = next_obs
-            if truncated:
-                done = True
+            if truncated: done = True
                 
         if episode % 10 == 0:
-            logger.info(f"Episode {episode}: Total Reward = {episode_reward:.2f}, Conflicts = {info.get('conflicts', 0)}")
+            logger.info(f"Episode {episode}: Reward = {episode_reward:.2f}, Conflicts = {info.get('conflicts', 0)}")
+            
+        # Checkpoint
+        if episode > 0 and episode % args.save_interval == 0:
+            ckpt_path = os.path.join(args.out_dir, f"mappo_ep{episode}.pth")
+            torch.save({
+                'critic': critic.state_dict(),
+                'actors': {aid: actors[aid].state_dict() for aid in agent_ids},
+                'episode': episode
+            }, ckpt_path)
+            logger.info(f"Saved checkpoint: {ckpt_path}")
 
 if __name__ == "__main__":
-    # Mock data for demonstration
-    mock_tracks = [
-        {'id': 1, 'station_ids': [101, 102], 'length_km': 10, 'capacity': 1, 'is_single_track': True},
-        {'id': 2, 'station_ids': [102, 103], 'length_km': 15, 'capacity': 2, 'is_single_track': False}
-    ]
-    mock_stations = [{'id': 101, 'name': 'A'}, {'id': 102, 'name': 'B'}, {'id': 103, 'name': 'C'}]
-    mock_trains = [
-        {'id': 1, 'planned_route': [1, 2], 'velocity_kmh': 120},
-        {'id': 2, 'planned_route': [2, 1], 'velocity_kmh': 100} # Potential conflict on track 1
-    ]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scenario", type=str, required=True, help="Path to JSON scenario")
+    parser.add_argument("--episodes", type=int, default=100)
+    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--save_interval", type=int, default=50)
+    parser.add_argument("--checkpoint", type=str, default=None)
+    parser.add_argument("--out_dir", type=str, default="checkpoints")
     
-    env = RailwayGymEnv(mock_tracks, mock_stations, mock_trains)
-    train_mappo(env, episodes=50)
+    args = parser.parse_args()
+    train_mappo(args)

@@ -98,9 +98,10 @@ async function startScenarioGeneration() {
         if (response.ok) {
             addLog(`Richiesta generazione inviata per l'area: ${area}`, 'info');
         } else {
-            const error = await response.json();
-            addLog(`Errore generazione: ${error.detail}`, 'error');
-            msgEl.textContent = "❌ Errore durante l'invio della richiesta.";
+            const error = await response.json().catch(() => ({ detail: "Errore sconosciuto" }));
+            const status = response.status;
+            addLog(`Errore ${status}: ${error.detail || JSON.stringify(error)}`, 'error');
+            msgEl.textContent = `❌ Errore ${status}: ${error.detail || "Verifica i log"}`;
             msgEl.style.color = "var(--accent)";
         }
     } catch (err) {

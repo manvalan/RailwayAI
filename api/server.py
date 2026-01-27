@@ -506,8 +506,11 @@ async def generate_scenario(
     """
     Generate a real-world railway scenario from OpenStreetMap data.
     """
-    if current_user != "admin":
-        raise HTTPException(status_code=403, detail="Only admin can generate scenarios")
+    logger.info(f"Scenario generation requested by user: '{current_user}'")
+    
+    if str(current_user).lower() != "admin":
+        logger.warning(f"Access denied for user '{current_user}' to generate_scenario")
+        raise HTTPException(status_code=403, detail=f"Only admin can generate scenarios (logged as: {current_user})")
         
     output_name = request.output_filename or f"{request.area.lower().replace(' ', '_')}_{int(time.time())}.json"
     if not output_name.endswith(".json"):

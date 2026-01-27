@@ -71,7 +71,7 @@ PYBIND11_MODULE(railway_cpp, m) {
         .def_readwrite("train1_id", &Conflict::train1_id)
         .def_readwrite("train2_id", &Conflict::train2_id)
         .def_readwrite("track_id", &Conflict::track_id)
-        .def_readwrite("estimated_collision_time_minutes", &Conflict::estimated_collision_time_minutes)
+        .def_readwrite("estimated_time_min", &Conflict::estimated_time_min)
         .def_readwrite("conflict_type", &Conflict::conflict_type)
         .def_readwrite("severity", &Conflict::severity)
         .def("__repr__", [](const Conflict& c) {
@@ -123,109 +123,25 @@ PYBIND11_MODULE(railway_cpp, m) {
     py::class_<RailwayScheduler>(m, "RailwayScheduler")
         .def(py::init<int, int>(), 
              py::arg("num_tracks") = 20,
-             py::arg("num_stations") = 10,
-             "Inizializza lo scheduler con numero di binari e stazioni")
+             py::arg("num_stations") = 10)
         
-        // Network management
-        .def("initialize_network", &RailwayScheduler::initialize_network,
-             "Inizializza la rete ferroviaria con binari e stazioni")
-        .def("add_train", &RailwayScheduler::add_train,
-             "Aggiunge un treno al sistema")
-        .def("remove_train", &RailwayScheduler::remove_train,
-             "Rimuove un treno dal sistema")
-        .def("update_train_state", &RailwayScheduler::update_train_state,
-             py::arg("train_id"),
-             py::arg("position_km"),
-             py::arg("velocity_kmh"),
-             py::arg("is_delayed") = false,
-             "Aggiorna posizione e stato di un treno")
-        .def("step", &RailwayScheduler::step,
-             py::arg("actions"),
-             py::arg("time_step_minutes"),
-             "Avanza la simulazione di un passo temporale")
-        
-        // Conflict detection
-        .def("detect_conflicts", &RailwayScheduler::detect_conflicts,
-             "Rileva conflitti nella rete corrente")
-        .def("are_trains_in_conflict", &RailwayScheduler::are_trains_in_conflict,
-             "Verifica se due treni specifici sono in conflitto")
-        .def("predict_future_conflicts", &RailwayScheduler::predict_future_conflicts,
-             py::arg("time_horizon_minutes"),
-             "Predice conflitti futuri entro un orizzonte temporale")
-        
-        // Schedule optimization
-        .def("resolve_conflicts", &RailwayScheduler::resolve_conflicts,
-             "Risolve conflitti e propone aggiustamenti")
-        .def("apply_adjustments", &RailwayScheduler::apply_adjustments,
-             "Applica aggiustamenti alla schedule")
-        .def("optimize_network", &RailwayScheduler::optimize_network,
-             "Ottimizza l'intera rete per efficienza")
-        
-        // ML integration
-        .def("load_ml_model", &RailwayScheduler::load_ml_model,
-             py::arg("model_path"),
-             "Carica il modello ML addestrato")
-        .def("predict_with_ml", &RailwayScheduler::predict_with_ml,
-             py::arg("state"),
-             py::arg("conflicts"),
-             "Usa il modello ML per predire aggiustamenti")
-        
-        // Queries
-        .def("get_network_state", &RailwayScheduler::get_network_state,
-             "Ottieni lo stato corrente della rete")
-        .def("get_train_info", &RailwayScheduler::get_train_info,
-             "Ottieni informazioni su un treno specifico")
-        .def("get_statistics", &RailwayScheduler::get_statistics,
-             "Ottieni statistiche di performance")
-        .def("get_event_log", &RailwayScheduler::get_event_log,
-             py::arg("max_events") = 100,
-             "Ottieni log degli eventi recenti")
-        
-        .def("__repr__", [](const RailwayScheduler& s) {
-            auto stats = s.get_statistics();
-            return "<RailwayScheduler trains=" + std::to_string(stats.total_trains) + 
-                   " conflicts=" + std::to_string(stats.active_conflicts) + ">";
-        });
-    
-    // ========================================================================
-    // Conflict Resolver (static methods)
-    // ========================================================================
-    
-    py::class_<ConflictResolver>(m, "ConflictResolver")
-        .def_static("resolve_by_priority", &ConflictResolver::resolve_by_priority,
-                   py::arg("conflicts"), py::arg("trains"), py::arg("tracks"),
-                   "Risolve conflitti basandosi su priorità treni con cambio binario automatico in stazione")
-        .def_static("minimize_total_delay", &ConflictResolver::minimize_total_delay,
-                   "Risolve minimizzando il ritardo totale")
-        .def_static("resolve_single_track_conflicts", 
-                   &ConflictResolver::resolve_single_track_conflicts,
-                   "Risolve conflitti su binari singoli")
-        .def_static("find_alternative_track", &ConflictResolver::find_alternative_track,
-                   py::arg("train"), py::arg("current_track_id"), py::arg("tracks"), py::arg("trains"),
-                   "Trova binario alternativo disponibile per cambio in stazione")
-        .def_static("is_near_station", &ConflictResolver::is_near_station,
-                   py::arg("train"), py::arg("track"), py::arg("max_distance_km") = 5.0,
-                   "Verifica se un treno è vicino a una stazione per cambio binario");
-    
-    // ========================================================================
-    // Utility Functions
-    // ========================================================================
-    
-    m.def("calculate_track_distance", &calculate_track_distance,
-          py::arg("pos1_km"), py::arg("pos2_km"),
-          "Calcola distanza tra due punti su un binario");
-    
-    m.def("minutes_to_timestamp", &minutes_to_timestamp,
-          py::arg("minutes"),
-          "Converte minuti in timestamp");
-    
-    m.def("format_timestamp", &format_timestamp,
-          py::arg("timestamp"),
-          "Formatta un timestamp per logging");
-    
-    // ========================================================================
-    // Module metadata
-    // ========================================================================
+        .def("initialize_network", &RailwayScheduler::initialize_network)
+        .def("add_train", &RailwayScheduler::add_train)
+        .def("remove_train", &RailwayScheduler::remove_train)
+        .def("update_train_state", &RailwayScheduler::update_train_state)
+        .def("step", &RailwayScheduler::step)
+        .def("detect_conflicts", &RailwayScheduler::detect_conflicts)
+        .def("are_trains_in_conflict", &RailwayScheduler::are_trains_in_conflict)
+        .def("predict_future_conflicts", &RailwayScheduler::predict_future_conflicts)
+        .def("resolve_conflicts", &RailwayScheduler::resolve_conflicts)
+        .def("apply_adjustments", &RailwayScheduler::apply_adjustments)
+        .def("optimize_network", &RailwayScheduler::optimize_network)
+        .def("load_ml_model", &RailwayScheduler::load_ml_model)
+        .def("predict_with_ml", &RailwayScheduler::predict_with_ml)
+        .def("get_network_state", &RailwayScheduler::get_network_state)
+        .def("get_train_info", &RailwayScheduler::get_train_info)
+        .def("get_statistics", &RailwayScheduler::get_statistics)
+        .def("get_event_log", &RailwayScheduler::get_event_log);
     
     m.attr("__version__") = "0.1.0";
 }

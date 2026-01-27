@@ -18,68 +18,13 @@
 #ifndef RAILWAY_API_H
 #define RAILWAY_API_H
 
+#include "railway_common.h"
 #include <string>
 #include <vector>
 #include <memory>
 #include <cstdint>
 
-// Export macros for shared library
-#ifdef _WIN32
-    #ifdef RAILWAY_API_EXPORTS
-        #define RAILWAY_API __declspec(dllexport)
-    #else
-        #define RAILWAY_API __declspec(dllimport)
-    #endif
-#else
-    #define RAILWAY_API __attribute__((visibility("default")))
-#endif
-
 namespace railway {
-
-/**
- * @brief Represents a train in the railway network
- */
-struct RAILWAY_API Train {
-    int id;                      ///< Unique train identifier
-    double position_km;          ///< Current position in kilometers
-    double velocity_kmh;         ///< Current velocity in km/h
-    int current_track;           ///< Current track ID
-    int destination_station;     ///< Destination station ID
-    double delay_minutes;        ///< Current delay in minutes
-    int priority;                ///< Priority level (1-10, higher = more important)
-    bool is_delayed;             ///< Whether train is currently delayed
-};
-
-/**
- * @brief Represents a track segment in the railway network
- */
-struct RAILWAY_API Track {
-    int id;                      ///< Unique track identifier
-    double length_km;            ///< Track length in kilometers
-    bool is_single_track;        ///< True if single-track (bidirectional conflicts)
-    int capacity;                ///< Maximum number of trains
-    std::vector<int> station_ids; ///< Stations connected by this track
-};
-
-/**
- * @brief Represents a railway station
- */
-struct RAILWAY_API Station {
-    int id;                      ///< Unique station identifier
-    std::string name;            ///< Station name
-    int num_platforms;           ///< Number of available platforms
-};
-
-/**
- * @brief Detected conflict between two trains
- */
-struct RAILWAY_API Conflict {
-    int train1_id;               ///< First train ID
-    int train2_id;               ///< Second train ID
-    int track_id;                ///< Track where conflict occurs
-    double estimated_time_min;   ///< Estimated time until conflict (minutes)
-    double severity;             ///< Conflict severity score (0.0-1.0)
-};
 
 /**
  * @brief Resolution action for a train

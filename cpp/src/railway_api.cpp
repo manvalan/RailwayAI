@@ -154,9 +154,16 @@ namespace {
         t.velocity_kmh = j.value("velocity_kmh", 0.0);
         t.scheduled_arrival_minutes = j.value("scheduled_arrival_minutes", 0.0);
         t.destination_station = j.value("destination_station", 0);
-        t.priority = j.value("priority", 0);
+        t.priority = j.value("priority", 5);
         t.is_delayed = j.value("is_delayed", false);
         t.delay_minutes = j.value("delay_minutes", 0.0);
+        
+        if (j.contains("planned_route") && j["planned_route"].is_array()) {
+            t.planned_route = j["planned_route"].get<std::vector<int>>();
+        }
+        t.route_index = j.value("route_index", 0);
+        t.position_on_track = j.value("position_on_track", 0.0);
+        
         return t;
     }
 
@@ -166,8 +173,9 @@ namespace {
             {"train1_id", c.train1_id},
             {"train2_id", c.train2_id},
             {"track_id", c.track_id},
-            {"estimated_time_min", c.estimated_collision_time_minutes},
-            {"severity", c.severity}
+            {"estimated_time_min", c.estimated_time_min},
+            {"severity", c.severity},
+            {"conflict_type", c.conflict_type}
         };
     }
 }

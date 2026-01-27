@@ -6,85 +6,19 @@
 #ifndef RAILWAY_SCHEDULER_H
 #define RAILWAY_SCHEDULER_H
 
+#include "railway_common.h"
 #include <vector>
 #include <string>
 #include <memory>
 #include <chrono>
 #include <unordered_map>
 #include <mutex>
-#include <mutex>
 
 namespace railway {
 class MLInferenceEngine;
 
-// ============================================================================
-// Data Structures
-// ============================================================================
-
 /**
- * Rappresenta un treno nella rete ferroviaria.
- */
-struct Train {
-    int id;
-    int current_track;
-    double position_km;
-    double velocity_kmh; // Positivo: direzione crescente km, Negativo: direzione decrescente km
-    double scheduled_arrival_minutes;
-    int destination_station;
-    int priority;
-    bool is_delayed;
-    double delay_minutes;
-    
-    std::vector<int> planned_route;
-    int route_index;
-    double position_on_track; // Posizione relativa al binario corrente
-    
-    // Timestamp per tracking real-time
-    std::chrono::system_clock::time_point last_update;
-    bool has_arrived;
-};
-
-/**
- * Rappresenta un binario.
- */
-struct Track {
-    int id;
-    double length_km;
-    bool is_single_track;
-    int capacity;
-    std::vector<int> station_ids;
-    
-    // Treni attualmente sul binario
-    std::vector<int> active_train_ids;
-};
-
-/**
- * Rappresenta una stazione.
- */
-struct Station {
-    int id;
-    std::string name;
-    int num_platforms;
-    std::vector<int> connected_track_ids;
-    
-    // Occupazione piattaforme
-    std::vector<bool> platform_occupied;
-};
-
-/**
- * Rappresenta un conflitto tra due treni.
- */
-struct Conflict {
-    int train1_id;
-    int train2_id;
-    int track_id;
-    double estimated_collision_time_minutes;
-    std::string conflict_type; // "head_on", "overtaking", "station_congestion"
-    int severity; // 1-10
-};
-
-/**
- * Soluzione proposta per risolvere conflitti.
+ * Soluzione propost per risolvere conflitti.
  */
 struct ScheduleAdjustment {
     int train_id;

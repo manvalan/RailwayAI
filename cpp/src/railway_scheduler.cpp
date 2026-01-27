@@ -177,7 +177,7 @@ std::vector<Conflict> RailwayScheduler::detect_conflicts() const {
                         conflict.train2_id = t2.id;
                         conflict.track_id = track_id;
                         conflict.conflict_type = "head_on";
-                        conflict.estimated_collision_time_minutes = calculate_meeting_time(t1, t2);
+                        conflict.estimated_time_min = calculate_meeting_time(t1, t2);
                         conflict.severity = 10; // Massima gravità
                         conflicts.push_back(conflict);
                     }
@@ -190,7 +190,7 @@ std::vector<Conflict> RailwayScheduler::detect_conflicts() const {
                         conflict.train2_id = t2.id;
                         conflict.track_id = track_id;
                         conflict.conflict_type = "overtaking";
-                        conflict.estimated_collision_time_minutes = 
+                        conflict.estimated_time_min = 
                             distance / ((t1.velocity_kmh + t2.velocity_kmh) / 2.0) * 60.0;
                         conflict.severity = 5;
                         conflicts.push_back(conflict);
@@ -208,7 +208,7 @@ std::vector<Conflict> RailwayScheduler::detect_conflicts() const {
                 conflict.train2_id = -1; // No specific train
                 conflict.track_id = track_id;
                 conflict.conflict_type = "capacity_exceeded";
-                conflict.estimated_collision_time_minutes = 0;
+                conflict.estimated_time_min = 0;
                 conflict.severity = 7;
                 conflicts.push_back(conflict);
             }

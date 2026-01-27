@@ -4,14 +4,14 @@
  */
 
 #include "railway_api.h"
+#include "railway_scheduler.h"
 #include <chrono>
 #include <algorithm>
 #include <numeric>
 #include <cmath>
+#include <nlohmann/json.hpp>
 
-namespace railway {
-
-#include "railway_scheduler.h"
+using json = nlohmann::json;
 
 namespace railway {
 
@@ -50,10 +50,6 @@ bool RailwaySchedulerAPI::set_network(const std::vector<Track>& tracks,
 
 std::vector<Conflict> RailwaySchedulerAPI::detect_conflicts(
     const std::vector<Train>& trains) {
-    
-    // Initialize a temporary scheduler for stateless detection if needed,
-    // or use the internal one if it already has the network.
-    // For this API, we assume the internal scheduler is pre-configured or we add trains temporarily.
     
     // Simplest way to keep it consistent with the core:
     for (const auto& t : trains) {
@@ -131,7 +127,6 @@ std::string RailwaySchedulerAPI::version() {
 }
 
 bool RailwaySchedulerAPI::is_ml_ready() const {
-    // This is a simplification; in a real scenario we'd check the core scheduler's ML state.
     return pImpl->config.use_ml_model;
 }
 
@@ -148,10 +143,6 @@ void RailwaySchedulerAPI::get_statistics(double& avg_time_ms,
             0.0) / pImpl->optimization_times.size();
     }
 }
-
-#include <nlohmann/json.hpp>
-
-using json = nlohmann::json;
 
 namespace {
     // Helper: Parse Train from JSON object
@@ -175,7 +166,7 @@ namespace {
             {"train1_id", c.train1_id},
             {"train2_id", c.train2_id},
             {"track_id", c.track_id},
-            {"estimated_time_min", c.estimated_time_min},
+            {"estimated_time_min", c.estimated_collision_time_minutes},
             {"severity", c.severity}
         };
     }
@@ -278,7 +269,5 @@ std::string RailwaySchedulerAPI::get_statistics_json() const {
     
     return response.dump();
 }
-
-} // namespace railway
 
 } // namespace railway

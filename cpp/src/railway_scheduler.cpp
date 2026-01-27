@@ -3,6 +3,7 @@
  */
 
 #include "railway_scheduler.h"
+#include "ml_inference.h"
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -89,6 +90,60 @@ void RailwayScheduler::update_train_state(int train_id,
         trains_[train_id].velocity_kmh = velocity_kmh;
         trains_[train_id].is_delayed = is_delayed;
         trains_[train_id].last_update = std::chrono::system_clock::now();
+    }
+}
+
+void RailwayScheduler::step(const std::unordered_map<int, int>& actions, double time_step_minutes) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    
+    for (auto& [train_id, train] : trains_) {
+        if (train.has_arrived) continue;
+        
+        int action = 0;
+        if (actions.count(train_id)) {
+            action = actions.at(train_id);
+        }
+        
+        // Action 0: Cruise
+        if (action == 0) {
+            double distance_step = (train.velocity_kmh / 60.0) * time_step_minutes;
+            
+            // Logica di movimento lungo la rotta
+            double remaining_dist = distance_step;
+            while (remaining_dist > 0 && train.route_index < train.planned_route.size()) {
+                int track_id = train.planned_route[train.route_index];
+                if (!tracks_.count(track_id)) break;
+                
+                const Track& track = tracks_.at(track_id);
+                double dist_to_end = track.length_km - train.position_on_track;
+                
+                if (remaining_dist < dist_to_end) {
+                    train.position_on_track += remaining_dist;
+                    remaining_dist = 0;
+                } else {
+                    remaining_dist -= dist_to_end;
+                    train.position_on_track = 0.0;
+                    train.route_index++;
+                }
+            }
+            
+            if (train.route_index >= train.planned_route.size()) {
+                train.has_arrived = true;
+                train.route_index = train.planned_route.size() - 1;
+            } else {
+                train.current_track = train.planned_route[train.route_index];
+                train.position_km = train.position_on_track; // Semplificato per compatibilità
+            }
+        }
+        // Action 1: Stop
+        else if (action == 1) {
+            train.delay_minutes += time_step_minutes;
+            train.is_delayed = true;
+        }
+        // Action 2: Deviate
+        else if (action == 2) {
+            // Placeholder: richiede ricalcolo rotta (find_alternative_route)
+        }
     }
 }
 

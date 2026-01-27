@@ -29,6 +29,10 @@ PYBIND11_MODULE(railway_cpp, m) {
         .def_readwrite("priority", &Train::priority)
         .def_readwrite("is_delayed", &Train::is_delayed)
         .def_readwrite("delay_minutes", &Train::delay_minutes)
+        .def_readwrite("planned_route", &Train::planned_route)
+        .def_readwrite("route_index", &Train::route_index)
+        .def_readwrite("position_on_track", &Train::position_on_track)
+        .def_readwrite("has_arrived", &Train::has_arrived)
         .def("__repr__", [](const Train& t) {
             return "<Train id=" + std::to_string(t.id) + 
                    " track=" + std::to_string(t.current_track) + 
@@ -135,6 +139,10 @@ PYBIND11_MODULE(railway_cpp, m) {
              py::arg("velocity_kmh"),
              py::arg("is_delayed") = false,
              "Aggiorna posizione e stato di un treno")
+        .def("step", &RailwayScheduler::step,
+             py::arg("actions"),
+             py::arg("time_step_minutes"),
+             "Avanza la simulazione di un passo temporale")
         
         // Conflict detection
         .def("detect_conflicts", &RailwayScheduler::detect_conflicts,

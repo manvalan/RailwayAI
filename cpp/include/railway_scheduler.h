@@ -12,9 +12,10 @@
 #include <chrono>
 #include <unordered_map>
 #include <mutex>
-#include "ml_inference.h"
+#include <mutex>
 
 namespace railway {
+class MLInferenceEngine;
 
 // ============================================================================
 // Data Structures
@@ -34,8 +35,13 @@ struct Train {
     bool is_delayed;
     double delay_minutes;
     
+    std::vector<int> planned_route;
+    int route_index;
+    double position_on_track; // Posizione relativa al binario corrente
+    
     // Timestamp per tracking real-time
     std::chrono::system_clock::time_point last_update;
+    bool has_arrived;
 };
 
 /**
@@ -141,6 +147,13 @@ public:
                            double velocity_kmh,
                            bool is_delayed = false);
     
+    /**
+     * Avanza la simulazione di un passo temporale.
+     * @param actions Mappa train_id -> action (0: Cruise, 1: Stop, 2: Deviate)
+     * @param time_step_minutes Durata del passo in minuti
+     */
+    void step(const std::unordered_map<int, int>& actions, double time_step_minutes);
+
     // ========================================
     // Conflict Detection
     // ========================================
@@ -240,6 +253,7 @@ private:
     
     std::unordered_map<int, Train> trains_;
     std::unordered_map<int, Track> tracks_;
+    std::unordered_map<int, Station> stations_;
     
     std::vector<std::string> event_log_;
     

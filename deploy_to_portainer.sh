@@ -16,8 +16,12 @@ NC='\033[0m' # No Color
 
 # Step 1: Verify local setup
 echo -e "${YELLOW}Step 1: Verifying local setup...${NC}"
-python3 -c "from python.scheduling.route_planner import RoutePlanner; from python.scheduling.temporal_simulator import TemporalSimulator; print('✓ Imports OK')" || {
-    echo -e "${RED}✗ Import error! Check your Python files.${NC}"
+python3 -c "import sys, os; sys.path.append('build/python'); import railway_cpp; print('✓ C++ Backend OK')" || {
+    echo -e "${RED}✗ C++ Backend not compiled! Run build first.${NC}"
+    exit 1
+}
+python3 -c "from python.marl_scheduling.env import RailwayGymEnv; print('✓ MARL Env OK')" || {
+    echo -e "${RED}✗ MARL Env error!${NC}"
     exit 1
 }
 echo -e "${GREEN}✓ Local setup verified${NC}"
@@ -33,22 +37,28 @@ read -p "Do you want to commit and push these changes? (y/n) " -n 1 -r
 echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
-    echo -e "${YELLOW}Step 3: Committing changes...${NC}"
-    git add python/scheduling/route_planner.py
-    git add python/scheduling/temporal_simulator.py
-    git add api/server.py
-    git add test_scheduled_optimization.py
-    git add ROUTE_PLANNING_GUIDE.md
-    git add PORTAINER_DEPLOYMENT.md
-    git add deploy_to_portainer.sh
+    # Core Python files
+    git add python/scheduling/*.py
+    git add python/marl_scheduling/*.py
+    git add api/*.py
     
-    git commit -m "feat: Add route planning and temporal simulation
+    # Core C++ files
+    git add cpp/include/*.h
+    git add cpp/src/*.cpp
+    git add CMakeLists.txt
+    
+    # Doc and scripts
+    git add ROUTE_PLANNING_GUIDE.md
+    git add *.md
+    git add deploy_to_portainer.sh
+    git add Dockerfile
+    
+    git commit -m "feat: Add MARL conflict resolution with C++ accelerated backend
 
-- Implemented Dijkstra's algorithm for automatic route planning
-- Added temporal simulator for future conflict detection
-- New endpoint /api/v1/optimize_scheduled for scheduled trains
-- Extended Train model with origin_station, planned_route fields
-- Support for opposite-direction trains on single tracks"
+- Implemented Multi-Agent Reinforcement Learning (MAPPO) for conflict resolution
+- Added C++ high-performance physics core with pybind11 bindings
+- Neuro-symbolic safety constraint layer to prevent collisions
+- Updated Dockerfile for C++ compilation and Torch support"
     
     echo -e "${GREEN}✓ Changes committed${NC}"
     echo ""

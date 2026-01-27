@@ -13,6 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sidebar Navigation
     document.getElementById('nav-monitoring').addEventListener('click', () => switchView('monitoring'));
     document.getElementById('nav-training').addEventListener('click', () => switchView('training'));
+    document.getElementById('nav-optimization').addEventListener('click', () => switchView('optimization'));
+    document.getElementById('nav-users').addEventListener('click', () => {
+        switchView('users');
+        fetchUsers();
+    });
     document.getElementById('nav-settings').addEventListener('click', () => switchView('settings'));
 
     document.getElementById('nav-logout').addEventListener('click', () => {
@@ -20,8 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
         location.reload();
     });
 
-    // Training Control Actions
+    // Actions
     document.getElementById('start-train-btn').addEventListener('click', startScenarioGeneration);
+    document.getElementById('optimize-btn').addEventListener('click', triggerOptimization);
+    document.getElementById('admin-add-user-btn').addEventListener('click', addUser);
 
     // Settings Actions
     document.getElementById('change-pass-btn').addEventListener('click', changePassword);
@@ -67,22 +74,36 @@ function initDashboard() {
 function switchView(view) {
     const viewMon = document.getElementById('view-monitoring');
     const viewTrain = document.getElementById('view-training');
+    const viewOpt = document.getElementById('view-optimization');
+    const viewUsers = document.getElementById('view-users');
     const viewSettings = document.getElementById('view-settings');
 
     const navMon = document.getElementById('nav-monitoring');
     const navTrain = document.getElementById('nav-training');
+    const navOpt = document.getElementById('nav-optimization');
+    const navUsers = document.getElementById('nav-users');
     const navSettings = document.getElementById('nav-settings');
 
     // Reset visibility
-    [viewMon, viewTrain, viewSettings].forEach(v => v.classList.add('hidden'));
-    [navMon, navTrain, navSettings].forEach(n => n.classList.remove('active'));
+    [viewMon, viewTrain, viewOpt, viewUsers, viewSettings].forEach(v => v.classList.add('hidden'));
+    [navMon, navTrain, navOpt, navUsers, navSettings].forEach(n => n.classList.remove('active'));
 
     if (view === 'monitoring') {
         viewMon.classList.remove('hidden');
         navMon.classList.add('active');
+        if (trainingChart) {
+            trainingChart.resize();
+            trainingChart.update();
+        }
     } else if (view === 'training') {
         viewTrain.classList.remove('hidden');
         navTrain.classList.add('active');
+    } else if (view === 'optimization') {
+        viewOpt.classList.remove('hidden');
+        navOpt.classList.add('active');
+    } else if (view === 'users') {
+        viewUsers.classList.remove('hidden');
+        navUsers.classList.add('active');
     } else if (view === 'settings') {
         viewSettings.classList.remove('hidden');
         navSettings.classList.add('active');
@@ -307,6 +328,129 @@ function updateChart(episode, reward, conflicts) {
         trainingChart.data.datasets[1].data.shift();
     }
     trainingChart.update('none');
+}
+
+async function fetchUsers() {
+    try {
+        const response = await fetch('/api/v1/admin/users', {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        if (response.ok) {
+            const users = await response.json();
+            const body = document.getElementById('user-table-body');
+            body.innerHTML = '';
+            users.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+                tr.innerHTML = `
+                    <td style="padding: 0.75rem;">${u.username}</td>
+                    <td style="padding: 0.75rem;">
+                        <span style="color: ${u.is_active ? 'var(--success)' : 'var(--accent)'};">
+                            ${u.is_active ? 'Attivo' : 'Inattivo'}
+                        </span>
+                    </td>
+                    <td style="padding: 0.75rem; text-align: right;">
+                        <button onclick="deleteUser('${u.username}')" 
+                                style="background: var(--accent); padding: 0.25rem 0.5rem; font-size: 0.8rem; ${u.username === 'admin' ? 'display:none' : ''}">
+                            Elimina
+                        </button>
+                    </td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+    } catch (err) {
+        console.error("Failed to fetch users:", err);
+    }
+}
+
+async function addUser() {
+    const user = document.getElementById('admin-new-username').value;
+    const pass = document.getElementById('admin-new-password').value;
+
+    if (!user || pass.length < 6) {
+        alert("Inserisci uno username e una password di almeno 6 caratteri.");
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/v1/admin/users', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ username: user, password: pass })
+        });
+
+        if (response.ok) {
+            document.getElementById('admin-new-username').value = '';
+            document.getElementById('admin-new-password').value = '';
+            fetchUsers();
+        } else {
+            const err = await response.json();
+            alert(`Errore: ${err.detail}`);
+        }
+    } catch (err) {
+        alert("Errore di connessione.");
+    }
+}
+
+async function deleteUser(username) {
+    if (!confirm(`Sei sicuro di voler eliminare l'utente ${username}?`)) return;
+
+    try {
+        const response = await fetch(`/api/v1/admin/users/${username}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+
+        if (response.ok) {
+            fetchUsers();
+        } else {
+            const err = await response.json();
+            alert(`Errore: ${err.detail}`);
+        }
+    } catch (err) {
+        alert("Errore di connessione.");
+    }
+}
+
+async function triggerOptimization() {
+    const path = document.getElementById('optimize-scenario-path').value;
+    const msgEl = document.getElementById('optimize-status-msg');
+
+    if (!path) {
+        alert("Inserisci il percorso dello scenario.");
+        return;
+    }
+
+    msgEl.textContent = "⚙️ Avvio ottimizzazione...";
+    msgEl.style.color = "var(--primary)";
+
+    try {
+        const response = await fetch('/api/v1/optimize', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ scenario_path: path })
+        });
+
+        if (response.ok) {
+            msgEl.textContent = "✅ Ottimizzazione completata/avviata!";
+            msgEl.style.color = "var(--success)";
+            addLog(`Ottimizzazione avviata per ${path}`, 'success');
+        } else {
+            const err = await response.json();
+            msgEl.textContent = `❌ Errore: ${err.detail}`;
+            msgEl.style.color = "var(--accent)";
+        }
+    } catch (err) {
+        msgEl.textContent = "❌ Errore di connessione.";
+        msgEl.style.color = "var(--accent)";
+    }
 }
 
 function addLog(message, level = 'info') {

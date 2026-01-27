@@ -254,15 +254,24 @@ class PasswordChangeRequest(BaseModel):
     new_password: str = Field(..., min_length=6)
 
 
-@app.post("/api/v1/register", status_code=status.HTTP_201_CREATED)
+@app.get("/api/v1/admin/users", tags=["Admin"])
+async def list_all_users(
+    current_user: str = Depends(get_current_user)
+):
+    """Admin-only: List all users."""
+    if str(current_user).lower() != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can list users")
+    return UserService.list_users()
+
+@app.post("/api/v1/admin/users", status_code=status.HTTP_201_CREATED, tags=["Admin"])
 async def register_user(
     request: UserRegistrationRequest,
     current_user: str = Depends(get_current_user)
 ):
     """
-    Registra un nuovo utente. 
+    Admin-only: Registra un nuovo utente. 
     """
-    if current_user != "admin":
+    if str(current_user).lower() != "admin":
         raise HTTPException(status_code=403, detail="Only 'admin' can register new users")
         
     if UserService.get_user(request.username):
@@ -273,6 +282,24 @@ async def register_user(
         raise HTTPException(status_code=500, detail="Failed to create user")
         
     return {"message": f"User {request.username} created successfully"}
+
+@app.delete("/api/v1/admin/users/{username}", tags=["Admin"])
+async def delete_user(
+    username: str,
+    current_user: str = Depends(get_current_user)
+):
+    """Admin-only: Delete a user."""
+    if str(current_user).lower() != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can delete users")
+    
+    if username.lower() == "admin":
+        raise HTTPException(status_code=400, detail="Cannot delete the admin user")
+        
+    success = UserService.delete_user(username)
+    if not success:
+        raise HTTPException(status_code=500, detail=f"Failed to delete user {username}")
+        
+    return {"message": f"User {username} deleted successfully"}
 
 class TimeWindow(BaseModel):
     """Time window for schedule optimization"""

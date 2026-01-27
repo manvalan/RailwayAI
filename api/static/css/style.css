@@ -125,9 +125,15 @@ header {
 
 .graph-container {
     padding: 1.5rem;
-    min-height: 300px;
+    min-height: 400px;
     display: flex;
     flex-direction: column;
+}
+
+.graph-container canvas {
+    flex: 1;
+    width: 100% !important;
+    height: 100% !important;
 }
 
 .log-container {

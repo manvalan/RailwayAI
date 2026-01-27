@@ -34,7 +34,9 @@
             <ul>
                 <li id="nav-monitoring" class="active">Monitoring</li>
                 <li id="nav-training">Training Control</li>
+                <li id="nav-optimization">Ottimizzazione</li>
                 <li id="nav-topology">Network Topology</li>
+                <li id="nav-users">User Management</li>
                 <li id="nav-settings">Security Settings</li>
                 <li id="nav-api-keys">API Keys</li>
                 <li id="nav-logout" style="margin-top: 1rem; color: var(--accent);">Logout</li>
@@ -122,6 +124,66 @@
                 </div>
 
                 <div id="training-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;"></div>
+            </div>
+
+            <!-- Optimization View -->
+            <div id="view-optimization" class="hidden">
+                <div class="glass"
+                    style="padding: 2.5rem; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
+                    <h2>Ottimizzazione Orari</h2>
+                    <p style="color: var(--text-secondary);">Avvia l'algoritmo di ottimizzazione su uno scenario
+                        esistente per ridurre i conflitti.</p>
+
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <label style="font-weight: 600;">Percorso Scenario (.json)</label>
+                        <input type="text" id="optimize-scenario-path" placeholder="es: scenarios/toscana_real.json">
+                        <button id="optimize-btn">Avvia Ottimizzazione</button>
+                    </div>
+
+                    <div id="optimize-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Management View -->
+        <div id="view-users" class="hidden">
+            <div class="glass"
+                style="padding: 2.5rem; max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
+                <h2>Gestione Utenti</h2>
+
+                <div class="glass" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                    <h3>Aggiungi Nuovo Utente</h3>
+                    <div style="display: flex; gap: 1rem; align-items: flex-end;">
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                            <label style="font-size: 0.8rem;">Username</label>
+                            <input type="text" id="admin-new-username" placeholder="Username">
+                        </div>
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                            <label style="font-size: 0.8rem;">Password</label>
+                            <input type="password" id="admin-new-password" placeholder="Password">
+                        </div>
+                        <button id="admin-add-user-btn" style="height: 42px;">Aggiungi</button>
+                    </div>
+                </div>
+
+                <div class="glass" style="padding: 1.5rem;">
+                    <h3>Lista Utenti</h3>
+                    <div id="user-list-container" style="margin-top: 1rem;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--glass-border);">
+                                    <th style="padding: 0.5rem;">Username</th>
+                                    <th style="padding: 0.5rem;">Stato</th>
+                                    <th style="padding: 0.5rem; text-align: right;">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-table-body">
+                                <!-- Popolato via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
 

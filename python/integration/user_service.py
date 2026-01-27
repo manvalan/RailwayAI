@@ -98,3 +98,18 @@ class UserService:
             WHERE ak.key = ? AND ak.is_active = 1 AND u.is_active = 1
         """
         return db.fetch_one(query, (api_key,))
+
+    @staticmethod
+    def list_users() -> list:
+        """Restituisce la lista di tutti gli utenti."""
+        return db.fetch_all("SELECT username, is_active FROM users")
+
+    @staticmethod
+    def delete_user(username: str) -> bool:
+        """Rimuove un utente dal sistema."""
+        try:
+            db.execute("DELETE FROM users WHERE username = ?", (username,))
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete user {username}: {e}")
+            return False

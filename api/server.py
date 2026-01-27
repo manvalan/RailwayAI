@@ -244,6 +244,11 @@ class TrainingRequest(BaseModel):
     episodes: int = 100
     lr: float = 1e-3
 
+class ScenarioGenerationRequest(BaseModel):
+    """Request to generate a real-world scenario from OSM"""
+    area: str = Field(..., description="OSM Area name (e.g. 'Lombardia', 'Berlin')")
+    output_filename: Optional[str] = Field(None, description="Output filename (optional)")
+
 
 @app.post("/api/v1/register", status_code=status.HTTP_201_CREATED)
 async def register_user(
@@ -491,6 +496,60 @@ async def get_model_info():
         num_trains=model_config['num_trains'],
         loaded_at=metrics['model_loaded_at']
     )
+
+@app.post("/api/v1/scenario/generate", tags=["Scenarios"])
+async def generate_scenario(
+    request: ScenarioGenerationRequest,
+    background_tasks: BackgroundTasks,
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Generate a real-world railway scenario from OpenStreetMap data.
+    """
+    if current_user != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can generate scenarios")
+        
+    output_name = request.output_filename or f"{request.area.lower().replace(' ', '_')}_{int(time.time())}.json"
+    if not output_name.endswith(".json"):
+        output_name += ".json"
+        
+    output_path = f"scenarios/{output_name}"
+    os.makedirs("scenarios", exist_ok=True)
+    
+    async def run_generation():
+        logger.info(f"Generating scenario for {request.area} -> {output_path}")
+        await manager.broadcast({"type": "log", "message": f"Generazione scenario per {request.area}...", "level": "info"})
+        
+        cmd = [
+            sys.executable, 
+            "scripts/fetch_osm_rail.py",
+            "--area", request.area,
+            "--output", output_path
+        ]
+        
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        stdout, stderr = await process.communicate()
+        if process.returncode == 0:
+            logger.info(f"Scenario generated successfully: {output_path}")
+            await manager.broadcast({
+                "type": "log", 
+                "message": f"Scenario '{request.area}' generato con successo: {output_name}", 
+                "level": "success",
+                "scenario_path": output_path
+            })
+        else:
+            err_msg = stderr.decode()
+            logger.error(f"Scenario generation failed: {err_msg}")
+            await manager.broadcast({"type": "log", "message": f"Errore generazione: {err_msg}", "level": "error"})
+
+    background_tasks.add_task(run_generation)
+    return {"message": "Scenario generation started in background", "area": request.area, "expected_output": output_path}
+
 
 @app.post("/api/v1/train", tags=["Training"])
 async def trigger_training(

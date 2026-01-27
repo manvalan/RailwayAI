@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +8,11 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
     <!-- Authentication Overlay -->
     <div id="auth-overlay">
@@ -19,7 +22,8 @@
             <input type="text" id="username" placeholder="Username" value="admin">
             <input type="password" id="password" placeholder="Password">
             <button id="login-btn">Accedi al Sistema</button>
-            <p id="auth-error" style="color: var(--accent); font-size: 0.8rem; text-align: center; display: none;">Credenziali errate</p>
+            <p id="auth-error" style="color: var(--accent); font-size: 0.8rem; text-align: center; display: none;">
+                Credenziali errate</p>
         </div>
     </div>
 
@@ -28,11 +32,11 @@
         <div class="logo">RAILWAY AI</div>
         <nav>
             <ul>
-                <li class="active">Monitoring</li>
-                <li>Training Control</li>
-                <li>Network Topology</li>
-                <li>Security Logs</li>
-                <li>API Keys</li>
+                <li id="nav-monitoring" class="active">Monitoring</li>
+                <li id="nav-training">Training Control</li>
+                <li id="nav-topology">Network Topology</li>
+                <li id="nav-security">Security Logs</li>
+                <li id="nav-api-keys">API Keys</li>
             </ul>
         </nav>
         <div style="margin-top: auto; font-size: 0.8rem; color: var(--text-secondary);">
@@ -49,41 +53,79 @@
             </div>
         </header>
 
-        <!-- Stats Overview -->
-        <div class="stats-grid">
-            <div class="stat-card glass">
-                <h3>Treni Attivi</h3>
-                <div class="value" id="train-count">--</div>
+        <!-- Monitoring View -->
+        <div id="view-monitoring">
+            <!-- Stats Overview -->
+            <div class="stats-grid">
+                <div class="stat-card glass">
+                    <h3>Treni Attivi</h3>
+                    <div class="value" id="train-count">--</div>
+                </div>
+                <div class="stat-card glass">
+                    <h3>Conflitti Rilevati</h3>
+                    <div class="value" id="conflict-count" style="color: var(--accent);">--</div>
+                </div>
+                <div class="stat-card glass">
+                    <h3>Efficienza Rete</h3>
+                    <div class="value" id="efficiency">--%</div>
+                </div>
+                <div class="stat-card glass">
+                    <h3>Backend Core</h3>
+                    <div class="value" id="core-status" style="color: var(--primary);">C++ Opt</div>
+                </div>
             </div>
-            <div class="stat-card glass">
-                <h3>Conflitti Rilevati</h3>
-                <div class="value" id="conflict-count" style="color: var(--accent);">--</div>
-            </div>
-            <div class="stat-card glass">
-                <h3>Efficienza Rete</h3>
-                <div class="value" id="efficiency">--%</div>
-            </div>
-            <div class="stat-card glass">
-                <h3>Backend Core</h3>
-                <div class="value" id="core-status" style="color: var(--primary);">C++ Opt</div>
+
+            <!-- Training Monitor -->
+            <div class="monitor-grid" style="margin-top: 2rem;">
+                <div class="graph-container glass">
+                    <h3>Training Progress (Reward / Conflicts)</h3>
+                    <canvas id="training-chart"></canvas>
+                </div>
+                <div class="log-container glass">
+                    <h3>Live Execution Logs</h3>
+                    <div id="event-logs">
+                        <div class="log-entry">In attesa di connessione WebSocket...</div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Training Monitor -->
-        <div class="monitor-grid">
-            <div class="graph-container glass">
-                <h3>Training Progress (Reward / Conflicts)</h3>
-                <canvas id="training-chart"></canvas>
-            </div>
-            <div class="log-container glass">
-                <h3>Live Execution Logs</h3>
-                <div id="event-logs">
-                    <div class="log-entry">In attesa di connessione WebSocket...</div>
+        <!-- Training Control View -->
+        <div id="view-training" class="hidden">
+            <div class="glass"
+                style="padding: 2.5rem; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
+                <h2>Configurazione Addestramento</h2>
+                <p style="color: var(--text-secondary);">Genera uno scenario reale da OpenStreetMap e avvia il training
+                    MARL.</p>
+
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <label style="font-weight: 600;">Regione / Area OSM</label>
+                    <input type="text" id="train-area" placeholder="Es: Lombardia, Toscana, Berlin, Paris"
+                        value="Lombardia">
                 </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <label style="font-weight: 600;">Episodi</label>
+                        <input type="number" id="train-episodes" value="500" min="10" max="5000">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <label style="font-weight: 600;">Learning Rate</label>
+                        <input type="text" id="train-lr" value="0.001">
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                    <button id="start-train-btn" style="flex: 2;">Genera scenario e Avvia Training</button>
+                    <button id="stop-train-btn" style="flex: 1; background: var(--accent);">Stop Training</button>
+                </div>
+
+                <div id="training-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;"></div>
             </div>
         </div>
     </main>
 
     <script src="js/dashboard.js"></script>
 </body>
+
 </html>

@@ -1,5 +1,6 @@
 let accessToken = localStorage.getItem('access_token');
 let trainingChart = null;
+let currentScenarioPath = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     if (accessToken) {
@@ -8,6 +9,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('login-btn').addEventListener('click', login);
+
+    // Sidebar Navigation
+    document.getElementById('nav-monitoring').addEventListener('click', () => switchView('monitoring'));
+    document.getElementById('nav-training').addEventListener('click', () => switchView('training'));
+
+    // Training Control Actions
+    document.getElementById('start-train-btn').addEventListener('click', startScenarioGeneration);
 });
 
 async function login() {
@@ -44,6 +52,97 @@ function initDashboard() {
     initChart();
     connectWebSocket();
     fetchStats();
+}
+
+function switchView(view) {
+    const viewMon = document.getElementById('view-monitoring');
+    const viewTrain = document.getElementById('view-training');
+    const navMon = document.getElementById('nav-monitoring');
+    const navTrain = document.getElementById('nav-training');
+
+    if (view === 'monitoring') {
+        viewMon.classList.remove('hidden');
+        viewTrain.classList.add('hidden');
+        navMon.classList.add('active');
+        navTrain.classList.remove('active');
+    } else {
+        viewMon.classList.add('hidden');
+        viewTrain.classList.remove('hidden');
+        navMon.classList.remove('active');
+        navTrain.classList.add('active');
+    }
+}
+
+async function startScenarioGeneration() {
+    const area = document.getElementById('train-area').value;
+    const msgEl = document.getElementById('training-status-msg');
+
+    if (!area) {
+        alert("Inserisci un'area o regione!");
+        return;
+    }
+
+    msgEl.textContent = "⚙️ Inizializzazione generazione scenario...";
+    msgEl.style.color = "var(--primary)";
+
+    try {
+        const response = await fetch('/api/v1/scenario/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ area: area })
+        });
+
+        if (response.ok) {
+            addLog(`Richiesta generazione inviata per l'area: ${area}`, 'info');
+        } else {
+            const error = await response.json();
+            addLog(`Errore generazione: ${error.detail}`, 'error');
+            msgEl.textContent = "❌ Errore durante l'invio della richiesta.";
+            msgEl.style.color = "var(--accent)";
+        }
+    } catch (err) {
+        addLog(`Errore di rete: ${err}`, 'error');
+    }
+}
+
+async function triggerMarlTraining(scenarioPath) {
+    const episodes = document.getElementById('train-episodes').value;
+    const lr = document.getElementById('train-lr').value;
+    const msgEl = document.getElementById('training-status-msg');
+
+    msgEl.textContent = "🚀 Avvio addestramento MARL...";
+    msgEl.style.color = "var(--success)";
+
+    try {
+        const response = await fetch('/api/v1/train', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({
+                scenario_path: scenarioPath,
+                episodes: parseInt(episodes),
+                lr: parseFloat(lr)
+            })
+        });
+
+        if (response.ok) {
+            addLog(`Addestramento avviato su: ${scenarioPath}`, 'success');
+            // Switch back to monitoring to see the progress
+            setTimeout(() => switchView('monitoring'), 2000);
+        } else {
+            const error = await response.json();
+            addLog(`Errore avvio training: ${error.detail}`, 'error');
+            msgEl.textContent = "❌ Errore avvio training.";
+            msgEl.style.color = "var(--accent)";
+        }
+    } catch (err) {
+        addLog(`Errore di rete: ${err}`, 'error');
+    }
 }
 
 function initChart() {
@@ -105,6 +204,11 @@ function handleWsMessage(data) {
         if (data.efficiency !== undefined) document.getElementById('efficiency').textContent = (data.efficiency || 0).toFixed(1) + '%';
     } else if (data.type === 'log') {
         addLog(data.message, data.level);
+
+        // Se lo scenario è stato generato con successo, avvia il training automaticamente
+        if (data.level === 'success' && data.scenario_path) {
+            triggerMarlTraining(data.scenario_path);
+        }
     }
 }
 
@@ -124,6 +228,7 @@ function updateChart(episode, reward, conflicts) {
 
 function addLog(message, level = 'info') {
     const container = document.getElementById('event-logs');
+    if (!container) return;
     const entry = document.createElement('div');
     entry.className = `log-entry ${level}`;
     const now = new Date().toLocaleTimeString();
@@ -138,7 +243,6 @@ async function fetchStats() {
         });
         if (res.ok) {
             const data = await res.json();
-            // Stat update could be done here if needed
         }
     } catch (err) { }
 }

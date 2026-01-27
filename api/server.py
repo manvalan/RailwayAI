@@ -58,6 +58,7 @@ async def lifespan(app: FastAPI):
     except ImportError:
         logger.warning("! Railway C++ backend not found. Performance will be limited.")
     
+    bootstrap_admin()
     load_model()
     poller_task = asyncio.create_task(event_poller())
     yield
@@ -407,6 +408,23 @@ class ModelInfo(BaseModel):
     num_trains: int
     loaded_at: Optional[str]
 
+
+def bootstrap_admin():
+    """Crea l'utente admin se il database è vuoto."""
+    try:
+        users = UserService.list_users()
+        if not users:
+            logger.info("Database is empty. Creating default 'admin' user...")
+            UserService.create_user("admin", "admin")
+            logger.info("Default user 'admin' created with password 'admin'.")
+        else:
+            # Verifica se 'admin' esiste comunque
+            admin = UserService.get_user("admin")
+            if not admin:
+                logger.info("Admin user not found. Bootstrapping admin account...")
+                UserService.create_user("admin", "admin")
+    except Exception as e:
+        logger.error(f"Error during admin bootstrap: {e}")
 
 # ============================================================================
 # Model Management

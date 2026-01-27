@@ -1,9 +1,11 @@
 # Usa un'immagine Python ufficiale e leggera
 FROM python:3.11-slim
 
-# Installa le dipendenze di sistema minime
+# Installa le dipendenze di sistema (Python + C++ tools)
 RUN apt-get update && apt-get install -y \
     build-essential \
+    cmake \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Imposta la cartella di lavoro
@@ -16,10 +18,15 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copia tutto il resto del progetto
+# Copia tutto il progetto
 COPY . .
 
-# Espone la porta usata da FastAPI
+# Compila il core C++
+RUN mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    make -j$(nproc)
+
+# Espone la porta usata da FastAPI (porta interna del container)
 EXPOSE 8002
 
 # Comando per avviare il server

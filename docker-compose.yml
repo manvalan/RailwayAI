@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  railway-api:
+  railway-ai:
     build: .
     container_name: railway-ai
     ports:
@@ -12,10 +12,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PYTHONPATH=/app
     volumes:
-      # Montiamo solo la cartella principale, senza alias complicati
       - /opt/docker-projects/railway-ai:/app
-    # Questo comando entra in /app prima di lanciare tutto
-    command: sh -c "cd /app && pip install -r requirements.txt && python api/server.py"
     working_dir: /app
     restart: always
 

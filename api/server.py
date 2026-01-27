@@ -50,6 +50,14 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Startup logic
     logger.info("Starting Railway AI Scheduler API v2.0.0...")
+    
+    # Check C++ Backend
+    try:
+        import railway_cpp
+        logger.info(f"✓ Railway C++ backend loaded (v{railway_cpp.__version__})")
+    except ImportError:
+        logger.warning("! Railway C++ backend not found. Performance will be limited.")
+    
     load_model()
     poller_task = asyncio.create_task(event_poller())
     yield

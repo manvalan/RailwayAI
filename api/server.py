@@ -229,6 +229,13 @@ class OptimizationRequest(BaseModel):
     ga_max_iterations: Optional[int] = Field(200, ge=10, le=1000, description="Max GA iterations")
     ga_population_size: Optional[int] = Field(80, ge=10, le=500, description="GA population size")
 
+class TrainingRequest(BaseModel):
+    """Request to trigger MARL training"""
+    scenario_path: Optional[str] = None
+    raw_scenario: Optional[Dict[str, Any]] = None
+    episodes: int = 100
+    lr: float = 1e-3
+
 
 @app.post("/api/v1/register", status_code=status.HTTP_201_CREATED)
 async def register_user(
@@ -468,17 +475,103 @@ async def get_metrics():
 @app.get("/api/v1/model/info", response_model=ModelInfo, tags=["Model"])
 async def get_model_info():
     """Get model information"""
-    if model is None:
-        raise HTTPException(status_code=503, detail="Model not loaded")
-    
     return ModelInfo(
-        architecture="LSTM + Attention",
+        architecture="LSTM + Attention / MARL Universal",
         parameters=sum(p.numel() for p in model.parameters()),
         input_dim=model_config['input_dim'],
         hidden_dim=model_config['hidden_dim'],
         num_trains=model_config['num_trains'],
         loaded_at=metrics['model_loaded_at']
     )
+
+@app.post("/api/v1/train", tags=["Training"])
+async def trigger_training(
+    request: TrainingRequest,
+    background_tasks: BackgroundTasks,
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Trigger MARL training on a scenario.
+    The training runs in the background.
+    """
+    if current_user != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can trigger training")
+        
+    # Logic to trigger train_mappo.py (as subprocess or imported function)
+    import subprocess
+    
+    # Save raw scenario if provided
+    tmp_path = None
+    if request.raw_scenario:
+        import json
+        tmp_path = f"tmp_scenario_{int(time.time())}.json"
+        with open(tmp_path, 'w') as f:
+            json.dump(request.raw_scenario, f)
+        scenario_to_use = tmp_path
+    else:
+        scenario_to_use = request.scenario_path
+        
+    if not scenario_to_use:
+        raise HTTPException(status_code=400, detail="Must provide scenario_path or raw_scenario")
+
+    async def run_training():
+        logger.info(f"Starting background training on {scenario_to_use}")
+        await manager.broadcast({"type": "log", "message": f"Avvio addestramento su {scenario_to_use}...", "level": "info"})
+        
+        cmd = [
+            sys.executable, 
+            "python/marl_scheduling/train_mappo.py",
+            "--scenario", scenario_to_use,
+            "--episodes", str(request.episodes),
+            "--lr", str(request.lr),
+            "--out_dir", "api/models/checkpoints_marl"
+        ]
+        
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        # Parse stdout in real-time
+        while True:
+            line = await process.stdout.readline()
+            if not line: break
+            text = line.decode().strip()
+            
+            # Pattern: Episode 10: Reward = 123.45, Conflicts = 2
+            if "Episode" in text and "Reward =" in text:
+                try:
+                    parts = text.split(":")
+                    ep = int(parts[1].split()[1])
+                    reward = float(text.split("Reward =")[1].split(",")[0])
+                    conflicts = int(text.split("Conflicts =")[1])
+                    
+                    await manager.broadcast({
+                        "type": "training_update",
+                        "episode": ep,
+                        "reward": reward,
+                        "conflicts": conflicts
+                    })
+                except Exception:
+                    await manager.broadcast({"type": "log", "message": text, "level": "info"})
+            else:
+                await manager.broadcast({"type": "log", "message": text, "level": "info"})
+
+        stdout, stderr = await process.communicate()
+        if process.returncode == 0:
+            logger.info(f"Training completed successfully for {scenario_to_use}")
+            await manager.broadcast({"type": "log", "message": "Addestramento completato con successo.", "level": "success"})
+        else:
+            err_msg = stderr.decode()
+            logger.error(f"Training failed: {err_msg}")
+            await manager.broadcast({"type": "log", "message": f"Errore addestramento: {err_msg}", "level": "error"})
+        
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+    background_tasks.add_task(run_training)
+    return {"message": "Training started in background", "scenario": scenario_to_use}
 
 
 @app.post("/api/v1/optimize", response_model=OptimizationResponse, tags=["Optimization"])

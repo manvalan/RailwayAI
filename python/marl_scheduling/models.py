@@ -6,9 +6,8 @@ from typing import Dict, List, Tuple
 
 class ActorNetwork(nn.Module):
     """
-    Actor network for deciding actions (Cruise, Stop, Deviate).
-    Input: Individual agent observation + local graph context.
-    Output: Probabilities over discrete actions.
+    Shared Actor network for any agent.
+    Input: Individual agent observation (fixed dim).
     """
     def __init__(self, obs_dim: int, num_actions: int = 3):
         super(ActorNetwork, self).__init__()
@@ -23,20 +22,26 @@ class ActorNetwork(nn.Module):
 
 class CriticNetwork(nn.Module):
     """
-    Critic network for estimating state value (Centralized Training).
-    Input: Global state (all agents' observations concatenated).
-    Output: Scalar value estimate.
+    Scenario-agnostic Critic using Mean-Field/Global-Pooling.
+    Handles variable number of agents.
     """
-    def __init__(self, global_obs_dim: int):
+    def __init__(self, obs_dim: int):
         super(CriticNetwork, self).__init__()
-        self.fc1 = nn.Linear(global_obs_dim, 256)
+        self.fc1 = nn.Linear(obs_dim, 256)
         self.fc2 = nn.Linear(256, 128)
         self.fc3 = nn.Linear(128, 1)
         
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)
+    def forward(self, all_obs: torch.Tensor):
+        """
+        all_obs: (NumAgents, ObsDim)
+        """
+        # Embed each agent
+        h = F.relu(self.fc1(all_obs))
+        h = F.relu(self.fc2(h))
+        
+        # Mean Pooling to get scenario embedding
+        out = torch.mean(h, dim=0, keepdim=True)
+        return self.fc3(out)
 
 class GraphConvolutionLayer(nn.Module):
     """

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Railway AI | Governance Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Authentication Overlay -->
+    <div id="auth-overlay">
+        <div class="auth-card glass">
+            <div class="logo">RAILWAY AI</div>
+            <h2 style="text-align: center;">Governance Login</h2>
+            <input type="text" id="username" placeholder="Username" value="admin">
+            <input type="password" id="password" placeholder="Password">
+            <button id="login-btn">Accedi al Sistema</button>
+            <p id="auth-error" style="color: var(--accent); font-size: 0.8rem; text-align: center; display: none;">Credenziali errate</p>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">RAILWAY AI</div>
+        <nav>
+            <ul>
+                <li class="active">Monitoring</li>
+                <li>Training Control</li>
+                <li>Network Topology</li>
+                <li>Security Logs</li>
+                <li>API Keys</li>
+            </ul>
+        </nav>
+        <div style="margin-top: auto; font-size: 0.8rem; color: var(--text-secondary);">
+            v2.0.0-MARL-CORE
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header>
+            <h1>Dashboard Operativa</h1>
+            <div id="status-badge" class="glass" style="padding: 0.5rem 1rem; color: var(--success); font-weight: 600;">
+                ● SISTEMA ATTIVO
+            </div>
+        </header>
+
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card glass">
+                <h3>Treni Attivi</h3>
+                <div class="value" id="train-count">--</div>
+            </div>
+            <div class="stat-card glass">
+                <h3>Conflitti Rilevati</h3>
+                <div class="value" id="conflict-count" style="color: var(--accent);">--</div>
+            </div>
+            <div class="stat-card glass">
+                <h3>Efficienza Rete</h3>
+                <div class="value" id="efficiency">--%</div>
+            </div>
+            <div class="stat-card glass">
+                <h3>Backend Core</h3>
+                <div class="value" id="core-status" style="color: var(--primary);">C++ Opt</div>
+            </div>
+        </div>
+
+        <!-- Training Monitor -->
+        <div class="monitor-grid">
+            <div class="graph-container glass">
+                <h3>Training Progress (Reward / Conflicts)</h3>
+                <canvas id="training-chart"></canvas>
+            </div>
+            <div class="log-container glass">
+                <h3>Live Execution Logs</h3>
+                <div id="event-logs">
+                    <div class="log-entry">In attesa di connessione WebSocket...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

@@ -28,22 +28,19 @@ def train_mappo(args):
     
     agent_ids = env.agent_ids
     obs_dim = 8  # 1 (pos) + 1 (track) + 1 (vel) + 5 (neighbors)
-    global_obs_dim = obs_dim * len(agent_ids)
     
-    # Policy Setup
-    actors = {aid: ActorNetwork(obs_dim) for aid in agent_ids}
-    critic = CriticNetwork(global_obs_dim)
+    # Universal Policy (Shared Weights)
+    actor = ActorNetwork(obs_dim)
+    critic = CriticNetwork(obs_dim)
     
     # Load checkpoint if exists
     if args.checkpoint and os.path.exists(args.checkpoint):
         logger.info(f"Loading checkpoint from {args.checkpoint}")
         ckpt = torch.load(args.checkpoint)
         critic.load_state_dict(ckpt['critic'])
-        for aid in agent_ids:
-            if aid in ckpt['actors']:
-                actors[aid].load_state_dict(ckpt['actors'][aid])
+        actor.load_state_dict(ckpt['actor'])
     
-    actor_opts = {aid: optim.Adam(actors[aid].parameters(), lr=args.lr) for aid in agent_ids}
+    actor_opt = optim.Adam(actor.parameters(), lr=args.lr)
     critic_opt = optim.Adam(critic.parameters(), lr=args.lr)
     
     safety_layer = SafetyConstraintLayer(env.raw_tracks)
@@ -57,15 +54,22 @@ def train_mappo(args):
         
         while not done:
             actions = {}
+            all_o_tensors = []
+            
             for aid in agent_ids:
                 o = obs[aid]
                 o_vec = np.concatenate([o['position'], [o['current_track']], o['velocity'], o['neighbor_occupancy']])
                 o_tensor = torch.FloatTensor(o_vec).unsqueeze(0)
+                all_o_tensors.append(o_tensor)
                 
-                probs = actors[aid](o_tensor)
+                probs = actor(o_tensor)
                 dist = torch.distributions.Categorical(probs)
                 action = dist.sample()
                 actions[aid] = action.item()
+            
+            # Critic processing (Mean Field)
+            batch_obs = torch.cat(all_o_tensors, dim=0)
+            value = critic(batch_obs)
             
             # Constraint Layer (Safety)
             safe_actions = safety_layer.apply_constraints(actions, {"trains": env.trains})
@@ -83,10 +87,10 @@ def train_mappo(args):
             
         # Checkpoint
         if episode > 0 and episode % args.save_interval == 0:
-            ckpt_path = os.path.join(args.out_dir, f"mappo_ep{episode}.pth")
+            ckpt_path = os.path.join(args.out_dir, f"mappo_universal_ep{episode}.pth")
             torch.save({
                 'critic': critic.state_dict(),
-                'actors': {aid: actors[aid].state_dict() for aid in agent_ids},
+                'actor': actor.state_dict(),
                 'episode': episode
             }, ckpt_path)
             logger.info(f"Saved checkpoint: {ckpt_path}")

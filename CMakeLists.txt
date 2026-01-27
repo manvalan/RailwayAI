@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Ensure all targets are compiled with -fPIC (needed for Python bindings)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Compiler flags
 if(MSVC)
     add_compile_options(/W4)
@@ -151,74 +154,3 @@ install(DIRECTORY cpp/include/
     DESTINATION include
     FILES_MATCHING PATTERN "*.h"
 )
-
-# Install API documentation
-install(FILES API_REFERENCE.md
-    DESTINATION share/doc/railwayai
-)
-
-# ============================================================================
-# Testing (Optional)
-# ============================================================================
-
-option(BUILD_TESTS "Build test suite" OFF)
-if(BUILD_TESTS)
-    enable_testing()
-    
-    # Find Google Test
-    find_package(GTest REQUIRED)
-    
-    add_executable(test_scheduler
-        tests/test_scheduler.cpp
-    )
-    
-    target_link_libraries(test_scheduler
-        railway_scheduler_core
-        GTest::gtest_main
-    )
-    
-    add_test(NAME SchedulerTests COMMAND test_scheduler)
-endif()
-
-# ============================================================================
-# Documentation
-# ============================================================================
-
-option(BUILD_DOCS "Build documentation with Doxygen" OFF)
-if(BUILD_DOCS)
-    find_package(Doxygen)
-    if(DOXYGEN_FOUND)
-        set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
-        set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
-        
-        configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
-        
-        add_custom_target(docs ALL
-            COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            COMMENT "Generating API documentation with Doxygen"
-            VERBATIM
-        )
-    endif()
-endif()
-
-# ============================================================================
-# Print Configuration Summary
-# ============================================================================
-
-message(STATUS "")
-message(STATUS "==================== Configuration Summary ====================")
-message(STATUS "Project: ${PROJECT_NAME} v${PROJECT_VERSION}")
-message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
-message(STATUS "Python: ${Python_VERSION} (${Python_EXECUTABLE})")
-message(STATUS "pybind11: ${pybind11_VERSION}")
-if(USE_LIBTORCH)
-    message(STATUS "LibTorch: Enabled")
-else()
-    message(STATUS "LibTorch: Disabled (set USE_LIBTORCH=ON to enable)")
-endif()
-message(STATUS "Build Tests: ${BUILD_TESTS}")
-message(STATUS "Build Docs: ${BUILD_DOCS}")
-message(STATUS "===============================================================")
-message(STATUS "")

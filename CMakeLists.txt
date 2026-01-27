@@ -37,6 +37,14 @@ execute_process(
 )
 find_package(pybind11 CONFIG REQUIRED PATHS ${pybind11_DIR})
 
+# Find nlohmann_json (header-only)
+include(FetchContent)
+FetchContent_Declare(
+    json
+    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+)
+FetchContent_MakeAvailable(json)
+
 # Optional: LibTorch for ML model inference
 option(USE_LIBTORCH "Enable LibTorch support for ML inference" OFF)
 if(USE_LIBTORCH)
@@ -64,6 +72,7 @@ if(USE_LIBTORCH)
         ${TORCH_LIBRARIES}
     )
 endif()
+target_link_libraries(railway_scheduler_core PUBLIC nlohmann_json::nlohmann_json)
 
 # ============================================================================
 # Shared Library: Railway AI API (for external C++ applications)
@@ -93,6 +102,7 @@ set_target_properties(railwayai PROPERTIES
 if(USE_LIBTORCH)
     target_link_libraries(railwayai PUBLIC ${TORCH_LIBRARIES})
 endif()
+target_link_libraries(railwayai PUBLIC nlohmann_json::nlohmann_json)
 
 # ============================================================================
 # Python Module: railway_cpp

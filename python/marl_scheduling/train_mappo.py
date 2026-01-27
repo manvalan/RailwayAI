@@ -82,7 +82,7 @@ def train_mappo(args):
             obs = next_obs
             if truncated: done = True
                 
-        if episode % 10 == 0:
+        if episode % 1 == 0:  # Log every episode for smoother real-time dashboard updates
             logger.info(f"Episode {episode}: Reward = {episode_reward:.2f}, Conflicts = {info.get('conflicts', 0)}")
             
         # Checkpoint

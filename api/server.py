@@ -623,7 +623,7 @@ async def trigger_training(
         await manager.broadcast({"type": "log", "message": f"Avvio addestramento su {scenario_to_use}...", "level": "info"})
         
         cmd = [
-            sys.executable, 
+            sys.executable, "-u",
             "python/marl_scheduling/train_mappo.py",
             "--scenario", scenario_to_use,
             "--episodes", str(request.episodes),
@@ -631,25 +631,31 @@ async def trigger_training(
             "--out_dir", "api/models/checkpoints_marl"
         ]
         
+        logger.info(f"Executing command: {' '.join(cmd)}")
+        
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.STDOUT  # Merge stderr into stdout for easier parsing
         )
         
-        # Parse stdout in real-time
+        import re
+        train_pattern = re.compile(r"Episode\s+(\d+):\s+Reward\s+=\s+([\d\.\-]+),\s+Conflicts\s+=\s+(\d+)")
+        
+        # Parse output in real-time
         while True:
             line = await process.stdout.readline()
             if not line: break
             text = line.decode().strip()
+            if not text: continue
             
             # Pattern: Episode 10: Reward = 123.45, Conflicts = 2
-            if "Episode" in text and "Reward =" in text:
+            match = train_pattern.search(text)
+            if match:
                 try:
-                    parts = text.split(":")
-                    ep = int(parts[1].split()[1])
-                    reward = float(text.split("Reward =")[1].split(",")[0])
-                    conflicts = int(text.split("Conflicts =")[1])
+                    ep = int(match.group(1))
+                    reward = float(match.group(2))
+                    conflicts = int(match.group(3))
                     
                     await manager.broadcast({
                         "type": "training_update",
@@ -657,19 +663,19 @@ async def trigger_training(
                         "reward": reward,
                         "conflicts": conflicts
                     })
-                except Exception:
+                except Exception as e:
+                    logger.error(f"Error parsing training update: {e}")
                     await manager.broadcast({"type": "log", "message": text, "level": "info"})
             else:
                 await manager.broadcast({"type": "log", "message": text, "level": "info"})
 
-        stdout, stderr = await process.communicate()
+        await process.wait()
         if process.returncode == 0:
             logger.info(f"Training completed successfully for {scenario_to_use}")
             await manager.broadcast({"type": "log", "message": "Addestramento completato con successo.", "level": "success"})
         else:
-            err_msg = stderr.decode()
-            logger.error(f"Training failed: {err_msg}")
-            await manager.broadcast({"type": "log", "message": f"Errore addestramento: {err_msg}", "level": "error"})
+            logger.error(f"Training failed with return code {process.returncode}")
+            await manager.broadcast({"type": "log", "message": f"Errore addestramento (codice {process.returncode}). Controlla i log per i dettagli.", "level": "error"})
         
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)

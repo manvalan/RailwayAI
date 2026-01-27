@@ -5,6 +5,7 @@ import logging
 import math
 import random
 import os
+import sys
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -167,5 +168,11 @@ if __name__ == "__main__":
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
     
     data = fetch_railway_data(args.area)
-    if data:
+    if data and data.get('elements'):
         process_to_scenario(data, args.output)
+        if not os.path.exists(args.output):
+            logger.error("Failed to create output file.")
+            sys.exit(1)
+    else:
+        logger.error(f"No railway data found for area: {args.area}")
+        sys.exit(1)

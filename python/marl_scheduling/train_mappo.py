@@ -23,6 +23,8 @@ def train_mappo(args):
     MAPPO training with scenario scaling and checkpointing.
     """
     # Load Scenario
+    scenario_abs_path = os.path.abspath(args.scenario)
+    logger.info(f"Attempting to load scenario from: {scenario_abs_path}")
     scenario = ScenarioLoader.load_scenario(args.scenario)
     env = RailwayGymEnv(scenario['tracks'], scenario['stations'], scenario['trains'])
     

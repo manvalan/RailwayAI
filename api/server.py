@@ -520,8 +520,8 @@ async def generate_scenario(
     if not output_name.endswith(".json"):
         output_name += ".json"
         
-    output_path = f"scenarios/{output_name}"
-    os.makedirs("scenarios", exist_ok=True)
+    output_path = os.path.abspath(f"scenarios/{output_name}")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     async def run_generation():
         logger.info(f"Generating scenario for {request.area} -> {output_path}")
@@ -541,7 +541,7 @@ async def generate_scenario(
         )
         
         stdout, stderr = await process.communicate()
-        if process.returncode == 0:
+        if process.returncode == 0 and os.path.exists(output_path):
             logger.info(f"Scenario generated successfully: {output_path}")
             await manager.broadcast({
                 "type": "log", 
@@ -550,7 +550,10 @@ async def generate_scenario(
                 "scenario_path": output_path
             })
         else:
-            err_msg = stderr.decode()
+            err_msg = stderr.decode() if stderr else "Empty stderr"
+            if process.returncode == 0:
+                err_msg = "Il processo è terminato con successo ma il file di output non è stato creato."
+            
             logger.error(f"Scenario generation failed: {err_msg}")
             await manager.broadcast({"type": "log", "message": f"Errore generazione: {err_msg}", "level": "error"})
 

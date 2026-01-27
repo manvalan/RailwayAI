@@ -52,6 +52,20 @@ class UserService:
             return False
 
     @staticmethod
+    def update_password(username: str, new_password: str) -> bool:
+        """Aggiorna la password di un utente."""
+        hashed = UserService.get_password_hash(new_password)
+        try:
+            db.execute(
+                "UPDATE users SET hashed_password = ? WHERE username = ?",
+                (hashed, username)
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update password for {username}: {e}")
+            return False
+
+    @staticmethod
     def get_user(username: str) -> Optional[Dict[str, Any]]:
         """Retrieve user by username."""
         return db.fetch_one("SELECT * FROM users WHERE username = ?", (username,))

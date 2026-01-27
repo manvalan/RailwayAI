@@ -249,6 +249,10 @@ class ScenarioGenerationRequest(BaseModel):
     area: str = Field(..., description="OSM Area name (e.g. 'Lombardia', 'Berlin')")
     output_filename: Optional[str] = Field(None, description="Output filename (optional)")
 
+class PasswordChangeRequest(BaseModel):
+    """Request to change current user's password"""
+    new_password: str = Field(..., min_length=6)
+
 
 @app.post("/api/v1/register", status_code=status.HTTP_201_CREATED)
 async def register_user(
@@ -554,7 +558,36 @@ async def generate_scenario(
     return {"message": "Scenario generation started in background", "area": request.area, "expected_output": output_path}
 
 
-@app.post("/api/v1/train", tags=["Training"])
+@app.post("/api/v1/user/change-password", tags=["User"])
+async def change_password(
+    request: PasswordChangeRequest,
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Change the password for the currently logged-in user.
+    """
+    success = UserService.update_password(current_user, request.new_password)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update password")
+        
+    return {"message": "Password updated successfully"}
+
+@app.post("/api/v1/admin/reactivate", tags=["Admin"])
+async def reactivate_user(
+    username: str,
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Admin-only: Reactivate any user account.
+    """
+    if str(current_user).lower() != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can reactivate users")
+        
+    success = UserService.set_user_status(username, True)
+    if not success:
+        raise HTTPException(status_code=500, detail=f"Failed to reactivate user {username}")
+        
+    return {"message": f"User {username} reactivated successfully"}
 async def trigger_training(
     request: TrainingRequest,
     background_tasks: BackgroundTasks,

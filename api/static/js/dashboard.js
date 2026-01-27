@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sidebar Navigation
     document.getElementById('nav-monitoring').addEventListener('click', () => switchView('monitoring'));
     document.getElementById('nav-training').addEventListener('click', () => switchView('training'));
+    document.getElementById('nav-settings').addEventListener('click', () => switchView('settings'));
 
     document.getElementById('nav-logout').addEventListener('click', () => {
         localStorage.removeItem('access_token');
@@ -21,6 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Training Control Actions
     document.getElementById('start-train-btn').addEventListener('click', startScenarioGeneration);
+
+    // Settings Actions
+    document.getElementById('change-pass-btn').addEventListener('click', changePassword);
+    document.getElementById('reactivate-btn').addEventListener('click', reactivateAccount);
 });
 
 async function login() {
@@ -62,19 +67,91 @@ function initDashboard() {
 function switchView(view) {
     const viewMon = document.getElementById('view-monitoring');
     const viewTrain = document.getElementById('view-training');
+    const viewSettings = document.getElementById('view-settings');
+
     const navMon = document.getElementById('nav-monitoring');
     const navTrain = document.getElementById('nav-training');
+    const navSettings = document.getElementById('nav-settings');
+
+    // Reset visibility
+    [viewMon, viewTrain, viewSettings].forEach(v => v.classList.add('hidden'));
+    [navMon, navTrain, navSettings].forEach(n => n.classList.remove('active'));
 
     if (view === 'monitoring') {
         viewMon.classList.remove('hidden');
-        viewTrain.classList.add('hidden');
         navMon.classList.add('active');
-        navTrain.classList.remove('active');
-    } else {
-        viewMon.classList.add('hidden');
+    } else if (view === 'training') {
         viewTrain.classList.remove('hidden');
-        navMon.classList.remove('active');
         navTrain.classList.add('active');
+    } else if (view === 'settings') {
+        viewSettings.classList.remove('hidden');
+        navSettings.classList.add('active');
+    }
+}
+
+async function changePassword() {
+    const newPass = document.getElementById('new-password').value;
+    const msgEl = document.getElementById('settings-status-msg');
+
+    if (newPass.length < 6) {
+        alert("La password deve essere di almeno 6 caratteri.");
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/v1/user/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ new_password: newPass })
+        });
+
+        if (response.ok) {
+            msgEl.textContent = "✅ Password aggiornata con successo!";
+            msgEl.style.color = "var(--success)";
+            document.getElementById('new-password').value = "";
+        } else {
+            const error = await response.json();
+            msgEl.textContent = `❌ Errore: ${error.detail}`;
+            msgEl.style.color = "var(--accent)";
+        }
+    } catch (err) {
+        msgEl.textContent = "❌ Errore di connessione.";
+        msgEl.style.color = "var(--accent)";
+    }
+}
+
+async function reactivateAccount() {
+    const username = document.getElementById('reactivate-username').value;
+    const msgEl = document.getElementById('settings-status-msg');
+
+    if (!username) {
+        alert("Inserisci lo username da riattivare.");
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/v1/admin/reactivate?username=${encodeURIComponent(username)}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        if (response.ok) {
+            msgEl.textContent = `✅ Utente ${username} riattivato!`;
+            msgEl.style.color = "var(--success)";
+            document.getElementById('reactivate-username').value = "";
+        } else {
+            const error = await response.json();
+            msgEl.textContent = `❌ Errore: ${error.detail}`;
+            msgEl.style.color = "var(--accent)";
+        }
+    } catch (err) {
+        msgEl.textContent = "❌ Errore di connessione.";
+        msgEl.style.color = "var(--accent)";
     }
 }
 

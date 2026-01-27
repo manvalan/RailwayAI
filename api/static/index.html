@@ -35,7 +35,7 @@
                 <li id="nav-monitoring" class="active">Monitoring</li>
                 <li id="nav-training">Training Control</li>
                 <li id="nav-topology">Network Topology</li>
-                <li id="nav-security">Security Logs</li>
+                <li id="nav-settings">Security Settings</li>
                 <li id="nav-api-keys">API Keys</li>
                 <li id="nav-logout" style="margin-top: 1rem; color: var(--accent);">Logout</li>
             </ul>
@@ -122,6 +122,31 @@
                 </div>
 
                 <div id="training-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;"></div>
+            </div>
+        </div>
+
+        <!-- Settings View -->
+        <div id="view-settings" class="hidden">
+            <div class="glass"
+                style="padding: 2.5rem; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
+                <h2>Impostazioni Sicurezza</h2>
+                <p style="color: var(--text-secondary);">Gestisci il tuo profilo e le credenziali di accesso.</p>
+
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <label style="font-weight: 600;">Cambia Password</label>
+                    <input type="password" id="new-password" placeholder="Nuova Password (min 6 caratteri)">
+                    <button id="change-pass-btn">Aggiorna Password</button>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--glass-border);">
+
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <label style="font-weight: 600;">Reattività Account (Admin Only)</label>
+                    <input type="text" id="reactivate-username" placeholder="Username da riattivare">
+                    <button id="reactivate-btn" style="background: var(--success);">Riattiva Utente</button>
+                </div>
+
+                <div id="settings-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;"></div>
             </div>
         </div>
     </main>

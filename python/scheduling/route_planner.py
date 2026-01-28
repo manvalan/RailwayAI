@@ -37,19 +37,23 @@ class RouteGraph:
             Dict mapping station_id -> [(neighbor_station_id, track_id, distance_km), ...]
         """
         graph = defaultdict(list)
+        # Add normal track connections
         for track in tracks:
             if len(track['station_ids']) != 2:
-                logger.warning(f"Track {track['id']} has {len(track['station_ids'])} stations, expected 2")
                 continue
             
             s1, s2 = track['station_ids']
             length = track['length_km']
             track_id = track['id']
             
-            # Bidirectional edges (trains can travel both directions)
             graph[s1].append((s2, track_id, length))
             graph[s2].append((s1, track_id, length))
         
+        # Note: parent_hub_id is kept in station data for identification purposes
+        # (visualization, priority in conflict resolution, emergency routing)
+        # but we do NOT create automatic virtual edges between hub stations
+        # to keep AV and Regional networks physically separated.
+                    
         return dict(graph)
     
     def find_route(self, origin: int, destination: int) -> Optional[List[int]]:
@@ -130,10 +134,14 @@ class RouteGraph:
         for i in range(len(path_stations) - 1):
             s1, s2 = path_stations[i], path_stations[i + 1]
             if (s1, s2) not in track_used:
+                # Might be a virtual Hub edge if not found in tracks but valid in graph
+                # But Dijkstra should have recorded it in 'track_used'
                 logger.error(f"Track not found between stations {s1} and {s2}")
                 return None
+            
             track_id = track_used[(s1, s2)]
-            track_path.append(track_id)
+            if track_id != -1: # exclude virtual transfer tracks from the physical track path
+                track_path.append(track_id)
         
         logger.info(f"Route found from {origin} to {destination}: {len(track_path)} tracks, "
                    f"{distances[destination]:.1f} km")

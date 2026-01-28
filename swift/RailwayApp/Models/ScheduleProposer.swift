@@ -25,11 +25,12 @@ public struct ProposedLine: Codable, Identifiable {
     public let id: String
     public let originId: Int
     public let destinationId: Int
+    public let stops: [Int] // Added intermediate stations
     public let frequency: String
     public let firstDepartureMinute: Int
     
     enum CodingKeys: String, CodingKey {
-        case id, frequency
+        case id, frequency, stops
         case originId = "origin"
         case destinationId = "destination"
         case firstDepartureMinute = "first_departure_minute"
@@ -42,9 +43,10 @@ public struct SchedulePreviewItem: Codable, Identifiable {
     public let departure: String
     public let originId: Int
     public let destinationId: Int
+    public let stops: [Int] // Added for full detail in preview
     
     enum CodingKeys: String, CodingKey {
-        case line, departure
+        case line, departure, stops
         case originId = "origin"
         case destinationId = "destination"
     }

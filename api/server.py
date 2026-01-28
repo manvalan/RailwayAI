@@ -238,6 +238,7 @@ class Station(BaseModel):
     id: int
     name: str
     num_platforms: int
+    parent_hub_id: Optional[int] = Field(None, description="ID of the parent hub for interchange linkage")
 
 
 class OptimizationRequest(BaseModel):

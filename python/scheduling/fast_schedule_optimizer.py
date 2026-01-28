@@ -29,15 +29,20 @@ class FastScheduleOptimizer:
         self.station_map = {s['id']: FastStation(s['id'], []) for s in stations}
         self.tracks = tracks
         
-        # Build adjacency list
+        # Build adjacency list from tracks
         for track in tracks:
-            # Handle list of station IDs in track
             s_ids = track['station_ids']
             if len(s_ids) >= 2:
                 u, v = s_ids[0], s_ids[1]
                 if u in self.station_map and v in self.station_map:
                     self.station_map[u].neighbors.append(v)
                     self.station_map[v].neighbors.append(u)
+        
+        # Note: parent_hub_id is stored in station metadata for:
+        # - Identifying HUB stations (for visualization and priority)
+        # - Emergency routing scenarios
+        # But we do NOT create automatic neighbors between hub stations
+        # to keep network types (AV, Regional) physically separated.
 
     def generate_plan(self, 
                      target_trains_count: int = 5, 
@@ -126,32 +131,70 @@ class FastScheduleOptimizer:
             pop.append(ind)
         return pop
 
+    def _get_full_path(self, start: int, end: int) -> List[int]:
+        """Simple BFS to find the actual path between two stations. Returns [] if no path."""
+        if start == end: return [start]
+        queue = [(start, [start])]
+        visited = {start}
+        while queue:
+            node, path = queue.pop(0)
+            if node == end: return path
+            for neighbor in self.station_map[node].neighbors:
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append((neighbor, path + [neighbor]))
+        return []
+
     def _fitness(self, individual: List[FastTrainSpec]) -> float:
         """
-        Fitness function optimized for speed.
-        Rewards: Coverage of tracks, regular cadence.
-        Penalties: Overlapping offsets at hubs (congestion proxy).
+        Fitness function with Full Path Interchange Awareness.
         """
         score = 0.0
         covered_stations = set()
+        stations_served_by_line = [] # List of sets
         
-        # Cadence diversity reward
-        cadences = [t.cadence_minutes for t in individual]
-        if 60 in cadences: score += 10
-        if 30 in cadences: score += 5
+        # Identify hubs
+        hubs = {sid for sid, node in self.station_map.items() if len(node.neighbors) > 2}
         
         for spec in individual:
-            # Simple path existence check (BFS is too slow for fitness loop? 
-            # Actually BFS on small graph is fine, let's just assume path exists for now)
-            # Reward distinct O/D pairs
-            if spec.origin != spec.destination:
-                score += 5
+            path = self._get_full_path(spec.origin, spec.destination)
             
-            covered_stations.add(spec.origin)
-            covered_stations.add(spec.destination)
+            if not path:
+                score -= 100 # Heavy penalty for impossible routes
+                continue
+                
+            dist = len(path) - 1
+            if dist == 0:
+                score -= 20
+                continue
+
+            # Valid route reward - reward complexity and length
+            score += 30 + (dist * 3)
             
-        # Coverage reward
-        score += len(covered_stations) * 0.5
+            # Coverage using the FULL PATH
+            path_set = set(path)
+            covered_stations.update(path_set)
+            stations_served_by_line.append(path_set)
+            
+            # Hub traversal reward: lines that pass through hubs are more valuable
+            hubs_traversed = path_set.intersection(hubs)
+            score += len(hubs_traversed) * 15
+
+        # --- Interchange Reward (Full Path) ---
+        station_service_count = {}
+        for line_path_set in stations_served_by_line:
+            for sid in line_path_set:
+                station_service_count[sid] = station_service_count.get(sid, 0) + 1
+        
+        for sid, count in station_service_count.items():
+            if count > 1:
+                # Multiple lines pass through this station
+                is_hub = sid in hubs
+                multiplier = 25 if is_hub else 10 # High reward for hub interchanges
+                score += (count - 1) * multiplier
+        
+        # Global coverage reward
+        score += len(covered_stations) * 5.0
         
         return score
 
@@ -185,10 +228,15 @@ class FastScheduleOptimizer:
         # Generate proposed lines
         for i, spec in enumerate(solution):
             line_id = f"L{i+1}"
+            
+            # Get the full path including intermediate stations
+            full_path = self._get_full_path(spec.origin, spec.destination)
+            
             result["proposed_lines"].append({
                 "id": line_id,
                 "origin": spec.origin,
                 "destination": spec.destination,
+                "stops": full_path, # Added intermediate stations
                 "frequency": f"Every {spec.cadence_minutes} min",
                 "first_departure_minute": spec.start_offset
             })
@@ -203,7 +251,8 @@ class FastScheduleOptimizer:
                     "line": line_id,
                     "departure": time_str,
                     "origin": spec.origin,
-                    "destination": spec.destination
+                    "destination": spec.destination,
+                    "stops": full_path # Also helpful in preview
                 })
                 current_min += spec.cadence_minutes
                 

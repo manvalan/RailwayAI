@@ -9,10 +9,12 @@ public struct Station: Codable, Identifiable {
     public let numPlatforms: Int
     public let lat: Double?
     public let lon: Double?
+    public let parentHubId: Int?
     
     enum CodingKeys: String, CodingKey {
         case id, name, lat, lon
         case numPlatforms = "num_platforms"
+        case parentHubId = "parent_hub_id"
     }
 }
 

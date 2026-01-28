@@ -35,6 +35,7 @@ from python.scheduling.route_planner import RoutePlanner
 from python.scheduling.temporal_simulator import TemporalSimulator
 from python.scheduling.network_analyzer import NetworkAnalyzer
 from python.scheduling.schedule_optimizer import ScheduleOptimizer
+from python.scheduling.fast_schedule_optimizer import FastScheduleOptimizer # New import
 from contextlib import asynccontextmanager
 from python.scheduling.conflict_resolver import ConflictResolver
 
@@ -263,6 +264,12 @@ class ScenarioGenerationRequest(BaseModel):
 class PasswordChangeRequest(BaseModel):
     """Request to change current user's password"""
     new_password: str = Field(..., min_length=6)
+
+class ScheduleProposalRequest(BaseModel):
+    """Request network analysis for line proposal"""
+    stations: List[Station]
+    tracks: List[Track]
+    target_lines: int = Field(5, ge=1, le=20)
 
 
 @app.get("/api/v1/admin/users", tags=["Admin"])
@@ -1145,6 +1152,44 @@ async def suggest_schedule(
 # ============================================================================
 # Run Server
 # ============================================================================
+
+@app.post("/api/v1/propose_schedule", tags=["Planning"])
+async def propose_schedule(
+    request: ScheduleProposalRequest,
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Lightning-fast Genetic Algorithm analysis (< 0.5s).
+    Analyzes the network topology and suggests:
+    - Logical Origin-Destination pairs (Lines)
+    - Optimal Hourly Cadence (e.g. every 30 or 60 mins)
+    """
+    try:
+        # Convert Pydantic models to dicts for the optimizer
+        stations_data = [s.dict() for s in request.stations]
+        tracks_data = [t.dict() for t in request.tracks]
+        
+        optimizer = FastScheduleOptimizer(stations_data, tracks_data)
+        
+        # Run fast GA analysis
+        result = optimizer.generate_plan(
+            target_trains_count=request.target_lines,
+            population_size=40,
+            max_generations=50
+        )
+        
+        return {
+            "success": True,
+            "proposal": result,
+            "meta": {
+                "algorithm": "FastGeneticAlgorithm",
+                "execution_speed": "Real-time"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Schedule proposal failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

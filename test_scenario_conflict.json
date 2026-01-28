@@ -1,0 +1,49 @@
+{
+    "stations": [
+        {
+            "id": 10,
+            "name": "ByWater Pool",
+            "num_platforms": 4
+        },
+        {
+            "id": 11,
+            "name": "Bywater",
+            "num_platforms": 4
+        }
+    ],
+    "tracks": [
+        {
+            "id": 12,
+            "length_km": 3,
+            "is_single_track": true,
+            "capacity": 1,
+            "station_ids": [
+                10,
+                11
+            ]
+        }
+    ],
+    "trains": [
+        {
+            "id": 0,
+            "position_km": 0.5,
+            "velocity_kmh": 80,
+            "current_track": 12,
+            "destination_station": 11,
+            "delay_minutes": 0,
+            "priority": 5,
+            "is_delayed": false
+        },
+        {
+            "id": 1,
+            "position_km": 2.5,
+            "velocity_kmh": -80,
+            "current_track": 12,
+            "destination_station": 10,
+            "priority": 5,
+            "is_delayed": false,
+            "delay_minutes": 0
+        }
+    ],
+    "max_iterations": 100
+}

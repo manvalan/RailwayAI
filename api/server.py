@@ -107,16 +107,28 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 async def event_poller():
-    """Trasmette aggiornamenti periodici ai client WebSocket"""
+    """Trasmette aggiornamenti periodici ai client WebSocket con statistiche reali"""
     while True:
         try:
+            # Calcoliamo alcune statistiche di base dai metrics globali
+            # In un sistema reale, questi verrebbero letti da un engine di simulazione attivo
+            train_count = metrics.get('last_train_count', 0)
+            conflicts = metrics.get('last_conflicts_detected', 0)
+            
+            # Efficienza basata sul rapporto tra richieste correette e totali (esempio)
+            total = metrics['total_requests']
+            efficiency = (metrics['successful_optimizations'] / total * 100) if total > 0 else 100.0
+
             await manager.broadcast({
                 "type": "state_update",
                 "timestamp": datetime.now().isoformat(),
-                "status": "active"
+                "status": "active",
+                "train_count": train_count,
+                "conflicts": conflicts,
+                "efficiency": efficiency
             })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in event_poller: {e}")
         await asyncio.sleep(5)
 
 # Note: on_event is deprecated. Using lifespan instead.
@@ -867,6 +879,10 @@ async def optimize_schedule(
         
         logger.info(f"Optimization completed: {num_trains} trains, "
                    f"{len(resolutions)} resolutions, {inference_time:.2f}ms")
+        
+        # Update global metrics for real-time monitoring
+        metrics['last_train_count'] = num_trains
+        metrics['last_conflicts_detected'] = conflicts_detected
         
         return OptimizationResponse(
             success=True,

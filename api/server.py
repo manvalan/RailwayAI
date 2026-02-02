@@ -258,6 +258,45 @@ async def get_key_status(api_key: str = Depends(api_key_header)):
     return info
 
 # ============================================================================
+# Core Domain Models (Moved up for dependency resolution)
+# ============================================================================
+
+class Train(BaseModel):
+    """Train state"""
+    id: int = Field(..., description="Unique train identifier")
+    position_km: float = Field(..., description="Current position in km")
+    velocity_kmh: float = Field(..., description="Current velocity in km/h")
+    current_track: int = Field(..., description="Current track ID")
+    destination_station: int = Field(..., description="Destination station ID")
+    delay_minutes: float = Field(0.0, description="Current delay in minutes")
+    priority: int = Field(5, ge=1, le=10, description="Priority level (1-10)")
+    is_delayed: bool = Field(False, description="Whether train is delayed")
+    
+    # New fields for route planning
+    origin_station: Optional[int] = Field(None, description="Origin station ID")
+    scheduled_departure_time: Optional[str] = Field(None, description="Scheduled departure time (HH:MM:SS)")
+    planned_route: Optional[List[int]] = Field(None, description="Planned sequence of track IDs")
+    current_route_index: int = Field(0, description="Current position in planned route")
+
+
+class Track(BaseModel):
+    """Track segment"""
+    id: int
+    length_km: float
+    is_single_track: bool
+    capacity: int
+    station_ids: List[int]
+
+
+class Station(BaseModel):
+    """Railway station"""
+    id: int
+    name: str
+    num_platforms: int
+    parent_hub_id: Optional[int] = Field(None, description="ID of the parent hub for interchange linkage")
+
+
+# ============================================================================
 # Request/Response Models
 # ============================================================================
 
@@ -337,43 +376,8 @@ metrics = {
 }
 
 
+
 # ============================================================================
-# Request/Response Models
-# ============================================================================
-
-class Train(BaseModel):
-    """Train state"""
-    id: int = Field(..., description="Unique train identifier")
-    position_km: float = Field(..., description="Current position in km")
-    velocity_kmh: float = Field(..., description="Current velocity in km/h")
-    current_track: int = Field(..., description="Current track ID")
-    destination_station: int = Field(..., description="Destination station ID")
-    delay_minutes: float = Field(0.0, description="Current delay in minutes")
-    priority: int = Field(5, ge=1, le=10, description="Priority level (1-10)")
-    is_delayed: bool = Field(False, description="Whether train is delayed")
-    
-    # New fields for route planning
-    origin_station: Optional[int] = Field(None, description="Origin station ID")
-    scheduled_departure_time: Optional[str] = Field(None, description="Scheduled departure time (HH:MM:SS)")
-    planned_route: Optional[List[int]] = Field(None, description="Planned sequence of track IDs")
-    current_route_index: int = Field(0, description="Current position in planned route")
-
-
-class Track(BaseModel):
-    """Track segment"""
-    id: int
-    length_km: float
-    is_single_track: bool
-    capacity: int
-    station_ids: List[int]
-
-
-class Station(BaseModel):
-    """Railway station"""
-    id: int
-    name: str
-    num_platforms: int
-    parent_hub_id: Optional[int] = Field(None, description="ID of the parent hub for interchange linkage")
 
 
 class OptimizationRequest(BaseModel):

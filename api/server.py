@@ -257,6 +257,7 @@ async def register_confirm(request: CodeVerificationRequest):
     return {"message": "User registered successfully", "username": username}
 
 # ==================== Authentication ====================
+@app.post("/token")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     user = UserService.get_user(form_data.username)
     if user and UserService.verify_password(form_data.password, user['hashed_password']):

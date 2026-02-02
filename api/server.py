@@ -294,6 +294,25 @@ class SMTPTestRequest(BaseModel):
     """Request to test SMTP settings"""
     email: str
 
+class LineAnalysisRequest(BaseModel):
+    """Request to analyze a specific railway line axis"""
+    tracks: List[Track] = Field(..., description="Ordered list of tracks representing the line")
+    stations: List[Station] = Field(..., description="Stations along the line")
+    avg_speed_kmh: float = Field(100.0, description="Average expected speed of trains")
+    min_dwell_time_min: float = Field(2.0, description="Minimum stop time at each intermediate station")
+
+class LineAnalysisResponse(BaseModel):
+    """Result of line capacity and timing analysis"""
+    success: bool
+    travel_time_min: float
+    min_headway_min: float
+    optimal_headway_min: float
+    optimal_offset_min: float
+    reliability_index: float
+    bottleneck_track_id: Optional[int]
+    crossing_points_count: int
+    recommendation: str
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -1346,6 +1365,88 @@ async def suggest_schedule(
 
 
 
+
+
+@app.post("/api/v1/analyze_line", response_model=LineAnalysisResponse, tags=["Planning"])
+async def analyze_line(request: LineAnalysisRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Analizza una singola linea (asse A-B) per determinare cadenzamento e sfasamento ottimale.
+    """
+    try:
+        total_time = 0
+        max_section_time = 0
+        bottleneck_id = None
+        single_track_count = 0
+        
+        # 1. Calcolo tempi di percorrenza e colli di bottiglia
+        for track in request.tracks:
+            # Tempo percorrenza sezione: (dist / speed) * 60
+            section_time = (track.length_km / request.avg_speed_kmh) * 60
+            total_time += section_time
+            
+            # Un collo di bottiglia è definito dalla sezione più lunga a binario unico
+            if track.capacity == 1:
+                single_track_count += 1
+                if section_time > max_section_time:
+                    max_section_time = section_time
+                    bottleneck_id = track.id
+        
+        # Aggiungiamo i tempi di sosta (dwell) per le stazioni intermedie
+        dwell_contribution = (len(request.tracks) - 1) * request.min_dwell_time_min
+        total_time += dwell_contribution
+        
+        # --- CALCOLO RISULTATI ---
+        
+        # A) Tempo minimo (Saturazione): dettato dalla sezione a binario unico più lunga
+        # In binario unico, un treno deve liberare la sezione prima che l'altro entri.
+        min_headway = max_section_time * 2.1 # 10% safety margin
+        if min_headway < 10: min_headway = 10 
+        
+        # B) Tempo ottimale: permette traffico eterogeneo e recupero ritardi
+        optimal_headway = min_headway * 1.5
+        if optimal_headway <= 15: optimal_headway = 15
+        elif optimal_headway <= 30: optimal_headway = 30
+        else: optimal_headway = 60
+        
+        # C) Sfasamento (Offset) per incroci ottimali
+        optimal_offset = (total_time % optimal_headway) / 2.0
+        
+        # D) Affidabilità
+        reliability = 1.0 - (min(0.5, single_track_count * 0.05) + min(0.3, total_time / 300))
+        
+        crossing_points = int(total_time / (optimal_headway / 2.0))
+        
+        recommendation = (
+            f"Linea di {total_time:.1f} min. "
+            f"Frequenza max: un treno ogni {min_headway:.0f} min. "
+            f"Consigliato cadenzamento a {optimal_headway:.0f} min con sfasamento di {optimal_offset:.1f} min tra i due capolinea."
+        )
+
+        return LineAnalysisResponse(
+            success=True,
+            travel_time_min=total_time,
+            min_headway_min=min_headway,
+            optimal_headway_min=optimal_headway,
+            optimal_offset_min=optimal_offset,
+            reliability_index=max(0.1, reliability),
+            bottleneck_track_id=bottleneck_id,
+            crossing_points_count=crossing_points,
+            recommendation=recommendation
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in analyze_line: {e}")
+        return LineAnalysisResponse(
+            success=False,
+            travel_time_min=0,
+            min_headway_min=0,
+            optimal_headway_min=0,
+            optimal_offset_min=0,
+            reliability_index=0,
+            bottleneck_track_id=None,
+            crossing_points_count=0,
+            recommendation=f"Errore analisi: {str(e)}"
+        )
 
 
 # ============================================================================

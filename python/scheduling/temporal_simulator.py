@@ -138,9 +138,8 @@ class TemporalSimulator:
             # Check for dwell time at the station AFTER this track
             # Only if it's not the final destination
             if idx < len(planned_route) - 1:
-                # Default dwell time (e.g., 3 minutes) + adjustment from GA
-                # Increased to 3.0 to match the Swift FdC Railway Manager app
-                base_dwell = 3.0 
+                # Use dwell time provided in train or default to 3.0
+                base_dwell = train.get('base_dwell_time', 3.0) 
                 adjustment = dwell_delays[idx] if idx < len(dwell_delays) else 0.0
                 dwell_time = base_dwell + adjustment
                 
@@ -174,8 +173,9 @@ class TemporalSimulator:
     def detect_future_conflicts(self, 
                                 trains: List[Dict], 
                                 time_horizon_minutes: float = 60.0,
-                                time_step_minutes: float = 1.0,
-                                baseline_minutes: Optional[float] = None) -> List[Dict]:
+                                time_step_minutes: float = 0.5,
+                                baseline_minutes: Optional[float] = None,
+                                safety_buffer_min: float = 2.0) -> List[Dict]:
         """
         Detect conflicts over a time horizon by simulating train positions.
         
@@ -244,6 +244,9 @@ class TemporalSimulator:
                     continue
                 
                 track_id = pos['current_track']
+                
+                # Add exit time to track occupancy for headway checking
+                pos['exit_time'] = t_absolute + (safety_buffer_min if not pos.get('is_stopped_at_station') else 0)
                 
                 if track_id not in positions_by_track:
                     positions_by_track[track_id] = []

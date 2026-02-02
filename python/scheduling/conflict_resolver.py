@@ -50,7 +50,8 @@ class ConflictResolver:
         initial_conflicts = self.temporal_simulator.detect_future_conflicts(
             trains,
             time_horizon_minutes=time_horizon_minutes,
-            time_step_minutes=1.0
+            time_step_minutes=0.5,
+            safety_buffer_min=2.0
         )
         
         if not initial_conflicts:
@@ -197,8 +198,9 @@ class ConflictResolver:
             conflicts = self.temporal_simulator.detect_future_conflicts(
                 adjusted_trains,
                 time_horizon_minutes=time_horizon,
-                time_step_minutes=1.0,
-                baseline_minutes=baseline
+                time_step_minutes=0.5,
+                baseline_minutes=baseline,
+                safety_buffer_min=2.0
             )
         except Exception as e:
             logger.warning(f"Error in conflict detection: {e}")
@@ -306,9 +308,8 @@ class ConflictResolver:
         
         total_delay = sum(s['departure_delay'] + sum(s['dwell_delays']) for s in solution.values())
         
-        # Calculate actual conflicts resolved
         initial_conflicts_count = len(self.temporal_simulator.detect_future_conflicts(
-            trains, time_horizon_minutes=time_horizon, time_step_minutes=1.0, baseline_minutes=baseline))
+            trains, time_horizon_minutes=time_horizon, time_step_minutes=0.5, baseline_minutes=baseline, safety_buffer_min=2.0))
         
         # Calculate final conflicts accurately by simulating the best solution
         final_conflicts_count = initial_conflicts_count
@@ -317,7 +318,7 @@ class ConflictResolver:
             adjusted_trains = self._apply_solution_to_trains(solution, trains)
             
             final_conflicts = self.temporal_simulator.detect_future_conflicts(
-                adjusted_trains, time_horizon_minutes=time_horizon, time_step_minutes=1.0, baseline_minutes=baseline)
+                adjusted_trains, time_horizon_minutes=time_horizon, time_step_minutes=0.5, baseline_minutes=baseline, safety_buffer_min=2.0)
             final_conflicts_count = len(final_conflicts)
             
         resolved_count = max(0, initial_conflicts_count - final_conflicts_count)

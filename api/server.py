@@ -142,7 +142,60 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
-@app.post("/token")
+# ==================== Public Registration ====================
+
+@app.post("/api/v1/register/request")
+async def register_request(request: EmailRegistrationRequest):
+    """Public: Inizia la registrazione richiedendo un codice via email."""
+    # Controllo se utente o email esistono già
+    if UserService.get_user(request.username):
+        raise HTTPException(status_code=400, detail="Username already taken")
+    if UserService.get_user_by_email(request.email):
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Genera codice a 6 cifre
+    import secrets
+    code = "".join([str(secrets.randbelow(10)) for _ in range(6)])
+    
+    # Hash password per salvarla temporaneamente
+    hashed_pwd = UserService.get_password_hash(request.password)
+    
+    # Salva richiesta
+    if not UserService.store_verification_code(request.email, request.username, hashed_pwd, code):
+        raise HTTPException(status_code=500, detail="Failed to initiate registration")
+    
+    # Invia email (reale o simulata)
+    try:
+        subject = "Railway AI - Verifica Registrazione"
+        body = f"Ciao {request.username},\n\nIl tuo codice di verifica è: {code}\nScadrà tra 15 minuti."
+        await UserService.send_email(subject, request.email, body)
+    except Exception as e:
+        logger.warning(f"Failed to send real email: {e}. Check SMTP settings.")
+    
+    await manager.broadcast({
+        "type": "log", 
+        "message": f"Richiesta registrazione per {request.username}. Codice inviato a {request.email}.", 
+        "level": "info"
+    })
+    
+    return {"message": "Verification code sent to email", "email": request.email}
+
+@app.post("/api/v1/register/confirm")
+async def register_confirm(request: CodeVerificationRequest):
+    """Public: Conferma il codice e crea l'utente."""
+    username = UserService.verify_code_and_register(request.email, request.code)
+    if not username:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+    
+    await manager.broadcast({
+        "type": "log", 
+        "message": f"Nuovo utente registrato con successo: {username}.", 
+        "level": "success"
+    })
+    
+    return {"message": "User registered successfully", "username": username}
+
+# ==================== Authentication ====================
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     user = UserService.get_user(form_data.username)
     if user and UserService.verify_password(form_data.password, user['hashed_password']):
@@ -151,16 +204,20 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
                 status_code=status.HTTP_403_FORBIDDEN, 
                 detail="Account is inactive. Please contact administrator."
             )
-        access_token = create_access_token(data={"sub": form_data.username})
+        
+        # Genera una API Key valida per 60 giorni invece di un semplice JWT breve
+        key = UserService.generate_api_key(form_data.username, days=60)
+        
         await manager.broadcast({
             "type": "log", 
-            "message": f"Login effettuato: l'utente '{form_data.username}' è ora attivo.", 
+            "message": f"Login effettuato: l'utente '{form_data.username}' ha ricevuto una nuova chiave di accesso.", 
             "level": "info"
         })
         return {
-            "access_token": access_token, 
+            "access_token": key, 
             "token_type": "bearer",
-            "message": "Login effettuato con successo via database."
+            "expires_in_days": 60,
+            "message": "Login effettuato. Usa questa chiave nell'header 'X-API-Key' o come Bearer token."
         }
     await manager.broadcast({
         "type": "log", 
@@ -170,16 +227,30 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     raise HTTPException(status_code=401, detail="Incorrect username or password")
 
 @app.post("/api/v1/generate-key")
-async def release_api_key(current_user: str = Depends(get_current_user)):
-    """Rilascia una API Key permanente per l'utente autenticato salvandola nel DB."""
-    key = UserService.generate_api_key(current_user)
+async def release_api_key(current_user: dict = Depends(get_current_user)):
+    """Rilascia una API Key valida 60 giorni per l'utente autenticato."""
+    username = current_user.get("username")
+    key = UserService.generate_api_key(username, days=60)
     if not key:
         raise HTTPException(status_code=500, detail="Failed to generate API Key")
     return {
         "api_key": key,
+        "expires_in_days": 60,
         "instructions": "Includi questa chiave nell'header 'X-API-Key' per ogni richiesta futura.",
-        "notice": "Questa chiave è ora persistente nel database."
+        "notice": "Questa chiave scadrà tra 60 giorni."
     }
+
+@app.get("/api/v1/key-info")
+async def get_key_status(api_key: str = Depends(api_key_header)):
+    """Restituisce informazioni sulla chiave API utilizzata."""
+    if not api_key:
+        raise HTTPException(status_code=401, detail="X-API-Key header missing")
+        
+    info = UserService.get_key_info(api_key)
+    if not info:
+        raise HTTPException(status_code=404, detail="Key not found or invalid")
+        
+    return info
 
 # ============================================================================
 # Request/Response Models
@@ -189,6 +260,33 @@ class UserRegistrationRequest(BaseModel):
     """Request for new user registration"""
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=6)
+    privilege: Optional[str] = Field("normal", description="admin, proof, normal, guest")
+    email: Optional[str] = None
+
+class EmailRegistrationRequest(BaseModel):
+    """Initial request to register with email"""
+    username: str = Field(..., min_length=3, max_length=50)
+    email: str = Field(..., description="A valid email address")
+    password: str = Field(..., min_length=6)
+
+class CodeVerificationRequest(BaseModel):
+    """Request to verify the code sent via email"""
+    email: str
+    code: str
+
+class SMTPSettingsRequest(BaseModel):
+    """Request to update SMTP settings"""
+    host: str
+    port: int
+    username: Optional[str] = None
+    password: Optional[str] = None
+    sender_email: str
+    use_tls: bool = True
+    is_active: bool = True
+
+class SMTPTestRequest(BaseModel):
+    """Request to test SMTP settings"""
+    email: str
 
 # CORS middleware
 app.add_middleware(
@@ -287,28 +385,64 @@ class ScheduleProposalRequest(BaseModel):
 
 @app.get("/api/v1/admin/users", tags=["Admin"])
 async def list_all_users(
-    current_user: str = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Admin-only: List all users."""
-    if str(current_user).lower() != "admin":
+    if current_user.get("privilege") != "admin":
         raise HTTPException(status_code=403, detail="Only admin can list users")
     return UserService.list_users()
+
+@app.get("/api/v1/admin/smtp", tags=["Admin"])
+async def get_smtp_config(current_user: dict = Depends(get_current_user)):
+    """Admin-only: Visualizza la configurazione SMTP."""
+    if current_user.get("privilege") != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can view SMTP settings")
+    config = UserService.get_smtp_settings()
+    if not config:
+        return {"is_active": False, "host": "", "port": 587, "sender_email": ""}
+    # Non restituire la password
+    config.pop('password', None)
+    return config
+
+@app.post("/api/v1/admin/smtp", tags=["Admin"])
+async def update_smtp_config(request: SMTPSettingsRequest, current_user: dict = Depends(get_current_user)):
+    """Admin-only: Aggiorna la configurazione SMTP."""
+    if current_user.get("privilege") != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can update SMTP settings")
+    if not UserService.update_smtp_settings(request.dict()):
+        raise HTTPException(status_code=500, detail="Failed to update SMTP settings")
+    return {"message": "SMTP settings updated successfully"}
+
+@app.post("/api/v1/admin/smtp/test", tags=["Admin"])
+async def test_smtp_config(request: SMTPTestRequest, current_user: dict = Depends(get_current_user)):
+    """Admin-only: Testa la configurazione SMTP inviando una email."""
+    if current_user.get("privilege") != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can test SMTP settings")
+    try:
+        await UserService.send_email(
+            "Railway AI - Test Configurazione SMTP",
+            request.email,
+            "Se stai leggendo questa email, la configurazione SMTP del sistema Railway AI è corretta."
+        )
+        return {"message": "Test email sent successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"SMTP Test failed: {str(e)}")
 
 @app.post("/api/v1/admin/users", status_code=status.HTTP_201_CREATED, tags=["Admin"])
 async def register_user(
     request: UserRegistrationRequest,
-    current_user: str = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Admin-only: Registra un nuovo utente. 
     """
-    if str(current_user).lower() != "admin":
+    if current_user.get("privilege") != "admin":
         raise HTTPException(status_code=403, detail="Only 'admin' can register new users")
         
     if UserService.get_user(request.username):
         raise HTTPException(status_code=400, detail="Username already exists")
         
-    success = UserService.create_user(request.username, request.password)
+    success = UserService.create_user(request.username, request.password, privilege=request.privilege, email=request.email)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to create user")
     
@@ -323,10 +457,10 @@ async def register_user(
 @app.delete("/api/v1/admin/users/{username}", tags=["Admin"])
 async def delete_user(
     username: str,
-    current_user: str = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Admin-only: Delete a user."""
-    if str(current_user).lower() != "admin":
+    if current_user.get("privilege") != "admin":
         raise HTTPException(status_code=403, detail="Only admin can delete users")
     
     if username.lower() == "admin":
@@ -457,14 +591,14 @@ def bootstrap_admin():
         users = UserService.list_users()
         if not users:
             logger.info("Database is empty. Creating default 'admin' user...")
-            UserService.create_user("admin", "admin")
+            UserService.create_user("admin", "admin", privilege="admin")
             logger.info("Default user 'admin' created with password 'admin'.")
         else:
             # Verifica se 'admin' esiste comunque
             admin = UserService.get_user("admin")
             if not admin:
                 logger.info("Admin user not found. Bootstrapping admin account...")
-                UserService.create_user("admin", "admin")
+                UserService.create_user("admin", "admin", privilege="admin")
     except Exception as e:
         logger.error(f"Error during admin bootstrap: {e}")
 
@@ -597,11 +731,11 @@ async def generate_scenario(
     """
     Generate a real-world railway scenario from OpenStreetMap data.
     """
-    logger.info(f"Scenario generation requested by user: '{current_user}'")
+    logger.info(f"Scenario generation requested by user: '{current_user.get('username')}'")
     
-    if str(current_user).lower() != "admin":
-        logger.warning(f"Access denied for user '{current_user}' to generate_scenario")
-        raise HTTPException(status_code=403, detail=f"Only admin can generate scenarios (logged as: {current_user})")
+    if current_user.get("privilege") != "admin":
+        logger.warning(f"Access denied for user '{current_user.get('username')}' to generate_scenario")
+        raise HTTPException(status_code=403, detail=f"Only admin can generate scenarios")
         
     output_name = request.output_filename or f"{request.area.lower().replace(' ', '_')}_{int(time.time())}.json"
     if not output_name.endswith(".json"):
@@ -651,12 +785,13 @@ async def generate_scenario(
 @app.post("/api/v1/user/change-password", tags=["User"])
 async def change_password(
     request: PasswordChangeRequest,
-    current_user: str = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Change the password for the currently logged-in user.
     """
-    success = UserService.update_password(current_user, request.new_password)
+    username = current_user.get("username")
+    success = UserService.update_password(username, request.new_password)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update password")
         
@@ -665,12 +800,12 @@ async def change_password(
 @app.post("/api/v1/admin/reactivate", tags=["Admin"])
 async def reactivate_user(
     username: str,
-    current_user: str = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Admin-only: Reactivate any user account.
     """
-    if str(current_user).lower() != "admin":
+    if current_user.get("privilege") != "admin":
         raise HTTPException(status_code=403, detail="Only admin can reactivate users")
         
     success = UserService.set_user_status(username, True)
@@ -682,14 +817,14 @@ async def reactivate_user(
 async def trigger_training(
     request: TrainingRequest,
     background_tasks: BackgroundTasks,
-    current_user: str = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Trigger MARL training on a scenario.
     The training runs in the background.
     """
-    if str(current_user).lower() != "admin":
-        raise HTTPException(status_code=403, detail=f"Only admin can trigger training (logged as: {current_user})")
+    if current_user.get("privilege") != "admin":
+        raise HTTPException(status_code=403, detail=f"Only admin can trigger training")
         
     # Logic to trigger train_mappo.py (as subprocess or imported function)
     import subprocess
@@ -778,7 +913,7 @@ async def trigger_training(
 async def optimize_schedule(
     request: OptimizationRequest, 
     background_tasks: BackgroundTasks,
-    current_user: str = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Optimize train schedule using ML model

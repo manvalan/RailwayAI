@@ -24,6 +24,10 @@
             <button id="login-btn">Accedi al Sistema</button>
             <p id="auth-error" style="color: var(--accent); font-size: 0.8rem; text-align: center; display: none;">
                 Credenziali errate</p>
+            <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem;">
+                Non hai un account? <a href="/static/register.html"
+                    style="color: var(--primary); text-decoration: none; font-weight: 600;">Registrati ora</a>
+            </div>
         </div>
     </div>
 
@@ -37,6 +41,7 @@
                 <li id="nav-optimization">Ottimizzazione</li>
                 <li id="nav-topology">Network Topology</li>
                 <li id="nav-users">User Management</li>
+                <li id="nav-smtp">SMTP Configuration</li>
                 <li id="nav-settings">Security Settings</li>
                 <li id="nav-api-keys">API Keys</li>
                 <li id="nav-logout" style="margin-top: 1rem; color: var(--accent);">Logout</li>
@@ -143,6 +148,65 @@
                     <div id="optimize-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;">
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- SMTP Configuration View -->
+        <div id="view-smtp" class="hidden">
+            <div class="glass"
+                style="padding: 2.5rem; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
+                <h2>Configurazione SMTP</h2>
+                <p style="color: var(--text-secondary);">Configura il server per l'invio delle email di attivazione.</p>
+
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <label style="font-weight: 600;">Host SMTP</label>
+                        <input type="text" id="smtp-host" placeholder="smtp.esempio.com">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <label style="font-weight: 600;">Porta</label>
+                        <input type="number" id="smtp-port" value="587">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <label style="font-weight: 600;">Username / Email</label>
+                        <input type="text" id="smtp-user" placeholder="utente@esempio.com">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <label style="font-weight: 600;">Password</label>
+                        <input type="password" id="smtp-pass" placeholder="Password (lascia vuoto per non cambiare)">
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label style="font-weight: 600;">Email Mittente (Sender Address)</label>
+                    <input type="email" id="smtp-sender" placeholder="noreply@railway-ai.com">
+                </div>
+
+                <div style="display: flex; gap: 2rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="smtp-tls" checked style="width: auto;"> Usa TLS
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="smtp-active" style="width: auto;"> Servizio Attivo
+                    </label>
+                </div>
+
+                <div style="display: flex; gap: 1rem;">
+                    <button id="save-smtp-btn" style="flex: 2;">Salva Configurazione</button>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--glass-border);">
+
+                <h3>Test Email</h3>
+                <div style="display: flex; gap: 1rem;">
+                    <input type="email" id="smtp-test-email" placeholder="Email di destinazione" style="flex: 2;">
+                    <button id="test-smtp-btn" style="flex: 1; background: var(--success);">Invia Test</button>
+                </div>
+
+                <div id="smtp-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;"></div>
             </div>
         </div>
 

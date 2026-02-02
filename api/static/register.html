@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Railway AI | User Registration</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-dark: #0f172a;
+            --glass: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Background Animation */
+        .bg-glow {
+            position: absolute;
+            width: 40vw;
+            height: 40vw;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15), transparent 70%);
+            border-radius: 50%;
+            z-index: -1;
+            filter: blur(50px);
+            animation: move 20s infinite alternate;
+        }
+
+        @keyframes move {
+            from {
+                transform: translate(-10%, -10%);
+            }
+
+            to {
+                transform: translate(20%, 30%);
+            }
+        }
+
+        .container {
+            background: var(--glass);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 3rem;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease;
+        }
+
+        h1 {
+            font-weight: 600;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-dim);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(15, 23, 42, 0.8);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .status-msg {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .status-success {
+            background: rgba(34, 197, 94, 0.1);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, .3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+
+        .login-link a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <div class="container" id="reg-container">
+        <h1>Join Railway AI</h1>
+        <p class="subtitle" id="form-subtitle">Crea il tuo account per accedere all'ottimizzazione neurale.</p>
+
+        <!-- Step 1: Initial Info -->
+        <form id="request-form">
+            <div class="form-group">
+                <label for="username">Nome Utente</label>
+                <input type="text" id="username" placeholder="Es. marco_92" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Indirizzo Email</label>
+                <input type="email" id="email" placeholder="nome@esempio.it" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Minimo 6 caratteri" required minlength="6">
+            </div>
+            <button type="submit" id="btn-request">Invia Codice di Verifica</button>
+        </form>
+
+        <!-- Step 2: Verification -->
+        <form id="confirm-form" class="hidden">
+            <div class="form-group">
+                <label for="code">Codice di Verifica</label>
+                <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Inserisci il codice a 6 cifre
+                    inviato alla tua email.</p>
+                <input type="text" id="code" placeholder="000000" required maxlength="6"
+                    style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;">
+            </div>
+            <button type="submit" id="btn-confirm">Conferma e Registrati</button>
+            <p style="text-align: center; margin-top: 1rem; font-size: 0.8rem;">
+                <a href="#" id="restart-full" style="color: var(--text-dim);">Cambia email o ricomincia</a>
+            </p>
+        </form>
+
+        <div id="status" class="status-msg hidden"></div>
+
+        <div class="login-link">
+            Hai già un account? <a href="/static/index.html">Accedi</a>
+        </div>
+    </div>
+
+    <script>
+        const requestForm = document.getElementById('request-form');
+        const confirmForm = document.getElementById('confirm-form');
+        const btnRequest = document.getElementById('btn-request');
+        const btnConfirm = document.getElementById('btn-confirm');
+        const statusMsg = document.getElementById('status');
+        const subtitle = document.getElementById('form-subtitle');
+        const restartBtn = document.getElementById('restart-full');
+
+        let userEmail = '';
+
+        function showStatus(msg, isError = false) {
+            statusMsg.textContent = msg;
+            statusMsg.className = 'status-msg ' + (isError ? 'status-error' : 'status-success');
+            statusMsg.classList.remove('hidden');
+        }
+
+        function setSubmitting(btn, isLoading) {
+            btn.disabled = isLoading;
+            if (isLoading) {
+                btn.innerHTML = '<span class="loader"></span> Elaborazione...';
+            } else {
+                btn.innerHTML = btn.id === 'btn-request' ? 'Invia Codice di Verifica' : 'Conferma e Registrati';
+            }
+        }
+
+        requestForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            userEmail = email;
+
+            setSubmitting(btnRequest, true);
+            statusMsg.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/v1/register/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    requestForm.classList.add('hidden');
+                    confirmForm.classList.remove('hidden');
+                    subtitle.textContent = `Codice inviato a ${email}`;
+                    showStatus('Controlla la tua email per il codice di sicurezza.');
+                } else {
+                    showStatus(data.detail || 'Errore durante la richiesta', true);
+                }
+            } catch (err) {
+                showStatus('Errore di connessione al server', true);
+            } finally {
+                setSubmitting(btnRequest, false);
+            }
+        });
+
+        confirmForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('code').value;
+
+            setSubmitting(btnConfirm, true);
+            statusMsg.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/v1/register/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: userEmail, code: code })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showStatus('Registrazione completata! Verrai reindirizzato al login...');
+                    btnConfirm.disabled = true;
+                    setTimeout(() => {
+                        window.location.href = '/static/index.html';
+                    }, 2000);
+                } else {
+                    showStatus(data.detail || 'Codice errato o scaduto', true);
+                }
+            } catch (err) {
+                showStatus('Errore di connessione al server', true);
+            } finally {
+                setSubmitting(btnConfirm, false);
+            }
+        });
+
+        restartBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            confirmForm.classList.add('hidden');
+            requestForm.classList.remove('hidden');
+            subtitle.textContent = 'Crea il tuo account per accedere all\'ottimizzazione neurale.';
+            statusMsg.classList.add('hidden');
+        });
+    </script>
+</body>
+
+</html>

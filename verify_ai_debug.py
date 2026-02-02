@@ -5,8 +5,8 @@ import sys
 
 # --- CONFIGURAZIONE ---
 BASE_URL = "http://localhost:8002"  # Cambia in http://railway-ai.michelebigi.it:8080 se necessario
-USERNAME = "admin"
-PASSWORD = "admin"
+USERNAME = "test"
+PASSWORD = "test1234"
 
 def print_step(msg):
     print(f"\n[STEP] {msg}")

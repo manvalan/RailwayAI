@@ -36,13 +36,13 @@ async def get_current_user(
     
     # 1. Verifica API Key (Priorità alta per automazione)
     if api_key:
-        key_data = UserService.validate_api_key(api_key)
-        if key_data:
-            return key_data["username"]
+        user_data = UserService.validate_api_key(api_key)
+        if user_data:
+            return user_data
         
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or disabled API Key"
+            detail="Invalid, expired or disabled API Key"
         )
 
     # 2. Verifica JWT Token
@@ -52,7 +52,11 @@ async def get_current_user(
             username: str = payload.get("sub")
             if username is None:
                 raise credentials_exception
-            return username
+            
+            user = UserService.get_user(username)
+            if not user or not user.get('is_active', True):
+                raise credentials_exception
+            return user
         except JWTError:
             raise credentials_exception
             

@@ -18,6 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
         switchView('users');
         fetchUsers();
     });
+    document.getElementById('nav-smtp').addEventListener('click', () => {
+        switchView('smtp');
+        fetchSMTPConfig();
+    });
     document.getElementById('nav-settings').addEventListener('click', () => switchView('settings'));
 
     document.getElementById('nav-logout').addEventListener('click', () => {
@@ -33,6 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Settings Actions
     document.getElementById('change-pass-btn').addEventListener('click', changePassword);
     document.getElementById('reactivate-btn').addEventListener('click', reactivateAccount);
+
+    // SMTP Actions
+    document.getElementById('save-smtp-btn').addEventListener('click', saveSMTPConfig);
+    document.getElementById('test-smtp-btn').addEventListener('click', testSMTP);
 });
 
 async function login() {
@@ -82,11 +90,13 @@ function switchView(view) {
     const navTrain = document.getElementById('nav-training');
     const navOpt = document.getElementById('nav-optimization');
     const navUsers = document.getElementById('nav-users');
+    const navSMTP = document.getElementById('nav-smtp');
     const navSettings = document.getElementById('nav-settings');
 
     // Reset visibility
-    [viewMon, viewTrain, viewOpt, viewUsers, viewSettings].forEach(v => v.classList.add('hidden'));
-    [navMon, navTrain, navOpt, navUsers, navSettings].forEach(n => n.classList.remove('active'));
+    const viewSMTP = document.getElementById('view-smtp');
+    [viewMon, viewTrain, viewOpt, viewUsers, viewSMTP, viewSettings].forEach(v => v.classList.add('hidden'));
+    [navMon, navTrain, navOpt, navUsers, navSMTP, navSettings].forEach(n => n.classList.remove('active'));
 
     if (view === 'monitoring') {
         viewMon.classList.remove('hidden');
@@ -104,6 +114,9 @@ function switchView(view) {
     } else if (view === 'users') {
         viewUsers.classList.remove('hidden');
         navUsers.classList.add('active');
+    } else if (view === 'smtp') {
+        viewSMTP.classList.remove('hidden');
+        navSMTP.classList.add('active');
     } else if (view === 'settings') {
         viewSettings.classList.remove('hidden');
         navSettings.classList.add('active');
@@ -284,12 +297,21 @@ function initChart() {
 }
 
 function connectWebSocket() {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/monitoring`);
+    ws.onopen = () => {
+        const placeholder = document.getElementById('event-logs').querySelector('.log-entry');
+        if (placeholder && placeholder.textContent.includes('In attesa')) {
+            placeholder.remove();
+        }
+        addLog('Connessione WebSocket stabilita con successo.', 'success');
+    };
 
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         handleWsMessage(data);
+    };
+
+    ws.onerror = (err) => {
+        addLog('Errore di connessione WebSocket. Verifica firewall o proxy.', 'error');
     };
 
     ws.onclose = () => {
@@ -472,4 +494,98 @@ async function fetchStats() {
             const data = await res.json();
         }
     } catch (err) { }
+}
+async function fetchSMTPConfig() {
+    try {
+        const response = await fetch('/api/v1/admin/smtp', {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('smtp-host').value = data.host || '';
+            document.getElementById('smtp-port').value = data.port || 587;
+            document.getElementById('smtp-user').value = data.username || '';
+            document.getElementById('smtp-sender').value = data.sender_email || '';
+            document.getElementById('smtp-tls').checked = data.use_tls !== 0;
+            document.getElementById('smtp-active').checked = data.is_active !== 0;
+            document.getElementById('smtp-pass').value = ''; // Password non viene restituita
+        }
+    } catch (err) {
+        console.error("Failed to fetch SMTP config:", err);
+    }
+}
+
+async function saveSMTPConfig() {
+    const msgEl = document.getElementById('smtp-status-msg');
+    const config = {
+        host: document.getElementById('smtp-host').value,
+        port: parseInt(document.getElementById('smtp-port').value),
+        username: document.getElementById('smtp-user').value,
+        sender_email: document.getElementById('smtp-sender').value,
+        use_tls: document.getElementById('smtp-tls').checked,
+        is_active: document.getElementById('smtp-active').checked
+    };
+
+    const pass = document.getElementById('smtp-pass').value;
+    if (pass) config.password = pass;
+
+    msgEl.textContent = "💾 Salvataggio in corso...";
+    msgEl.style.color = "var(--primary)";
+
+    try {
+        const response = await fetch('/api/v1/admin/smtp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(config)
+        });
+
+        if (response.ok) {
+            msgEl.textContent = "✅ Configurazione salvata!";
+            msgEl.style.color = "var(--success)";
+        } else {
+            const err = await response.json();
+            msgEl.textContent = `❌ Errore: ${err.detail}`;
+            msgEl.style.color = "var(--accent)";
+        }
+    } catch (err) {
+        msgEl.textContent = "❌ Errore di connessione.";
+    }
+}
+
+async function testSMTP() {
+    const email = document.getElementById('smtp-test-email').value;
+    const msgEl = document.getElementById('smtp-status-msg');
+
+    if (!email) {
+        alert("Inserisci un'email di destinazione per il test.");
+        return;
+    }
+
+    msgEl.textContent = "📧 Invio email di test...";
+    msgEl.style.color = "var(--primary)";
+
+    try {
+        const response = await fetch('/api/v1/admin/smtp/test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ email: email })
+        });
+
+        if (response.ok) {
+            msgEl.textContent = "✅ Email di test inviata con successo! Controlla la posta.";
+            msgEl.style.color = "var(--success)";
+        } else {
+            const err = await response.json();
+            msgEl.textContent = `❌ Test fallito: ${err.detail}`;
+            msgEl.style.color = "var(--accent)";
+        }
+    } catch (err) {
+        msgEl.textContent = "❌ Errore durante il test.";
+    }
 }

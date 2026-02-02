@@ -25,13 +25,15 @@ class UserService:
         )
 
     @staticmethod
-    def create_user(username: str, password: str, privilege: str = "normal", is_active: int = 1, email: str = None) -> bool:
+    def create_user(username: str, password: str, privilege: str = "normal", is_active: int = 1, email: str = None, terms_accepted: bool = False) -> bool:
         """Create a new user with hashed password and privilege level."""
+        from datetime import datetime
         hashed = UserService.get_password_hash(password)
+        terms_at = datetime.utcnow().isoformat() if terms_accepted else None
         try:
             db.execute(
-                "INSERT INTO users (username, hashed_password, privilege, is_active, email) VALUES (?, ?, ?, ?, ?)",
-                (username, hashed, privilege, is_active, email)
+                "INSERT INTO users (username, hashed_password, privilege, is_active, email, terms_accepted_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (username, hashed, privilege, is_active, email, terms_at)
             )
             return True
         except Exception as e:
@@ -112,8 +114,8 @@ class UserService:
         # Crea l'utente
         try:
             db.execute(
-                "INSERT INTO users (username, hashed_password, email, privilege, is_active) VALUES (?, ?, ?, ?, ?)",
-                (record['username'], record['password_hash'], record['email'], 'normal', 1)
+                "INSERT INTO users (username, hashed_password, email, privilege, is_active, terms_accepted_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (record['username'], record['password_hash'], record['email'], 'normal', 1, datetime.utcnow().isoformat())
             )
             # Pulisci i codici
             db.execute("DELETE FROM verification_codes WHERE email = ?", (email,))

@@ -38,6 +38,7 @@ from python.scheduling.schedule_optimizer import ScheduleOptimizer
 from python.scheduling.fast_schedule_optimizer import FastScheduleOptimizer # New import
 from contextlib import asynccontextmanager
 from python.scheduling.conflict_resolver import ConflictResolver
+from python.integration.idle_training import idle_manager
 
 
 # Configure logging
@@ -62,6 +63,7 @@ async def lifespan(app: FastAPI):
     bootstrap_admin()
     load_model()
     poller_task = asyncio.create_task(event_poller())
+    await idle_manager.start()
     yield
     # Shutdown logic
     poller_task.cancel()
@@ -147,6 +149,9 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.post("/api/v1/register/request")
 async def register_request(request: EmailRegistrationRequest):
     """Public: Inizia la registrazione richiedendo un codice via email."""
+    if not request.accept_terms:
+        raise HTTPException(status_code=400, detail="You must accept the Terms and Privacy Policy")
+    
     # Controllo se utente o email esistono già
     if UserService.get_user(request.username):
         raise HTTPException(status_code=400, detail="Username already taken")
@@ -268,6 +273,7 @@ class EmailRegistrationRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: str = Field(..., description="A valid email address")
     password: str = Field(..., min_length=6)
+    accept_terms: bool = Field(..., description="Must accept terms and privacy policy")
 
 class CodeVerificationRequest(BaseModel):
     """Request to verify the code sent via email"""
@@ -797,6 +803,29 @@ async def change_password(
         
     return {"message": "Password updated successfully"}
 
+@app.delete("/api/v1/user/me", tags=["User"])
+async def delete_my_account(
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Apple & GDPR Compliance: Allow users to delete their own account.
+    """
+    username = current_user.get("username")
+    if username.lower() == "admin":
+        raise HTTPException(status_code=400, detail="Admin account cannot be self-deleted")
+        
+    success = UserService.delete_user(username)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete account")
+        
+    await manager.broadcast({
+        "type": "log", 
+        "message": f"Utente '{username}' ha eliminato il proprio account.", 
+        "level": "warning"
+    })
+    
+    return {"message": "Your account has been permanently deleted"}
+
 @app.post("/api/v1/admin/reactivate", tags=["Admin"])
 async def reactivate_user(
     username: str,
@@ -1074,15 +1103,31 @@ async def optimize_scheduled_trains(
                 {t.id: t.dict() for t in request.tracks}
             )
         
-        if route_planner is None or temporal_simulator is None:
             raise HTTPException(
                 status_code=400,
                 detail="Route planner not initialized. Please provide tracks and stations."
             )
         
+        # RECORD ACTIVITY for Idle Training
+        idle_manager.record_activity()
+
+        # STRATEGY FOR COMPLEX NETWORKS: Limit to 100 active trains
+        # We process the 100 most 'critical' trains if the network is too large
+        all_trains = request.trains
+        if len(all_trains) > 100:
+            logger.info(f"Complex network detected ({len(all_trains)} trains). Limiting optimization focus to top 100 critical trains.")
+            # Calculate priority score: delay * priority
+            all_trains.sort(key=lambda t: (t.delay_minutes * t.priority), reverse=True)
+            active_trains = all_trains[:100]
+            passive_trains = all_trains[100:]
+            logger.info(f"Top critical train: {active_trains[0].id} (delay: {active_trains[0].delay_minutes}m)")
+        else:
+            active_trains = all_trains
+            passive_trains = []
+
         # Plan routes for trains that need it
         trains_with_routes = []
-        for train in request.trains:
+        for train in active_trains:
             train_dict = train.dict()
             
             # Auto-plan route if origin and destination provided but no planned_route
@@ -1126,6 +1171,8 @@ async def optimize_scheduled_trains(
             conflict_resolver = ConflictResolver(temporal_simulator, route_planner)
             
             # Resolve conflicts
+            # Combine active trains (optimizable) and passive trains (static constraints)
+            # The resolver should ideally treat passive trains as immutable
             resolution_result = conflict_resolver.resolve_conflicts(
                 trains_with_routes,
                 time_horizon_minutes=time_horizon,

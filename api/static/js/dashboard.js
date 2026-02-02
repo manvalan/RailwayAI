@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Settings Actions
     document.getElementById('change-pass-btn').addEventListener('click', changePassword);
     document.getElementById('reactivate-btn').addEventListener('click', reactivateAccount);
+    document.getElementById('delete-me-btn').addEventListener('click', deleteMeAccount);
 
     // SMTP Actions
     document.getElementById('save-smtp-btn').addEventListener('click', saveSMTPConfig);
@@ -186,6 +187,28 @@ async function reactivateAccount() {
     } catch (err) {
         msgEl.textContent = "❌ Errore di connessione.";
         msgEl.style.color = "var(--accent)";
+    }
+}
+
+async function deleteMeAccount() {
+    if (!confirm("⚠️ SEI SICURO? Questa azione è irreversibile e il tuo account verrà eliminato permanentemente.")) return;
+
+    try {
+        const response = await fetch('/api/v1/user/me', {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+
+        if (response.ok) {
+            alert("Account eliminato con successo. Arrivederci.");
+            localStorage.removeItem('access_token');
+            location.reload();
+        } else {
+            const error = await response.json();
+            alert(`❌ Errore: ${error.detail}`);
+        }
+    } catch (err) {
+        alert("❌ Errore di connessione.");
     }
 }
 

@@ -31,6 +31,7 @@ class DatabaseManager:
                     hashed_password TEXT NOT NULL,
                     privilege TEXT DEFAULT 'normal',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    terms_accepted_at TIMESTAMP,
                     is_active BOOLEAN DEFAULT 1
                 )
             ''')

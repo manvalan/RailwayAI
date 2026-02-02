@@ -232,6 +232,17 @@
                 <label for="password">Password</label>
                 <input type="password" id="password" placeholder="Minimo 6 caratteri" required minlength="6">
             </div>
+
+            <div class="form-group" style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                <input type="checkbox" id="accept-terms" required style="width: auto; margin-top: 0.25rem;">
+                <label for="accept-terms" style="font-size: 0.75rem; line-height: 1.4;">
+                    Accetto i <a href="terms.html" target="_blank" style="color: var(--primary);">Termini di
+                        Servizio</a> e la
+                    <a href="terms.html" target="_blank" style="color: var(--primary);">Informativa sulla Privacy</a>
+                    (GDPR EU).
+                </label>
+            </div>
+
             <button type="submit" id="btn-request">Invia Codice di Verifica</button>
         </form>
 
@@ -288,6 +299,7 @@
             const username = document.getElementById('username').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const acceptTerms = document.getElementById('accept-terms').checked;
             userEmail = email;
 
             setSubmitting(btnRequest, true);
@@ -297,7 +309,7 @@
                 const response = await fetch('/api/v1/register/request', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email, password })
+                    body: JSON.stringify({ username, email, password, accept_terms: acceptTerms })
                 });
 
                 const data = await response.json();

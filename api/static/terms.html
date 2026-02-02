@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms & Privacy | Railway AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #818cf8;
+            --secondary: #c084fc;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(129, 140, 248, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(192, 132, 252, 0.15) 0%, transparent 40%);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 4rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin: 2rem 0 1rem 0;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 0.5rem;
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+            color: var(--text-dim);
+        }
+
+        ul {
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+            list-style-type: disc;
+            color: var(--text-dim);
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 2rem;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            opacity: 0.8;
+            transform: translateX(-5px);
+        }
+
+        @media (max-width: 640px) {
+            .glass-card {
+                padding: 1.5rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <a href="register.html" class="back-link">← Back to Registration</a>
+
+        <div class="glass-card">
+            <h1>Terms of Service & Privacy</h1>
+
+            <p>Last Updated: February 2, 2026</p>
+
+            <section>
+                <h2>1. Introduction</h2>
+                <p>Welcome to Railway AI. By creating an account, you agree to comply with these terms. Our system uses
+                    advanced Artificial Intelligence to optimize railway networks and logistics.</p>
+            </section>
+
+            <section>
+                <h2>2. Data Collection (GDPR)</h2>
+                <p>In compliance with the EU General Data Protection Regulation (GDPR), we inform you that we collect
+                    the following data:</p>
+                <ul>
+                    <li><strong>Username:</strong> To identify you within the system.</li>
+                    <li><strong>Email Address:</strong> Used strictly for account verification, security alerts, and
+                        system notifications.</li>
+                    <li><strong>Hashed Password:</strong> We never store your password in plain text. We use
+                        industry-standard encryption (Bcrypt).</li>
+                    <li><strong>Usage Data:</strong> Includes optimization requests and system logs to improve the AI
+                        model accuracy.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>3. Your Rights</h2>
+                <p>As a user, you have the right to:</p>
+                <ul>
+                    <li><strong>Access:</strong> Request a copy of your personal data.</li>
+                    <li><strong>Rectification:</strong> Correction of any inaccurate data.</li>
+                    <li><strong>Erasure (Right to be Forgotten):</strong> You can delete your account at any time
+                        through the "Security Settings" in your dashboard, which will permanently remove your personal
+                        identifiable information from our database.</li>
+                    <li><strong>Data Portability:</strong> Request your data in a structured, machine-readable format.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>4. AI & Operational Data</h2>
+                <p>Railway AI processing involves simulated and real-world network data. By using the platform, you
+                    acknowledge that:</p>
+                <ul>
+                    <li>Optimization results are generated by a Multi-Agent Reinforcement Learning (MARL) system.</li>
+                    <li>Simulated scenarios created via OpenStreetMap data are subject to OSM terms of use.</li>
+                    <li>The system is designed for operational governance and monitoring.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>5. Account Security</h2>
+                <p>You are responsible for maintaining the confidentiality of your API keys and credentials. Any
+                    suspicious activity should be reported immediately to the system administrator.</p>
+            </section>
+
+            <section>
+                <h2>6. Termination</h2>
+                <p>We reserve the right to suspend or terminate accounts that violate system integrity, perform
+                    unauthorized stress tests, or attempt to bypass security privileges.</p>
+            </section>
+        </div>
+
+        <div class="footer">
+            &copy; 2026 Railway AI Infrastructure Core. All rights reserved.
+        </div>
+    </div>
+</body>
+
+</html>

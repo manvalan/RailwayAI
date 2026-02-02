@@ -109,7 +109,7 @@ Al termine della conferma, l'utente può procedere al login.
 ## Esempio Swift (SwiftUI/URLSession)
 
 ```swift
-var request = URLRequest(url: URL(string: "http://localhost:8000/api/v1/optimize")!)
+var request = URLRequest(url: URL(string: "http://railway-ai.michelebigi.it:8080/api/v1/optimize")!)
 request.httpMethod = "POST"
 request.addValue(storedApiKey, forHTTPHeaderField: "X-API-Key")
 request.addValue("application/json", forHTTPHeaderField: "Content-Type")

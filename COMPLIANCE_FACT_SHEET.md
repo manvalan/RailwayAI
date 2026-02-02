@@ -14,7 +14,7 @@ In accordance with Apple's requirements for apps that support account creation, 
 ### Consent Tracking
 Every user registration is bound to an explicit acceptance of the Terms of Service and Privacy Policy.
 - **Audit Trail**: The system records the exact timestamp of consent in the `terms_accepted_at` field within the database.
-- **Transparency**: Terms are accessible publicly at `/static/terms.html`.
+- **Transparency**: Terms are accessible publicly at `http://railway-ai.michelebigi.it:8080/static/terms.html`.
 
 ---
 

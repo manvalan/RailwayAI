@@ -32,4 +32,4 @@ RUN mkdir -p build && cd build && \
 EXPOSE 8080
 
 # Comando per avviare il server
-CMD ["python", "api/server.py"]
+CMD ["uvicorn", "api.server:app", "--host", "0.0.0.0", "--port", "8080"]

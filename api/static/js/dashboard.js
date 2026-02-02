@@ -1,6 +1,9 @@
 let accessToken = localStorage.getItem('access_token');
 let trainingChart = null;
 let currentScenarioPath = null;
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const wsUrl = `${protocol}//${window.location.host}/ws/monitoring`;
+let ws = new WebSocket(wsUrl);
 
 document.addEventListener('DOMContentLoaded', () => {
     if (accessToken) {

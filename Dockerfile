@@ -29,7 +29,7 @@ RUN mkdir -p build && cd build && \
     cp python/*.so $(python3 -c "import site; print(site.getsitepackages()[0])")
 
 # Espone la porta usata da FastAPI (porta interna del container)
-EXPOSE 8002
+EXPOSE 8080
 
 # Comando per avviare il server
 CMD ["python", "api/server.py"]

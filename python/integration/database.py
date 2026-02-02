@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = os.getenv("RAILWAY_AI_DB_PATH", "railway_ai.db")
+DB_PATH = os.getenv("RAILWAY_AI_DB_PATH", "railway.db")
 
 class DatabaseManager:
     """Manages SQLite database connections and schema."""

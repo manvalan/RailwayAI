@@ -141,7 +141,7 @@ async function changePassword() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
+                'X-API-Key': accessToken
             },
             body: JSON.stringify({ new_password: newPass })
         });
@@ -174,7 +174,7 @@ async function reactivateAccount() {
         const response = await fetch(`/api/v1/admin/reactivate?username=${encodeURIComponent(username)}`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${accessToken}`
+                'X-API-Key': accessToken
             }
         });
 
@@ -199,7 +199,7 @@ async function deleteMeAccount() {
     try {
         const response = await fetch('/api/v1/user/me', {
             method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${accessToken}` }
+            headers: { 'X-API-Key': accessToken }
         });
 
         if (response.ok) {
@@ -232,7 +232,7 @@ async function startScenarioGeneration() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
+                'X-API-Key': accessToken
             },
             body: JSON.stringify({ area: area })
         });
@@ -264,7 +264,7 @@ async function triggerMarlTraining(scenarioPath) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
+                'X-API-Key': accessToken
             },
             body: JSON.stringify({
                 scenario_path: scenarioPath,
@@ -381,7 +381,7 @@ function updateChart(episode, reward, conflicts) {
 async function fetchUsers() {
     try {
         const response = await fetch('/api/v1/admin/users', {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
+            headers: { 'X-API-Key': accessToken }
         });
         if (response.ok) {
             const users = await response.json();
@@ -426,7 +426,7 @@ async function addUser() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
+                'X-API-Key': accessToken
             },
             body: JSON.stringify({ username: user, password: pass })
         });
@@ -450,7 +450,7 @@ async function deleteUser(username) {
     try {
         const response = await fetch(`/api/v1/admin/users/${username}`, {
             method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${accessToken}` }
+            headers: { 'X-API-Key': accessToken }
         });
 
         if (response.ok) {
@@ -481,7 +481,7 @@ async function triggerOptimization() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
+                'X-API-Key': accessToken
             },
             body: JSON.stringify({ scenario_path: path })
         });
@@ -514,7 +514,7 @@ function addLog(message, level = 'info') {
 async function fetchStats() {
     try {
         const res = await fetch('/api/v1/metrics', {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
+            headers: { 'X-API-Key': accessToken }
         });
         if (res.ok) {
             const data = await res.json();
@@ -524,7 +524,7 @@ async function fetchStats() {
 async function fetchSMTPConfig() {
     try {
         const response = await fetch('/api/v1/admin/smtp', {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
+            headers: { 'X-API-Key': accessToken }
         });
         if (response.ok) {
             const data = await response.json();
@@ -563,7 +563,7 @@ async function saveSMTPConfig() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
+                'X-API-Key': accessToken
             },
             body: JSON.stringify(config)
         });
@@ -598,7 +598,7 @@ async function testSMTP() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
+                'X-API-Key': accessToken
             },
             body: JSON.stringify({ email: email })
         });

@@ -26,7 +26,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, We
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
-from python.integration.auth import get_current_user, create_access_token
+from python.integration.auth import get_current_user, create_access_token, api_key_header
 from python.integration.user_service import UserService
 from fastapi.security import OAuth2PasswordRequestForm
 

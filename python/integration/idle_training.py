@@ -128,18 +128,24 @@ class IdleTrainingManager:
             env = os.environ.copy()
             env["PYTHONPATH"] = env.get("PYTHONPATH", "") + ":" + str(Path(__file__).parent.parent.parent)
             
-            self.training_process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-                env=env
-            )
+            try:
+                self.training_process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT,
+                    env=env
+                )
+                self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Process started successfully (PID: {self.training_process.pid})")
+            except Exception as startup_err:
+                self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] CRITICAL: Could not execute python3: {startup_err}")
+                raise startup_err
             
-            # Start monitoring
-            await self._monitor_process_output(scenario)
+            # Start monitoring in a separate background task so we don't block the loop
+            asyncio.create_task(self._monitor_process_output(scenario))
             
         except Exception as e:
             logger.error(f"Failed to start training process: {e}")
+            self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] STARTUP ERROR: {e}")
             self.is_training = False
             self._add_history_entry(scenario, "failed", str(e))
 

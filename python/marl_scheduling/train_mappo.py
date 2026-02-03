@@ -25,6 +25,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 print("Training script started...") # Direct output for verification
+sys.stdout.flush()
 
 def train_mappo(args):
     """

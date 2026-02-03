@@ -32,21 +32,9 @@ if str(current_dir) not in sys.path:
 
 print(f">>> SYS.PATH UPDATED: {sys.path[0]}", flush=True)
 
-print(">>> ATTEMPTING TO IMPORT TORCH (this can take time)...", flush=True)
-import torch
-print(f">>> TORCH LOADED: {torch.__version__} (Mem: {get_mem():.2f} MB)", flush=True)
-import torch.optim as optim
 import numpy as np
 import argparse
 import logging
-
-print(">>> ATTEMPTING LOCAL IMPORTS...", flush=True)
-from env import RailwayGymEnv
-from scenario_loader import ScenarioLoader
-from constraints import SafetyConstraintLayer
-from models import ActorNetwork, CriticNetwork
-
-print(">>> ALL IMPORTS SUCCESSFUL", flush=True)
 
 # Force INFO level logging
 logging.basicConfig(
@@ -55,17 +43,29 @@ logging.basicConfig(
     force=True
 )
 logger = logging.getLogger(__name__)
-print("Training script started...") # Direct output for verification
-sys.stdout.flush()
 
 def train_mappo(args):
     """
     MAPPO training with scenario scaling and checkpointing.
     """
-    # Load Scenario
+    print(">>> ENTERING train_mappo function", flush=True)
+    
+    # Load Scenario FIRST before heavy imports
     scenario_abs_path = os.path.abspath(args.scenario)
-    logger.info(f"Attempting to load scenario from: {scenario_abs_path}")
+    print(f">>> LOADING SCENARIO: {scenario_abs_path}", flush=True)
+    
+    from scenario_loader import ScenarioLoader
     scenario = ScenarioLoader.load_scenario(args.scenario)
+    print(f">>> SCENARIO DATA LOADED ({len(scenario['trains'])} trains)", flush=True)
+
+    print(">>> ATTEMPTING TO IMPORT TORCH AND ENV...", flush=True)
+    import torch
+    import torch.optim as optim
+    from env import RailwayGymEnv
+    from constraints import SafetyConstraintLayer
+    from models import ActorNetwork, CriticNetwork
+    print(f">>> TORCH AND ENV LOADED SUCCESSFULLY (Torch: {torch.__version__})", flush=True)
+
     env = RailwayGymEnv(scenario['tracks'], scenario['stations'], scenario['trains'])
     
     agent_ids = env.agent_ids

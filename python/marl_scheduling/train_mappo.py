@@ -9,6 +9,12 @@ print(">>> PYTHON INTERPRETER STARTED", flush=True)
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
+os.environ["OMP_PROC_BIND"] = "FALSE"
+os.environ["TORCH_NUM_THREADS"] = "1"
+
+import time
+print(">>> COOLING DOWN (2s)...", flush=True)
+time.sleep(2) # Give system a moment
 
 import resource
 def get_mem():

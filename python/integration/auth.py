@@ -13,7 +13,7 @@ SECRET_KEY = os.getenv("RAILWAY_AI_SECRET_KEY", "7b292195a86d4356ab70f04e187eca8
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 ore
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):

@@ -7,7 +7,8 @@ async function loadAIManagement() {
         fetchScenarios(),
         fetchModelStats(),
         loadAIConfig(),
-        populateScenarioDropdown()
+        populateScenarioDropdown(),
+        fetchAIQualityMetrics()
     ]);
 
     // Subscribe to training logs via WebSocket
@@ -232,6 +233,73 @@ async function populateScenarioDropdown() {
     } catch (error) {
         console.error('Error populating scenarios:', error);
     }
+}
+
+async function fetchAIQualityMetrics() {
+    try {
+        const response = await fetch('/api/v1/ai/quality-metrics', {
+            headers: { 'X-API-Key': accessToken }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+
+            // Test Set Performance
+            document.getElementById('test-accuracy').textContent = data.test_accuracy ? `${(data.test_accuracy * 100).toFixed(1)}%` : '--%';
+            document.getElementById('test-precision').textContent = data.test_precision ? `${(data.test_precision * 100).toFixed(1)}%` : '--%';
+            document.getElementById('test-recall').textContent = data.test_recall ? `${(data.test_recall * 100).toFixed(1)}%` : '--%';
+            document.getElementById('test-f1').textContent = data.test_f1 ? `${(data.test_f1 * 100).toFixed(1)}%` : '--%';
+            document.getElementById('test-loss').textContent = data.test_loss ? data.test_loss.toFixed(4) : '--';
+
+            // Training History
+            document.getElementById('train-loss').textContent = data.train_loss ? data.train_loss.toFixed(4) : '--';
+            document.getElementById('val-loss').textContent = data.val_loss ? data.val_loss.toFixed(4) : '--';
+            document.getElementById('convergence-status').textContent = data.convergence_status || 'In attesa di dati...';
+            document.getElementById('convergence-status').style.color = data.is_converged ? 'var(--success)' : 'var(--accent)';
+            document.getElementById('last-checkpoint').textContent = data.last_checkpoint || '--';
+
+            // Model Confidence
+            document.getElementById('avg-confidence').textContent = data.avg_confidence ? `${(data.avg_confidence * 100).toFixed(1)}%` : '--%';
+            document.getElementById('uncertain-predictions').textContent = data.uncertain_predictions || '--';
+            document.getElementById('model-stability').textContent = data.model_stability || '--';
+            document.getElementById('quality-assessment').textContent = data.quality_assessment || 'In attesa di dati...';
+            document.getElementById('quality-assessment').style.color = getQualityColor(data.quality_assessment);
+
+            // Dataset Info
+            document.getElementById('training-scenarios').textContent = data.training_scenarios || 0;
+            document.getElementById('total-examples').textContent = data.total_examples || 0;
+            document.getElementById('dataset-updated').textContent = data.dataset_updated ? new Date(data.dataset_updated).toLocaleString('it-IT') : '--';
+
+            // Benchmark Comparison
+            if (data.benchmarks) {
+                updateBenchmark('vs-random', data.benchmarks.vs_random);
+                updateBenchmark('vs-greedy', data.benchmarks.vs_greedy);
+                updateBenchmark('vs-optimal', data.benchmarks.vs_optimal);
+                document.getElementById('overall-improvement').textContent = data.benchmarks.overall_improvement || '--';
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching AI quality metrics:', error);
+    }
+}
+
+function getQualityColor(assessment) {
+    if (!assessment) return 'var(--text-secondary)';
+    if (assessment.includes('Eccellente') || assessment.includes('Ottimo')) return 'var(--success)';
+    if (assessment.includes('Buono')) return 'var(--primary)';
+    if (assessment.includes('Sufficiente')) return '#ff9800';
+    return 'var(--accent)';
+}
+
+function updateBenchmark(id, value) {
+    if (!value) return;
+
+    const textEl = document.getElementById(id);
+    const barEl = document.getElementById(id + '-bar');
+
+    const improvement = parseFloat(value);
+    textEl.textContent = `+${improvement.toFixed(1)}%`;
+    barEl.style.width = `${Math.min(improvement, 100)}%`;
 }
 
 // Intercept WebSocket messages for AI logs (only if handleWsMessage exists)

@@ -4,8 +4,9 @@ services:
   railway-ai:
     build: .
     container_name: railway-ai
-    ports:
-      - "8080:8080"
+    # Port 8080 is now internal only (accessed via Caddy)
+    expose:
+      - "8080"
     environment:
       - SECRET_KEY=${SECRET_KEY:-RailwayAISecureKeyDefault2026}
       - ACCESS_TOKEN_EXPIRE_MINUTES=60
@@ -19,6 +20,27 @@ services:
     working_dir: /app
     restart: always
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: railway-caddy
+    ports:
+      - "80:80" # HTTP (auto-redirects to HTTPS)
+      - "443:443" # HTTPS
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    restart: always
+    depends_on:
+      - railway-ai
+
 networks:
   default:
     name: railway-network
+
+volumes:
+  caddy_data:
+  caddy_config:
+  caddy_logs:

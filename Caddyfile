@@ -1,0 +1,29 @@
+railway-ai.michelebigi.it {
+    reverse_proxy railway-ai:8080
+    
+    # Enable automatic HTTPS
+    tls {
+        protocols tls1.2 tls1.3
+    }
+    
+    # WebSocket support
+    @websockets {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @websockets railway-ai:8080
+    
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+}

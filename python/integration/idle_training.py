@@ -107,11 +107,15 @@ class IdleTrainingManager:
         try:
             # Prepare command
             cmd = [
-                "python3", "python/marl_scheduling/train_mappo.py",
+                "python3", "-u", "python/marl_scheduling/train_mappo.py",
                 "--scenario", scenario,
                 "--episodes", str(self.episodes_per_run),
                 "--background"
             ]
+            
+            # Immediate feedback
+            self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Initializing training process on {Path(scenario).name}...")
+            self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Executing: {' '.join(cmd)}")
             
             # Start process, capturing output
             self.training_process = subprocess.Popen(
@@ -224,6 +228,9 @@ class IdleTrainingManager:
         self._refresh_scenarios()
         next_scenario = self._get_next_scenario() if not self.scenario_path else self.scenario_path
         
+        idle_time = time.time() - self.last_activity
+        remaining = max(0, self.idle_threshold - idle_time)
+        
         return {
             "status": "training" if self.is_training else "idle",
             "current_scenario": Path(next_scenario).name if next_scenario else None,
@@ -231,7 +238,8 @@ class IdleTrainingManager:
             "history": self.history[:10], # Last 10 runs
             "queued_scenario": Path(next_scenario).name if next_scenario else "None",
             "available_scenarios_count": len(self.available_scenarios),
-            "logs_preview": self.last_logs[-20:] if self.last_logs else ["No recent logs"]
+            "logs_preview": self.last_logs[-20:] if self.last_logs else ["No recent logs"],
+            "seconds_until_next_run": round(remaining)
         }
         
     def stop(self):

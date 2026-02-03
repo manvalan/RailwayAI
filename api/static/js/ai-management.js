@@ -65,7 +65,11 @@ async function fetchAIStatus() {
             } else {
                 indicator.style.background = 'var(--text-secondary)';
                 indicator.style.boxShadow = 'none';
-                statusText.textContent = `Idle (Next: ${data.queued_scenario})`;
+                if (data.seconds_until_next_run > 0) {
+                    statusText.textContent = `Attesa (${data.seconds_until_next_run}s) - Next: ${data.queued_scenario}`;
+                } else {
+                    statusText.textContent = `Avvio in corso...`;
+                }
                 statusText.style.fontWeight = 'normal';
             }
 

@@ -125,10 +125,14 @@ class IdleTrainingManager:
             self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Executing: {' '.join(cmd)}")
             
             # Start process using asyncio for non-blocking IO
+            env = os.environ.copy()
+            env["PYTHONPATH"] = env.get("PYTHONPATH", "") + ":" + str(Path(__file__).parent.parent.parent)
+            
             self.training_process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT
+                stderr=asyncio.subprocess.STDOUT,
+                env=env
             )
             
             # Start monitoring
@@ -167,6 +171,9 @@ class IdleTrainingManager:
             if return_code != 0:
                  status = "error" if return_code != -15 else "suspended"
                  error_msg = f"Exit code {return_code}"
+                 self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Training process {status}: {error_msg}")
+            else:
+                 self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Training process completed successfully.")
 
         except Exception as e:
             logger.error(f"Error monitoring training output: {e}")

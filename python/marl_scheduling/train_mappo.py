@@ -1,20 +1,21 @@
+import sys
+import os
+from pathlib import Path
+
+# Add current directory to sys.path BEFORE any other imports
+current_dir = Path(__file__).parent.absolute()
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
+
 import torch
 import torch.optim as optim
 import numpy as np
 import argparse
-import os
+import logging
 from env import RailwayGymEnv
 from scenario_loader import ScenarioLoader
 from constraints import SafetyConstraintLayer
 from models import ActorNetwork, CriticNetwork
-import logging
-import sys
-from pathlib import Path
-
-# Add the current directory to sys.path to find local modules (env, models, etc.)
-current_dir = Path(__file__).parent.absolute()
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
 
 # Force INFO level logging
 logging.basicConfig(

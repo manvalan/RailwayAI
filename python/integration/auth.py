@@ -2,9 +2,11 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, APIKeyHeader
 from python.integration.user_service import UserService
+import logging
+logger = logging.getLogger(__name__)
 
 # Configurazione (in produzione usare variabili d'ambiente)
 SECRET_KEY = os.getenv("RAILWAY_AI_SECRET_KEY", "7b292195a86d4356ab70f04e187eca8e")
@@ -25,6 +27,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 async def get_current_user(
+    request: Request,
     token: Optional[str] = Depends(oauth2_scheme),
     api_key: Optional[str] = Depends(api_key_header)
 ):
@@ -34,12 +37,21 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
+    # DEBUG LOGGING
+    logger.info(f"Auth Attempt - Headers: {request.headers}")
+    logger.info(f"Auth Attempt - Token: {token is not None}, API Key: {api_key}")
+
+    # Fallback: Check header manually if dependency failed
+    if not api_key:
+        api_key = request.headers.get("X-API-Key")
+
     # 1. Verifica API Key (Priorità alta per automazione)
     if api_key:
         user_data = UserService.validate_api_key(api_key)
         if user_data:
             return user_data
         
+        logger.warning(f"Invalid API Key provided: {api_key}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid, expired or disabled API Key"
@@ -57,7 +69,9 @@ async def get_current_user(
             if not user or not user.get('is_active', True):
                 raise credentials_exception
             return user
-        except JWTError:
+        except JWTError as e:
+            logger.warning(f"JWT Validation Error: {e}")
             raise credentials_exception
             
+    logger.warning("No credentials provided")
     raise credentials_exception

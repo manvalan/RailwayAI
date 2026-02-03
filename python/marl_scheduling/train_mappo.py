@@ -8,6 +8,7 @@ print(">>> PYTHON INTERPRETER STARTED", flush=True)
 # Limit threads to prevent VPS freeze during torch import/execution
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
 
 import resource
 def get_mem():

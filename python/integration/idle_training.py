@@ -114,7 +114,7 @@ class IdleTrainingManager:
         try:
             # Prepare command
             cmd = [
-                "python3", "-u", "python/marl_scheduling/train_mappo.py",
+                sys.executable, "-u", "python/marl_scheduling/train_mappo.py",
                 "--scenario", scenario,
                 "--episodes", str(self.episodes_per_run),
                 "--background"

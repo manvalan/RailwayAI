@@ -172,7 +172,9 @@ function switchView(view) {
     const viewTrain = document.getElementById('view-training');
     const viewOpt = document.getElementById('view-optimization');
     const viewUsers = document.getElementById('view-users');
+    const viewSMTP = document.getElementById('view-smtp');
     const viewSettings = document.getElementById('view-settings');
+    const viewApiKeys = document.getElementById('view-api-keys');
 
     const navMon = document.getElementById('nav-monitoring');
     const navTrain = document.getElementById('nav-training');
@@ -180,11 +182,15 @@ function switchView(view) {
     const navUsers = document.getElementById('nav-users');
     const navSMTP = document.getElementById('nav-smtp');
     const navSettings = document.getElementById('nav-settings');
+    const navApiKeys = document.getElementById('nav-api-keys');
 
     // Reset visibility
-    const viewSMTP = document.getElementById('view-smtp');
-    [viewMon, viewTrain, viewOpt, viewUsers, viewSMTP, viewSettings].forEach(v => v.classList.add('hidden'));
-    [navMon, navTrain, navOpt, navUsers, navSMTP, navSettings].forEach(n => n.classList.remove('active'));
+    [viewMon, viewTrain, viewOpt, viewUsers, viewSMTP, viewSettings, viewApiKeys].forEach(v => {
+        if (v) v.classList.add('hidden');
+    });
+    [navMon, navTrain, navOpt, navUsers, navSMTP, navSettings, navApiKeys].forEach(n => {
+        if (n) n.classList.remove('active');
+    });
 
     if (view === 'monitoring') {
         viewMon.classList.remove('hidden');
@@ -208,7 +214,11 @@ function switchView(view) {
     } else if (view === 'settings') {
         viewSettings.classList.remove('hidden');
         navSettings.classList.add('active');
+    } else if (view === 'api-keys') {
+        viewApiKeys.classList.remove('hidden');
+        navApiKeys.classList.add('active');
     }
+}
 }
 
 async function changePassword() {

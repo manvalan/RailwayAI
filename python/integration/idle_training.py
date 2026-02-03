@@ -127,6 +127,7 @@ class IdleTrainingManager:
             # Start process using asyncio for non-blocking IO
             env = os.environ.copy()
             env["PYTHONPATH"] = env.get("PYTHONPATH", "") + ":" + str(Path(__file__).parent.parent.parent)
+            env["PYTHONUNBUFFERED"] = "1"
             
             try:
                 self.training_process = await asyncio.create_subprocess_exec(

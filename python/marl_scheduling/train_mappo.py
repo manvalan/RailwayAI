@@ -4,6 +4,10 @@ from pathlib import Path
 
 # IMMEDIATE DIAGNOSTIC
 print(">>> PYTHON INTERPRETER STARTED", flush=True)
+import resource
+def get_mem():
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 # KB on Mac, but usually KB on Linux too
+print(f">>> MEMORY USAGE (START): {get_mem():.2f} MB", flush=True)
 print(f">>> CWD: {os.getcwd()}", flush=True)
 print(f">>> PYTHONPATH: {os.environ.get('PYTHONPATH')}", flush=True)
 
@@ -14,8 +18,9 @@ if str(current_dir) not in sys.path:
 
 print(f">>> SYS.PATH UPDATED: {sys.path[0]}", flush=True)
 
+print(">>> ATTEMPTING TO IMPORT TORCH (this can take time)...", flush=True)
 import torch
-print(f">>> TORCH LOADED: {torch.__version__}", flush=True)
+print(f">>> TORCH LOADED: {torch.__version__} (Mem: {get_mem():.2f} MB)", flush=True)
 import torch.optim as optim
 import numpy as np
 import argparse

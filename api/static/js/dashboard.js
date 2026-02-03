@@ -17,6 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-monitoring').addEventListener('click', () => switchView('monitoring'));
     document.getElementById('nav-training').addEventListener('click', () => switchView('training'));
     document.getElementById('nav-optimization').addEventListener('click', () => switchView('optimization'));
+    document.getElementById('nav-ai-management').addEventListener('click', () => {
+        switchView('ai-management');
+        loadAIManagement();
+    });
     document.getElementById('nav-users').addEventListener('click', () => {
         switchView('users');
         fetchUsers();
@@ -45,7 +49,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // SMTP Actions
     document.getElementById('save-smtp-btn').addEventListener('click', saveSMTPConfig);
     document.getElementById('test-smtp-btn').addEventListener('click', testSMTP);
+
+    // AI Management Actions
+    document.getElementById('ai-start-btn')?.addEventListener('click', startManualTraining);
+    document.getElementById('ai-stop-btn')?.addEventListener('click', stopAutoTraining);
+    document.getElementById('ai-refresh-btn')?.addEventListener('click', loadAIManagement);
+    document.getElementById('ai-clear-logs-btn')?.addEventListener('click', clearAILogs);
 });
+
 
 async function login() {
     const user = document.getElementById('username').value;

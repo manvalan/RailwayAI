@@ -36,15 +36,19 @@
         <div class="logo">RAILWAY AI</div>
         <nav>
             <ul>
-                <li id="nav-monitoring" class="active">Monitoring</li>
-                <li id="nav-training">Training Control</li>
-                <li id="nav-optimization">Ottimizzazione</li>
-                <li id="nav-topology">Network Topology</li>
-                <li id="nav-users">User Management</li>
-                <li id="nav-smtp">SMTP Configuration</li>
-                <li id="nav-settings">Security Settings</li>
-                <li id="nav-api-keys">API Keys</li>
-                <li id="nav-logout" style="margin-top: 1rem; color: var(--accent);">Logout</li>
+                <li id="nav-monitoring" class="active">📊 Monitoring</li>
+                <li id="nav-training">🚂 Training Control</li>
+                <li id="nav-optimization">⚡ Ottimizzazione</li>
+                <li id="nav-topology">🗺️ Network Topology</li>
+                <li id="nav-api-keys">🔑 API Keys</li>
+                <li
+                    style="margin-top: 1.5rem; padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
+                    Admin Panel</li>
+                <li id="nav-ai-management">🤖 AI Management</li>
+                <li id="nav-users">👥 User Management</li>
+                <li id="nav-smtp">📧 SMTP Configuration</li>
+                <li id="nav-settings">🔒 Security Settings</li>
+                <li id="nav-logout" style="margin-top: 1rem; color: var(--accent);">🚪 Logout</li>
             </ul>
         </nav>
         <div style="margin-top: auto; font-size: 0.8rem; color: var(--text-secondary);">
@@ -286,9 +290,132 @@
                 <div id="settings-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;"></div>
             </div>
         </div>
+
+        <!-- AI Management View (Admin Only) -->
+        <div id="view-ai-management" class="hidden">
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <!-- Auto-Training Status -->
+                <div class="glass" style="padding: 2rem;">
+                    <h2>🤖 Auto-Training Status</h2>
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Stato</div>
+                            <div id="ai-status" style="font-size: 1.2rem; font-weight: 600; color: var(--success);">
+                                Attivo</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Threshold Inattività</div>
+                            <div id="ai-threshold" style="font-size: 1.2rem; font-weight: 600;">300s</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Ultimo Training</div>
+                            <div id="ai-last-run" style="font-size: 1.2rem; font-weight: 600;">--</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Prossimo Run</div>
+                            <div id="ai-next-run" style="font-size: 1.2rem; font-weight: 600;">--</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button id="ai-start-btn" style="flex: 1; background: var(--success);">Avvia Training
+                            Manuale</button>
+                        <button id="ai-stop-btn" style="flex: 1; background: var(--accent);">Ferma
+                            Auto-Training</button>
+                        <button id="ai-refresh-btn" style="flex: 1;">Aggiorna Stato</button>
+                    </div>
+                </div>
+
+                <!-- Scenarios List -->
+                <div class="glass" style="padding: 2rem;">
+                    <h3>📁 Scenari Disponibili</h3>
+                    <div id="scenarios-list" style="margin-top: 1rem; max-height: 300px; overflow-y: auto;">
+                        <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                            Caricamento scenari...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Training Logs -->
+                <div class="glass" style="padding: 2rem;">
+                    <h3>📋 Training Logs (Live)</h3>
+                    <div id="ai-logs"
+                        style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; font-family: 'Fira Code', monospace; font-size: 0.85rem; max-height: 400px; overflow-y: auto; margin-top: 1rem;">
+                        <div style="color: var(--text-secondary);">In attesa di log...</div>
+                    </div>
+                    <button id="ai-clear-logs-btn"
+                        style="margin-top: 1rem; background: transparent; border: 1px solid var(--glass-border);">Pulisci
+                        Logs</button>
+                </div>
+
+                <!-- Model Statistics -->
+                <div class="glass" style="padding: 2rem;">
+                    <h3>📊 Statistiche Modello</h3>
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Episodi Completati</div>
+                            <div id="model-episodes"
+                                style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">0</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Reward Medio</div>
+                            <div id="model-reward" style="font-size: 1.5rem; font-weight: 600; color: var(--success);">
+                                --</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Conflitti Risolti</div>
+                            <div id="model-conflicts"
+                                style="font-size: 1.5rem; font-weight: 600; color: var(--accent);">0</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Accuratezza</div>
+                            <div id="model-accuracy" style="font-size: 1.5rem; font-weight: 600;">--%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings View -->
+        <div id="view-settings" class="hidden">
+            <div class="glass"
+                style="padding: 2.5rem; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
+                <h2>Impostazioni Sicurezza</h2>
+                <p style="color: var(--text-secondary);">Gestisci il tuo profilo e le credenziali di accesso.</p>
+
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <label style="font-weight: 600;">Cambia Password</label>
+                    <input type="password" id="new-password" placeholder="Nuova Password (min 6 caratteri)">
+                    <button id="change-pass-btn">Aggiorna Password</button>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--glass-border);">
+
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <label style="font-weight: 600;">Reattività Account (Admin Only)</label>
+                    <input type="text" id="reactivate-username" placeholder="Username da riattivare">
+                    <button id="reactivate-btn" style="background: var(--success);">Riattiva Utente</button>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--glass-border);">
+
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <label style="font-weight: 600; color: var(--accent);">Zona Pericolosa</label>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary);">Elimina permanentemente il tuo account e
+                        tutti i dati associati (Linee guida Apple e GDPR).</p>
+                    <button id="delete-me-btn"
+                        style="background: transparent; border: 1px solid var(--accent); color: var(--accent);">Elimina
+                        il mio Account</button>
+                </div>
+
+                <div id="settings-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;"></div>
+            </div>
+        </div>
     </main>
 
     <script src="js/dashboard.js"></script>
+    <script src="js/ai-management.js"></script>
 </body>
 
 </html>

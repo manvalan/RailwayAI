@@ -1531,6 +1531,101 @@ async def propose_schedule(
         logger.error(f"Schedule proposal failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== AI Management Endpoints ====================
+
+@app.get("/api/v1/ai/status", tags=["AI Management"])
+async def get_ai_status(current_user: dict = Depends(get_current_user)):
+    """Get auto-training status and statistics (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    from python.integration.idle_training import idle_manager
+    
+    return {
+        "status": "active" if idle_manager else "inactive",
+        "threshold_seconds": 300,
+        "last_run": idle_manager.last_training_time.isoformat() if idle_manager and idle_manager.last_training_time else None,
+        "next_run_estimate": "On idle (300s)",
+        "is_training": idle_manager.is_training if idle_manager else False
+    }
+
+@app.get("/api/v1/ai/scenarios", tags=["AI Management"])
+async def list_scenarios(current_user: dict = Depends(get_current_user)):
+    """List available training scenarios (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    import os
+    import json
+    from pathlib import Path
+    
+    scenarios_dir = Path("scenarios")
+    scenarios = []
+    
+    if scenarios_dir.exists():
+        for file in scenarios_dir.glob("*.json"):
+            try:
+                with open(file, 'r') as f:
+                    data = json.load(f)
+                    scenarios.append({
+                        "name": file.stem,
+                        "path": str(file),
+                        "stations": len(data.get('stations', [])),
+                        "tracks": len(data.get('tracks', [])),
+                        "size_kb": file.stat().st_size // 1024,
+                        "modified": file.stat().st_mtime
+                    })
+            except Exception as e:
+                logger.warning(f"Could not read scenario {file}: {e}")
+    
+    return {"scenarios": scenarios, "total": len(scenarios)}
+
+@app.post("/api/v1/ai/start-training", tags=["AI Management"])
+async def start_manual_training(
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_current_user)
+):
+    """Manually trigger a training session (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    from python.integration.idle_training import idle_manager
+    
+    if idle_manager and not idle_manager.is_training:
+        background_tasks.add_task(idle_manager._run_training)
+        return {"message": "Training started", "status": "running"}
+    elif idle_manager and idle_manager.is_training:
+        return {"message": "Training already in progress", "status": "running"}
+    else:
+        raise HTTPException(status_code=500, detail="Idle training manager not available")
+
+@app.post("/api/v1/ai/stop-training", tags=["AI Management"])
+async def stop_auto_training(current_user: dict = Depends(get_current_user)):
+    """Stop auto-training (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    from python.integration.idle_training import idle_manager
+    
+    if idle_manager:
+        idle_manager.stop()
+        return {"message": "Auto-training stopped", "status": "stopped"}
+    else:
+        raise HTTPException(status_code=500, detail="Idle training manager not available")
+
+@app.get("/api/v1/ai/model-stats", tags=["AI Management"])
+async def get_model_statistics(current_user: dict = Depends(get_current_user)):
+    """Get model training statistics (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    return {
+        "episodes_completed": metrics.get('training_episodes', 0),
+        "avg_reward": metrics.get('avg_reward', 0.0),
+        "conflicts_resolved": metrics.get('conflicts_resolved', 0),
+        "accuracy": metrics.get('model_accuracy', 0.0)
+    }
+
 if __name__ == "__main__":
     import uvicorn
     

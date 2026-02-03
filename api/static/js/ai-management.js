@@ -234,13 +234,15 @@ async function populateScenarioDropdown() {
     }
 }
 
-// Intercept WebSocket messages for AI logs
-const originalHandleWsMessage = handleWsMessage;
-handleWsMessage = function (data) {
-    originalHandleWsMessage(data);
+// Intercept WebSocket messages for AI logs (only if handleWsMessage exists)
+if (typeof handleWsMessage !== 'undefined') {
+    const originalHandleWsMessage = handleWsMessage;
+    handleWsMessage = function (data) {
+        originalHandleWsMessage(data);
 
-    // Forward training logs to AI Management panel
-    if (data.type === 'log' && data.message.includes('training')) {
-        addAILog(data.message, data.level);
-    }
-};
+        // Forward training logs to AI Management panel
+        if (data.type === 'log' && data.message.includes('training')) {
+            addAILog(data.message, data.level);
+        }
+    };
+}

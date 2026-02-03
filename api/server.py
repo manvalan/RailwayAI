@@ -1815,6 +1815,7 @@ async def update_ai_config(
     from python.integration.idle_training import idle_manager
     
     if idle_manager:
+        idle_manager.record_activity("Configuration Update")
         idle_manager.update_config(
             threshold=threshold,
             scenario=scenario,

@@ -58,7 +58,76 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('ai-refresh-btn')?.addEventListener('click', loadAIManagement);
     document.getElementById('ai-clear-logs-btn')?.addEventListener('click', clearAILogs);
     document.getElementById('save-config-btn')?.addEventListener('click', saveAIConfig);
+
+    // API Keys
+    document.getElementById('generate-key-btn')?.addEventListener('click', generateApiKey);
+    document.getElementById('copy-key-btn')?.addEventListener('click', () => {
+        const keyInput = document.getElementById('generated-key');
+        keyInput.select();
+        document.execCommand('copy');
+        alert('API Key copiata negli appunti!');
+    });
 });
+
+async function checkUserRole() {
+    try {
+        const response = await fetch('/api/v1/users/me', {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+
+        if (response.ok) {
+            const user = await response.json();
+
+            // Hide Admin Panel elements if not admin
+            if (user.privilege !== 'admin') {
+                document.querySelectorAll('li[id^="nav-"]').forEach(el => {
+                    // Hide specifi admin items
+                    if (['nav-ai-management', 'nav-users', 'nav-smtp', 'nav-training'].includes(el.id)) {
+                        el.style.display = 'none';
+                    }
+                });
+                // Hide header "Admin Panel"
+                const adminHeader = Array.from(document.querySelectorAll('li')).find(li => li.textContent.trim() === 'Admin Panel');
+                if (adminHeader) adminHeader.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Error checking user role:', error);
+    }
+}
+
+async function generateApiKey() {
+    const name = document.getElementById('api-key-name').value || 'Default Key';
+    const btn = document.getElementById('generate-key-btn');
+
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+
+    try {
+        const formData = new FormData();
+        formData.append('name', name);
+
+        const response = await fetch('/api/v1/users/api-key', {
+            method: 'POST',
+            headers: { 'X-API-Key': accessToken }, // Or Bearer token if using JWT
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('generated-key').value = data.api_key;
+            document.getElementById('api-key-result').style.display = 'block';
+        } else {
+            alert('Errore nella generazione della chiave API');
+        }
+    } catch (error) {
+        console.error('Error generating API key:', error);
+        alert('Errore di connessione');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate New Key';
+    }
+}
 
 
 async function login() {
@@ -95,6 +164,7 @@ function initDashboard() {
     initChart();
     connectWebSocket();
     fetchStats();
+    checkUserRole();
 }
 
 function switchView(view) {

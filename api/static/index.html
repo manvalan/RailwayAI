@@ -255,6 +255,37 @@
             </div>
         </div>
 
+        <!-- API Keys View -->
+        <div id="view-api-keys" class="hidden">
+            <div class="glass" style="max-width: 800px; margin: 0 auto;">
+                <h2>🔑 API Keys Generation</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Generate API keys for external applications (like the Swift App) to access Railway AI features.
+                </p>
+                <div style="background: rgba(0,0,0,0.3); padding: 1.5rem; border-radius: 8px;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Key Name</label>
+                        <input type="text" id="api-key-name" placeholder="e.g. Swift App"
+                            style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); border-radius: 4px; color: var(--text);">
+                    </div>
+                    <button id="generate-key-btn" style="width: 100%; background: var(--primary);">Generate New
+                        Key</button>
+                    <div id="api-key-result" style="margin-top: 1.5rem; display: none;">
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Your API
+                            Key:</div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="generated-key" readonly
+                                style="flex: 1; padding: 0.75rem; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); border-radius: 4px; color: var(--success); font-family: monospace;">
+                            <button id="copy-key-btn" style="background: var(--glass-bg);">Copy</button>
+                        </div>
+                        <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--accent);">
+                            ⚠️ Copy this key now. You won't be able to see it again!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Settings View -->
         <div id="view-settings" class="hidden">
             <div class="glass"

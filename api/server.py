@@ -1531,6 +1531,182 @@ async def propose_schedule(
         logger.error(f"Schedule proposal failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== User Management Endpoints ====================
+
+@app.get("/api/v1/users", tags=["Users"])
+async def get_users(current_user: dict = Depends(get_current_user)):
+    """Get all users (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+    users = UserService.get_all_users()
+    # Remove sensitive data
+    for u in users:
+        u.pop('password_hash', None)
+    return users
+
+@app.get("/api/v1/users/me", tags=["Users"])
+async def get_current_user_profile(current_user: dict = Depends(get_current_user)):
+    """Get current user profile"""
+    user_profile = current_user.copy()
+    user_profile.pop('password_hash', None)
+    return user_profile
+
+@app.post("/api/v1/users", tags=["Users"])
+async def add_new_user(
+    username: str = Form(...),
+    password: str = Form(...),
+    privilege: str = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Add a new user (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+    
+    if UserService.get_user(username):
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    try:
+        UserService.create_user(username, password, privilege)
+        return {"message": f"User {username} created successfully"}
+    except Exception as e:
+        logger.error(f"Error creating user: {e}")
+        raise HTTPException(status_code=500, detail="Could not create user")
+
+@app.post("/api/v1/users/{username}/status", tags=["Users"])
+async def update_user_status(
+    username: str,
+    action: str = Form(...), # 'activate' or 'deactivate'
+    current_user: dict = Depends(get_current_user)
+):
+    """Activate or deactivate a user (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+    
+    try:
+        is_active = (action == 'activate')
+        if UserService.update_user_status(username, is_active):
+            return {"message": f"User {username} {'activated' if is_active else 'deactivated'}"}
+        else:
+            raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        logger.error(f"Error updating user status: {e}")
+        raise HTTPException(status_code=500, detail="Could not update user status")
+
+@app.delete("/api/v1/users/{username}", tags=["Users"])
+async def delete_user(
+    username: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a user (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+        
+    if username == current_user['username']:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+        
+    try:
+        if UserService.delete_user(username):
+            return {"message": f"User {username} deleted"}
+        else:
+            raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        logger.error(f"Error deleting user: {e}")
+        raise HTTPException(status_code=500, detail="Could not delete user")
+
+
+# ==================== User Management Endpoints ====================
+
+@app.get("/api/v1/users", tags=["Users"])
+async def get_users(current_user: dict = Depends(get_current_user)):
+    """Get all users (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+    users = UserService.list_users()
+    return users
+
+@app.get("/api/v1/users/me", tags=["Users"])
+async def get_current_user_profile(current_user: dict = Depends(get_current_user)):
+    """Get current user profile"""
+    user_profile = current_user.copy()
+    user_profile.pop('password_hash', None)
+    return user_profile
+
+@app.post("/api/v1/users", tags=["Users"])
+async def add_new_user(
+    username: str = Form(...),
+    password: str = Form(...),
+    privilege: str = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Add a new user (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+    
+    if UserService.get_user(username):
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    try:
+        UserService.create_user(username, password, privilege)
+        return {"message": f"User {username} created successfully"}
+    except Exception as e:
+        logger.error(f"Error creating user: {e}")
+        raise HTTPException(status_code=500, detail="Could not create user")
+
+@app.post("/api/v1/users/{username}/status", tags=["Users"])
+async def update_user_status(
+    username: str,
+    action: str = Form(...), # 'activate' or 'deactivate'
+    current_user: dict = Depends(get_current_user)
+):
+    """Activate or deactivate a user (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+    
+    try:
+        is_active = (action == 'activate')
+        if UserService.set_user_status(username, is_active):
+            return {"message": f"User {username} {'activated' if is_active else 'deactivated'}"}
+        else:
+            raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        logger.error(f"Error updating user status: {e}")
+        raise HTTPException(status_code=500, detail="Could not update user status")
+
+@app.delete("/api/v1/users/{username}", tags=["Users"])
+async def delete_user(
+    username: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a user (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+        
+    if username == current_user['username']:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+        
+    try:
+        if UserService.delete_user(username):
+            return {"message": f"User {username} deleted"}
+        else:
+            raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        logger.error(f"Error deleting user: {e}")
+        raise HTTPException(status_code=500, detail="Could not delete user")
+
+@app.post("/api/v1/users/api-key", tags=["Users"])
+async def generate_api_key_endpoint(
+    name: str = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Generate a new API Key for the current user"""
+    # Name is just for logging/UI context if expanded, strict backend just links to user
+    
+    key = UserService.generate_api_key(current_user['username'])
+    if key:
+        return {"api_key": key, "message": "API Key generated successfully"}
+    else:
+        raise HTTPException(status_code=500, detail="Could not generate API Key")
+
 # ==================== AI Management Endpoints ====================
 
 @app.get("/api/v1/ai/status", tags=["AI Management"])

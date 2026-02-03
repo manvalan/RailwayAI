@@ -1882,6 +1882,25 @@ async def get_ai_quality_metrics(current_user: dict = Depends(get_current_user))
         }
     }
 
+@app.get("/api/v1/network/statistics", tags=["Network"])
+async def get_network_statistics(current_user: dict = Depends(get_current_user)):
+    """Get statistics of the currently loaded network topology"""
+    # This retrieves data from the currently loaded model/environment
+    # If using the C++ backend or Python environment
+    
+    # Mock data for now if real model isn't instantly accessible globally
+    # In a real impl, you'd access `idle_manager.env` or `scheduler_model`
+    
+    return {
+        "network_name": "Tuscany Regional Network",
+        "total_stations": 42,
+        "total_tracks": 156,
+        "total_junctions": 28,
+        "active_trains": 12,
+        "complexity_score": "High",
+        "last_update": datetime.now().isoformat()
+    }
+
 if __name__ == "__main__":
     import uvicorn
     

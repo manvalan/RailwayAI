@@ -325,299 +325,397 @@
         <!-- AI Management View (Admin Only) -->
         <div id="view-ai-management" class="hidden">
             <div style="display: flex; flex-direction: column; gap: 2rem;">
-                <!-- Auto-Training Status -->
-                <div class="glass" style="padding: 2rem;">
-                    <h2>🤖 Auto-Training Status</h2>
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Stato</div>
-                            <div id="ai-status" style="font-size: 1.2rem; font-weight: 600; color: var(--success);">
-                                Attivo</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Threshold Inattività</div>
-                            <div id="ai-threshold" style="font-size: 1.2rem; font-weight: 600;">300s</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Ultimo Training</div>
-                            <div id="ai-last-run" style="font-size: 1.2rem; font-weight: 600;">--</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Prossimo Run</div>
-                            <div id="ai-next-run" style="font-size: 1.2rem; font-weight: 600;">--</div>
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                        <button id="ai-start-btn" style="flex: 1; background: var(--success);">Avvia Training
-                            Manuale</button>
-                        <button id="ai-stop-btn" style="flex: 1; background: var(--accent);">Ferma
-                            Auto-Training</button>
-                        <button id="ai-refresh-btn" style="flex: 1;">Aggiorna Stato</button>
-                    </div>
-                </div>
+                <!-- Main Grid Layout -->
+                <div style="display: grid; grid-template-columns: 350px 1fr 350px; gap: 1.5rem; align-items: start;">
 
-                <!-- Auto-Training Configuration -->
-                <div class="glass" style="padding: 2rem;">
-                    <h3>⚙️ Configurazione Auto-Training</h3>
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
-                        <div>
-                            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Threshold Inattività
-                                (secondi)</label>
-                            <input type="number" id="config-threshold" min="60" max="3600" value="300"
-                                style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text); font-size: 1rem;">
-                        </div>
-                        <div>
-                            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Episodi per
-                                Sessione</label>
-                            <input type="number" id="config-episodes" min="10" max="10000" value="100"
-                                style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text); font-size: 1rem;">
-                        </div>
-                        <div>
-                            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Scenario da
-                                Usare</label>
-                            <select id="config-scenario"
-                                style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text); font-size: 1rem;">
-                                <option value="">Auto (primo disponibile)</option>
-                            </select>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 1rem; padding-top: 1.5rem;">
-                            <label style="font-weight: 600;">Auto-Training Attivo</label>
-                            <input type="checkbox" id="config-enabled" checked
-                                style="width: 24px; height: 24px; cursor: pointer;">
-                        </div>
-                    </div>
-                    <button id="save-config-btn" style="margin-top: 1.5rem; background: var(--primary); width: 100%;">💾
-                        Salva Configurazione</button>
-                    <div id="config-status-msg" style="margin-top: 1rem; text-align: center; font-weight: 600;"></div>
-                </div>
+                    <!-- COLUMN 1: Network & Config -->
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
 
-                <!-- Scenarios List -->
-                <div class="glass" style="padding: 2rem;">
-                    <h3>📁 Scenari Disponibili</h3>
-                    <div id="scenarios-list" style="margin-top: 1rem; max-height: 300px; overflow-y: auto;">
-                        <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
-                            Caricamento scenari...
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Training Logs -->
-                <div class="glass" style="padding: 2rem;">
-                    <h3>📋 Training Logs (Live)</h3>
-                    <div id="ai-logs"
-                        style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; font-family: 'Fira Code', monospace; font-size: 0.85rem; max-height: 400px; overflow-y: auto; margin-top: 1rem;">
-                        <div style="color: var(--text-secondary);">In attesa di log...</div>
-                    </div>
-                    <button id="ai-clear-logs-btn"
-                        style="margin-top: 1rem; background: transparent; border: 1px solid var(--glass-border);">Pulisci
-                        Logs</button>
-                </div>
-
-                <!-- Model Statistics -->
-                <div class="glass" style="padding: 2rem;">
-                    <h3>📊 Statistiche Modello</h3>
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Episodi Completati</div>
-                            <div id="model-episodes"
-                                style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">0</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Reward Medio</div>
-                            <div id="model-reward" style="font-size: 1.5rem; font-weight: 600; color: var(--success);">
-                                --</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Conflitti Risolti</div>
-                            <div id="model-conflicts"
-                                style="font-size: 1.5rem; font-weight: 600; color: var(--accent);">0</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Accuratezza</div>
-                            <div id="model-accuracy" style="font-size: 1.5rem; font-weight: 600;">--%</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Test Set Performance -->
-                <div class="glass" style="padding: 2rem;">
-                    <h3>🎯 Performance su Test Set</h3>
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Accuracy (Test)</div>
-                            <div id="test-accuracy" style="font-size: 1.5rem; font-weight: 600; color: var(--success);">
-                                --%</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Precision</div>
-                            <div id="test-precision"
-                                style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">--%</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Recall</div>
-                            <div id="test-recall" style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">
-                                --%</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">F1-Score</div>
-                            <div id="test-f1" style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">--%
-                            </div>
-                        </div>
-                    </div>
-                    <div
-                        style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Loss su
-                            Test Set</div>
-                        <div id="test-loss" style="font-size: 1.2rem; font-weight: 600;">--</div>
-                    </div>
-                </div>
-
-                <!-- Training History -->
-                <div class="glass" style="padding: 2rem;">
-                    <h3>📈 Storia del Training</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
-                        <div>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                                Training Loss (Ultimo)</div>
-                            <div id="train-loss" style="font-size: 1.3rem; font-weight: 600; color: var(--primary);">--
-                            </div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                                Validation Loss (Ultimo)</div>
-                            <div id="val-loss" style="font-size: 1.3rem; font-weight: 600; color: var(--accent);">--
-                            </div>
-                        </div>
-                    </div>
-                    <div
-                        style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                            Convergenza</div>
-                        <div id="convergence-status" style="font-size: 1rem; font-weight: 600;">In attesa di dati...
-                        </div>
-                    </div>
-                    <div
-                        style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Ultimo
-                            Checkpoint</div>
-                        <div id="last-checkpoint" style="font-size: 0.9rem;">--</div>
-                    </div>
-                </div>
-
-                <!-- Model Confidence -->
-                <div class="glass" style="padding: 2rem;">
-                    <h3>🔍 Affidabilità del Modello</h3>
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Confidence Media</div>
-                            <div id="avg-confidence"
-                                style="font-size: 1.5rem; font-weight: 600; color: var(--success);">--%</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Predizioni Incerte (&lt;70%)
-                            </div>
-                            <div id="uncertain-predictions"
-                                style="font-size: 1.5rem; font-weight: 600; color: var(--accent);">--</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Stabilità Modello</div>
-                            <div id="model-stability" style="font-size: 1.5rem; font-weight: 600;">--</div>
-                        </div>
-                    </div>
-                    <div
-                        style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                            Valutazione Qualità</div>
-                        <div id="quality-assessment" style="font-size: 1rem; font-weight: 600; color: var(--success);">
-                            In attesa di dati...</div>
-                    </div>
-                </div>
-
-                <!-- Dataset Info -->
-                <div class="glass" style="padding: 2rem;">
-                    <h3>📚 Informazioni Dataset</h3>
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Scenari di Training</div>
-                            <div id="training-scenarios"
-                                style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">0</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Esempi Totali</div>
-                            <div id="total-examples"
-                                style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">0</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Train / Val / Test Split</div>
-                            <div id="data-split" style="font-size: 1rem; font-weight: 600;">70% / 15% / 15%</div>
-                        </div>
-                    </div>
-                    <div
-                        style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Ultimo
-                            Aggiornamento Dataset</div>
-                        <div id="dataset-updated" style="font-size: 0.9rem;">--</div>
-                    </div>
-                </div>
-
-                <!-- Benchmark Comparison -->
-                <div class="glass" style="padding: 2rem;">
-                    <h3>⚖️ Confronto con Baseline</h3>
-                    <div style="margin-top: 1.5rem;">
-                        <div style="margin-bottom: 1.5rem;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                <span style="font-size: 0.85rem; color: var(--text-secondary);">vs. Random Policy</span>
-                                <span id="vs-random" style="font-weight: 600; color: var(--success);">--</span>
-                            </div>
-                            <div
-                                style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div id="vs-random-bar"
-                                    style="background: var(--success); height: 100%; width: 0%; transition: width 0.5s;">
+                        <!-- Panel: Network Info -->
+                        <div class="glass" style="padding: 1.5rem;">
+                            <h3 style="margin-bottom: 1rem; color: var(--primary);">🌐 Info Rete</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.5rem; font-weight: 700;" id="net-stations">--</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Stazioni</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.5rem; font-weight: 700;" id="net-tracks">--</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Binari</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent);"
+                                        id="net-junctions">--</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Giunzioni</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);"
+                                        id="net-trains">--</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Traini</div>
                                 </div>
                             </div>
                         </div>
-                        <div style="margin-bottom: 1.5rem;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                <span style="font-size: 0.85rem; color: var(--text-secondary);">vs. Greedy
-                                    Algorithm</span>
-                                <span id="vs-greedy" style="font-weight: 600; color: var(--primary);">--</span>
-                            </div>
+
+                        <!-- Panel: Auto-Update Config -->
+                        <div class="glass" style="padding: 1.5rem;">
                             <div
-                                style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div id="vs-greedy-bar"
-                                    style="background: var(--primary); height: 100%; width: 0%; transition: width 0.5s;">
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h3 style="margin: 0; color: #ff9800;">⚙️ Config</h3>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;">
+                                    <div id="status-indicator"
+                                        style="width: 8px; height: 8px; border-radius: 50%; background: var(--text-secondary);">
+                                    </div>
+                                    <span id="ai-status-text">...</span>
                                 </div>
                             </div>
-                        </div>
-                        <div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                <span style="font-size: 0.85rem; color: var(--text-secondary);">vs. Optimal
-                                    Solution</span>
-                                <span id="vs-optimal" style="font-weight: 600; color: var(--accent);">--</span>
+                            <div style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.85rem; color: var(--text-secondary);">Intervallo (s): <span
+                                        id="config-threshold-val">300</span></label>
+                                <input type="range" id="config-threshold" min="60" max="3600" step="60"
+                                    style="width: 100%;">
                             </div>
-                            <div
-                                style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div id="vs-optimal-bar"
-                                    style="background: var(--accent); height: 100%; width: 0%; transition: width 0.5s;">
-                                </div>
+                            <div style="margin-bottom: 1rem; display: flex; justify-content: space-between;">
+                                <label style="font-size: 0.85rem; color: var(--text-secondary);">Abilita</label>
+                                <input type="checkbox" id="config-enabled">
                             </div>
+                            <button id="save-config-btn" style="width: 100%;">Salva</button>
                         </div>
                     </div>
-                    <div
-                        style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
-                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                            Miglioramento Complessivo</div>
-                        <div id="overall-improvement"
-                            style="font-size: 1.3rem; font-weight: 600; color: var(--success);">--</div>
+
+                    <!-- COLUMN 2: Scenarios & Data -->
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+                        <!-- Panel: Scenarios -->
+                        <div class="glass"
+                            style="padding: 0; overflow: hidden; display: flex; flex-direction: column; max-height: 400px;">
+                            <div
+                                style="background: rgba(255,255,255,0.03); padding: 1rem; border-bottom: 1px solid var(--glass-border);">
+                                <h3 style="margin: 0; font-size: 1rem; color: #00bcd4;">📂 Scenari</h3>
+                            </div>
+                            <div style="padding: 1rem; border-bottom: 1px solid var(--glass-border);">
+                                <select id="config-scenario"
+                                    style="width: 100%; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 6px; color: #fff;">
+                                    <option value="">Seleziona...</option>
+                                </select>
+                            </div>
+                            <div id="scenarios-list" style="flex: 1; overflow-y: auto; padding: 1rem;">
+                                <!-- Detailed list populated via JS -->
+                            </div>
+                            <div style="padding: 1rem; border-top: 1px solid var(--glass-border); text-align: right;">
+                                <button id="ai-start-btn" style="background: var(--success); padding: 0.5rem 1rem;">▶️
+                                    Avvia</button>
+                            </div>
+                        </div>
+
+                        <!-- Panel: Logic & Logs (Lavoro Svolto) -->
+                        <div class="glass"
+                            style="padding: 0; overflow: hidden; display: flex; flex-direction: column; height: 350px;">
+                            <div
+                                style="background: rgba(255,255,255,0.03); padding: 1rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin: 0; font-size: 1rem; color: var(--text-secondary);">📜 Log Lavoro</h3>
+                                <button id="ai-clear-logs-btn"
+                                    style="font-size: 0.75rem; padding: 0.2rem 0.6rem; background: transparent; border: 1px solid var(--glass-border);">Pulisci</button>
+                            </div>
+                            <div id="ai-logs"
+                                style="flex: 1; overflow-y: auto; padding: 1rem; font-family: 'Fira Code', monospace; font-size: 0.8rem; color: #a0a0a0;">
+                                <div>Waiting for activity...</div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- COLUMN 3: Metrics (Enhanced existing) -->
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+                        <!-- Training History -->
+                        <div class="glass" style="padding: 0; overflow: hidden;">
+                            <div
+                                style="background: rgba(255,255,255,0.03); padding: 1rem; border-bottom: 1px solid var(--glass-border);">
+                                <h3 style="margin: 0; font-size: 1rem; color: var(--success);">📈 Trend</h3>
+                            </div>
+                            <div style="padding: 1rem;">
+                                <div
+                                    style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                    <span style="color: var(--text-secondary);">Training Loss</span>
+                                    <span id="train-loss" style="font-weight: 600;">--</span>
+                                </div>
+                                <div
+                                    style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                    <span style="color: var(--text-secondary);">Validation Loss</span>
+                                    <span id="val-loss" style="font-weight: 600;">--</span>
+                                </div>
+                                <div style="margin-top: 5px; font-size: 0.8rem; color: var(--text-secondary); text-align: center;"
+                                    id="convergence-status">
+                                    --
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Test Performance -->
+                        <div class="glass" style="padding: 0; overflow: hidden;">
+                            <div
+                                style="background: rgba(255,255,255,0.03); padding: 1rem; border-bottom: 1px solid var(--glass-border);">
+                                <h3 style="margin: 0; font-size: 1rem;">🎯 Performance</h3>
+                            </div>
+                            <div style="padding: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.2rem; font-weight: 600; color: var(--primary);"
+                                        id="test-accuracy">--%</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-secondary);">Accuracy</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.2rem; font-weight: 600; color: #fff;" id="test-f1">--%
+                                    </div>
+                                    <div style="font-size: 0.7rem; color: var(--text-secondary);">F1 Score</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.2rem; font-weight: 600; color: var(--text);"
+                                        id="test-precision">--%</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-secondary);">Precision</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.2rem; font-weight: 600; color: var(--text);"
+                                        id="test-recall">--%</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-secondary);">Recall</div>
+                                </div>
+                                <div style="grid-column: span 2; text-align: center;">
+                                    <div style="font-size: 1.2rem; font-weight: 600; color: var(--accent);"
+                                        id="test-loss">--</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-secondary);">Test Loss</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Model Confidence -->
+                        <div class="glass" style="padding: 0; overflow: hidden;">
+                            <div
+                                style="background: rgba(255,255,255,0.03); padding: 1rem; border-bottom: 1px solid var(--glass-border);">
+                                <h3 style="margin: 0; font-size: 1rem;">🔍 Affidabilità</h3>
+                            </div>
+                            <div style="padding: 1rem; font-size: 0.9rem;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span style="color: var(--text-secondary);">Confidenza Media</span>
+                                    <span id="avg-confidence">--%</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span style="color: var(--text-secondary);">Stabilità</span>
+                                    <span id="model-stability">--</span>
+                                </div>
+                                <div style="margin-top: 10px; border-top: 1px solid var(--glass-border); padding-top: 5px; text-align: center;"
+                                    id="quality-assessment">
+                                    --
+                                </div>
+                            </div>
+                        </div>
+
+                    </div> <!-- End Column 3 -->
+
+                </div> <!-- End Grid -->
+            </div>
+        </div>
+        <div id="ai-logs"
+            style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; font-family: 'Fira Code', monospace; font-size: 0.85rem; max-height: 400px; overflow-y: auto; margin-top: 1rem;">
+            <div style="color: var(--text-secondary);">In attesa di log...</div>
+        </div>
+        <button id="ai-clear-logs-btn"
+            style="margin-top: 1rem; background: transparent; border: 1px solid var(--glass-border);">Pulisci
+            Logs</button>
+        </div>
+
+        <!-- Model Statistics -->
+        <div class="glass" style="padding: 2rem;">
+            <h3>📊 Statistiche Modello</h3>
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Episodi Completati</div>
+                    <div id="model-episodes" style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">0
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Reward Medio</div>
+                    <div id="model-reward" style="font-size: 1.5rem; font-weight: 600; color: var(--success);">
+                        --</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Conflitti Risolti</div>
+                    <div id="model-conflicts" style="font-size: 1.5rem; font-weight: 600; color: var(--accent);">0
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Accuratezza</div>
+                    <div id="model-accuracy" style="font-size: 1.5rem; font-weight: 600;">--%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Set Performance -->
+        <div class="glass" style="padding: 2rem;">
+            <h3>🎯 Performance su Test Set</h3>
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Accuracy (Test)</div>
+                    <div id="test-accuracy" style="font-size: 1.5rem; font-weight: 600; color: var(--success);">
+                        --%</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Precision</div>
+                    <div id="test-precision" style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">--%
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Recall</div>
+                    <div id="test-recall" style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">
+                        --%</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">F1-Score</div>
+                    <div id="test-f1" style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">--%
                     </div>
                 </div>
             </div>
+            <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Loss su
+                    Test Set</div>
+                <div id="test-loss" style="font-size: 1.2rem; font-weight: 600;">--</div>
+            </div>
+        </div>
+
+        <!-- Training History -->
+        <div class="glass" style="padding: 2rem;">
+            <h3>📈 Storia del Training</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+                <div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                        Training Loss (Ultimo)</div>
+                    <div id="train-loss" style="font-size: 1.3rem; font-weight: 600; color: var(--primary);">--
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                        Validation Loss (Ultimo)</div>
+                    <div id="val-loss" style="font-size: 1.3rem; font-weight: 600; color: var(--accent);">--
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    Convergenza</div>
+                <div id="convergence-status" style="font-size: 1rem; font-weight: 600;">In attesa di dati...
+                </div>
+            </div>
+            <div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Ultimo
+                    Checkpoint</div>
+                <div id="last-checkpoint" style="font-size: 0.9rem;">--</div>
+            </div>
+        </div>
+
+        <!-- Model Confidence -->
+        <div class="glass" style="padding: 2rem;">
+            <h3>🔍 Affidabilità del Modello</h3>
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Confidence Media</div>
+                    <div id="avg-confidence" style="font-size: 1.5rem; font-weight: 600; color: var(--success);">--%
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Predizioni Incerte (&lt;70%)
+                    </div>
+                    <div id="uncertain-predictions" style="font-size: 1.5rem; font-weight: 600; color: var(--accent);">
+                        --</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Stabilità Modello</div>
+                    <div id="model-stability" style="font-size: 1.5rem; font-weight: 600;">--</div>
+                </div>
+            </div>
+            <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    Valutazione Qualità</div>
+                <div id="quality-assessment" style="font-size: 1rem; font-weight: 600; color: var(--success);">
+                    In attesa di dati...</div>
+            </div>
+        </div>
+
+        <!-- Dataset Info -->
+        <div class="glass" style="padding: 2rem;">
+            <h3>📚 Informazioni Dataset</h3>
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Scenari di Training</div>
+                    <div id="training-scenarios" style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">0
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Esempi Totali</div>
+                    <div id="total-examples" style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">0
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Train / Val / Test Split</div>
+                    <div id="data-split" style="font-size: 1rem; font-weight: 600;">70% / 15% / 15%</div>
+                </div>
+            </div>
+            <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Ultimo
+                    Aggiornamento Dataset</div>
+                <div id="dataset-updated" style="font-size: 0.9rem;">--</div>
+            </div>
+        </div>
+
+        <!-- Benchmark Comparison -->
+        <div class="glass" style="padding: 2rem;">
+            <h3>⚖️ Confronto con Baseline</h3>
+            <div style="margin-top: 1.5rem;">
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary);">vs. Random Policy</span>
+                        <span id="vs-random" style="font-weight: 600; color: var(--success);">--</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                        <div id="vs-random-bar"
+                            style="background: var(--success); height: 100%; width: 0%; transition: width 0.5s;">
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary);">vs. Greedy
+                            Algorithm</span>
+                        <span id="vs-greedy" style="font-weight: 600; color: var(--primary);">--</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                        <div id="vs-greedy-bar"
+                            style="background: var(--primary); height: 100%; width: 0%; transition: width 0.5s;">
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary);">vs. Optimal
+                            Solution</span>
+                        <span id="vs-optimal" style="font-weight: 600; color: var(--accent);">--</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                        <div id="vs-optimal-bar"
+                            style="background: var(--accent); height: 100%; width: 0%; transition: width 0.5s;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    Miglioramento Complessivo</div>
+                <div id="overall-improvement" style="font-size: 1.3rem; font-weight: 600; color: var(--success);">--
+                </div>
+            </div>
+        </div>
+        </div>
         </div>
 
         <!-- Settings View -->

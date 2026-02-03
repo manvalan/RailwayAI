@@ -8,13 +8,40 @@ async function loadAIManagement() {
         fetchModelStats(),
         loadAIConfig(),
         populateScenarioDropdown(),
-        fetchAIQualityMetrics()
+        fetchAIQualityMetrics(),
+        fetchNetworkStats()
     ]);
+
+    // Slider listener
+    const slider = document.getElementById('config-threshold');
+    const valDisplay = document.getElementById('config-threshold-val');
+    if (slider && valDisplay) {
+        slider.addEventListener('input', (e) => {
+            valDisplay.textContent = e.target.value + 's';
+        });
+    }
 
     // Subscribe to training logs via WebSocket
     if (ws && ws.readyState === WebSocket.OPEN) {
         // Logs will come through existing WebSocket connection
     }
+}
+
+
+async function fetchNetworkStats() {
+    try {
+        const response = await fetch('/api/v1/network/statistics', {
+            headers: { 'X-API-Key': accessToken }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('net-name').textContent = data.network_name;
+            document.getElementById('net-stations').textContent = data.total_stations;
+            document.getElementById('net-tracks').textContent = data.total_tracks;
+            document.getElementById('net-junctions').textContent = data.total_junctions;
+            document.getElementById('net-trains').textContent = data.active_trains;
+        }
+    } catch (e) { console.error('Error fetching network stats:', e); }
 }
 
 async function fetchAIStatus() {
@@ -45,25 +72,56 @@ async function fetchScenarios() {
         if (response.ok) {
             const data = await response.json();
             const listEl = document.getElementById('scenarios-list');
+            const selectEl = document.getElementById('config-scenario');
+
+            // Clear both
+            if (listEl) listEl.innerHTML = '';
+            if (selectEl) selectEl.innerHTML = '<option value="">Auto (primo disponibile)</option>';
 
             if (data.total === 0) {
-                listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 2rem;">Nessuno scenario disponibile. Generane uno dalla sezione Training.</div>';
+                if (listEl) listEl.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 2rem;">Nessuno scenario disponibile.</div>';
             } else {
-                listEl.innerHTML = data.scenarios.map(s => `
-                    <div style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 0.5rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <div style="font-weight: 600;">${s.name}</div>
-                                <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                    ${s.stations} stazioni • ${s.tracks} binari • ${s.size_kb} KB
+                data.scenarios.forEach(s => {
+                    // Populate List
+                    if (listEl) {
+                        const item = document.createElement('div');
+                        item.className = 'scenario-item'; // Add CSS class for hover effect
+                        item.style.padding = '0.8rem';
+                        item.style.borderBottom = '1px solid var(--glass-border)';
+                        item.style.cursor = 'pointer';
+
+                        // Click to select in config
+                        item.onclick = () => {
+                            if (selectEl) selectEl.value = s.filename;
+                            // Reset styles
+                            Array.from(listEl.children).forEach(c => c.style.background = 'transparent');
+                            item.style.background = 'rgba(255,255,255,0.1)';
+                        };
+
+                        item.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 0.9rem; color: #fff;">${s.name}</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">
+                                        ${s.stations} stazioni • ${s.tracks} binari
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                                    ${new Date(s.modified * 1000).toLocaleDateString('it-IT')}
                                 </div>
                             </div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">
-                                ${new Date(s.modified * 1000).toLocaleDateString('it-IT')}
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
+                        `;
+                        listEl.appendChild(item);
+                    }
+
+                    // Populate Dropdown
+                    if (selectEl) {
+                        const option = document.createElement('option');
+                        option.value = s.filename;
+                        option.textContent = `${s.name} (${s.stations} staz.)`;
+                        selectEl.appendChild(option);
+                    }
+                });
             }
         }
     } catch (error) {

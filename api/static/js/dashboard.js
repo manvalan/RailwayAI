@@ -219,7 +219,6 @@ function switchView(view) {
         navApiKeys.classList.add('active');
     }
 }
-}
 
 async function changePassword() {
     const newPass = document.getElementById('new-password').value;

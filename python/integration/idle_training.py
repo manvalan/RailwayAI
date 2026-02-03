@@ -90,15 +90,22 @@ class IdleTrainingManager:
         return scenario
 
     async def _run_training(self):
-        """Avvia il processo di addestramento in background."""
-        if not self.enabled:
+        """Select scenario and start training."""
+        if not self.enabled or self.is_training:
             return
             
         scenario = self._get_next_scenario()
         if not scenario:
-            logger.warning("No scenario available for auto-training.")
+            logger.warning("No scenarios found for training.")
             return
-        
+            
+        await self._run_background_training(scenario)
+
+    async def _run_background_training(self, scenario: str):
+        """Execute the training script in a non-blocking background process."""
+        if not self.enabled or self.is_training: # Added self.is_training check
+            return
+            
         logger.info(f"System is idle. Starting background training on {scenario}...")
         self.is_training = True
         self.last_training_time = datetime.now()
@@ -117,17 +124,15 @@ class IdleTrainingManager:
             self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Initializing training process on {Path(scenario).name}...")
             self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Executing: {' '.join(cmd)}")
             
-            # Start process, capturing output
-            self.training_process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1
+            # Start process using asyncio for non-blocking IO
+            self.training_process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT
             )
             
-            # Wait and capture output asynchronously
-            await asyncio.create_task(self._monitor_process_output(scenario))
+            # Start monitoring
+            await self._monitor_process_output(scenario)
             
         except Exception as e:
             logger.error(f"Failed to start training process: {e}")
@@ -135,38 +140,33 @@ class IdleTrainingManager:
             self._add_history_entry(scenario, "failed", str(e))
 
     async def _monitor_process_output(self, scenario: str):
-        """Read stdout from the training process."""
+        """Read stdout from the training process without blocking the event loop."""
         start_time = time.time()
-        output_buffer = []
         status = "completed"
         error_msg = None
 
-        if not self.training_process or not self.training_process.stdout:
+        if not self.training_process:
             self.is_training = False
             return
 
         try:
-            # Read line by line asynchronously (using run_in_executor for blocking IO)
-            while self.training_process and self.training_process.poll() is None:
-                # Note: readline is blocking, so we should be careful. 
-                # Ideally use asyncio subprocess, but we are using Popen for better control (kill).
-                # For simplicity here we poll.
-                line = self.training_process.stdout.readline()
+            # Read line by line asynchronously
+            while True:
+                line_bytes = await self.training_process.stdout.readline()
+                if not line_bytes:
+                    break
+                
+                line = line_bytes.decode('utf-8').strip()
                 if line:
-                    line = line.strip()
-                    if line:
-                        self.last_logs.append(line)
-                        if len(self.last_logs) > 1000: # Keep last 1000 lines
-                             self.last_logs.pop(0)
-                else:
-                    await asyncio.sleep(0.1)
+                    self.last_logs.append(line)
+                    if len(self.last_logs) > 1000:
+                         self.last_logs.pop(0)
 
-            # Check exit code
-            if self.training_process:
-                return_code = self.training_process.poll()
-                if return_code != 0 and return_code is not None:
-                     status = "error" if return_code != -15 else "suspended" # -15 is SIGTERM
-                     error_msg = f"Exit code {return_code}"
+            # Wait for completion
+            return_code = await self.training_process.wait()
+            if return_code != 0:
+                 status = "error" if return_code != -15 else "suspended"
+                 error_msg = f"Exit code {return_code}"
 
         except Exception as e:
             logger.error(f"Error monitoring training output: {e}")

@@ -514,6 +514,64 @@
             </div>
         </div>
 
+        <!-- Network Topology View -->
+        <div id="view-topology" class="hidden">
+            <div class="glass"
+                style="padding: 2rem; height: calc(100vh - 100px); display: flex; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        <h2 id="topo-title">🗺️ Topologia di Rete</h2>
+                        <p id="topo-desc" style="color: var(--text-secondary); font-size: 0.9rem;">Analisi spaziale e
+                            interconnessioni della rete ferroviaria.</p>
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button id="topo-refresh-btn"
+                            style="background: transparent; border: 1px solid var(--glass-border); padding: 0.5rem 1rem;">🔄
+                            Aggiorna</button>
+                        <div id="topo-status"
+                            style="font-size: 0.8rem; color: var(--success); display: flex; align-items: center; gap: 0.5rem;">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--success);"></div>
+                            Real-time Data
+                        </div>
+                    </div>
+                </div>
+
+                <div id="topo-container"
+                    style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 12px; position: relative; overflow: hidden; border: 1px solid var(--glass-border);">
+                    <canvas id="topo-canvas"
+                        style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;"></canvas>
+                    <div id="topo-overlay"
+                        style="position: absolute; top: 1rem; right: 1rem; padding: 1rem; background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 0.8rem; border: 1px solid var(--glass-border); display: none;">
+                        <div style="font-weight: 700; margin-bottom: 0.5rem; color: var(--primary);"
+                            id="topo-node-name">--</div>
+                        <div id="topo-node-details">Seleziona un nodo...</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-top: 1.5rem;">
+                    <div class="glass" style="padding: 1rem; text-align: center;">
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Nodi (Stazioni)</div>
+                        <div id="topo-stat-nodes" style="font-size: 1.2rem; font-weight: 700; color: #fff;">--</div>
+                    </div>
+                    <div class="glass" style="padding: 1rem; text-align: center;">
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Archi (Binari)</div>
+                        <div id="topo-stat-edges" style="font-size: 1.2rem; font-weight: 700; color: var(--primary);">--
+                        </div>
+                    </div>
+                    <div class="glass" style="padding: 1rem; text-align: center;">
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Densità Archi</div>
+                        <div id="topo-stat-density" style="font-size: 1.2rem; font-weight: 700; color: var(--success);">
+                            --</div>
+                    </div>
+                    <div class="glass" style="padding: 1rem; text-align: center;">
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Hub Principali</div>
+                        <div id="topo-stat-hubs" style="font-size: 1.2rem; font-weight: 700; color: var(--accent);">--
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
         <!-- Settings View -->
         <div id="view-settings" class="hidden">
@@ -554,6 +612,8 @@
 
     <script src="js/dashboard.js?v=2"></script>
     <script src="js/ai-management.js?v=2"></script>
+    <script src="js/topology.js?v=1"></script>
+
 </body>
 
 </html>

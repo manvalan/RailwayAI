@@ -1883,21 +1883,114 @@ async def get_ai_quality_metrics(current_user: dict = Depends(get_current_user))
 @app.get("/api/v1/network/statistics", tags=["Network"])
 async def get_network_statistics(current_user: dict = Depends(get_current_user)):
     """Get statistics of the currently loaded network topology"""
-    # This retrieves data from the currently loaded model/environment
-    # If using the C++ backend or Python environment
+    import json
+    from pathlib import Path
     
-    # Mock data for now if real model isn't instantly accessible globally
-    # In a real impl, you'd access `idle_manager.env` or `scheduler_model`
+    # Try to get the current scenario from idle_manager
+    scenario_path = getattr(idle_manager, 'current_scenario', None)
+    if not scenario_path:
+        # Fallback to a default scenario if none is training
+        scenario_path = "scenarios/tuscany_real.json"
     
-    return {
-        "network_name": "Tuscany Regional Network",
-        "total_stations": 42,
-        "total_tracks": 156,
-        "total_junctions": 28,
-        "active_trains": 12,
-        "complexity_score": "High",
+    path = Path(scenario_path)
+    if not path.is_absolute():
+        path = Path(__file__).parent.parent / path
+
+    if not path.exists():
+        # Last resort fallback to first available
+        for f in Path("scenarios").glob("*.json"):
+            path = f
+            break
+    
+    stats = {
+        "network_name": "Unknown Network",
+        "total_stations": 0,
+        "total_tracks": 0,
+        "total_junctions": 0,
+        "active_trains": 0,
+        "complexity_score": "Low",
         "last_update": datetime.now().isoformat()
     }
+
+    try:
+        if path.exists():
+            with open(path, 'r') as f:
+                data = json.load(f)
+                stations = data.get('stations', [])
+                tracks = data.get('tracks', [])
+                trains = data.get('trains', [])
+                
+                stats["network_name"] = path.stem.replace('_', ' ').title()
+                stats["total_stations"] = len(stations)
+                stats["total_tracks"] = len(tracks)
+                stats["active_trains"] = len(trains)
+                
+                # Simple complexity heuristic
+                if len(stations) > 100: stats["complexity_score"] = "Critical"
+                elif len(stations) > 50: stats["complexity_score"] = "High"
+                elif len(stations) > 20: stats["complexity_score"] = "Medium"
+                
+                # Check junctions (stations with > 2 tracks)
+                station_track_count = {}
+                for t in tracks:
+                    for s_id in t.get('station_ids', []):
+                        station_track_count[s_id] = station_track_count.get(s_id, 0) + 1
+                
+                stats["total_junctions"] = sum(1 for count in station_track_count.values() if count > 2)
+    except Exception as e:
+        logger.error(f"Error reading network stats from {path}: {e}")
+
+    return stats
+
+@app.get("/api/v1/network/topology", tags=["Network"])
+async def get_network_topology(current_user: dict = Depends(get_current_user)):
+    """Get nodes and edges for network visualization"""
+    import json
+    from pathlib import Path
+    
+    scenario_path = getattr(idle_manager, 'current_scenario', None) or "scenarios/tuscany_real.json"
+    path = Path(scenario_path)
+    if not path.is_absolute():
+        path = Path(__file__).parent.parent / path
+    
+    try:
+        if path.exists():
+            with open(path, 'r') as f:
+                data = json.load(f)
+                
+                # Extract nodes (stations)
+                nodes = []
+                for s in data.get('stations', []):
+                    nodes.append({
+                        "id": s.get('id'),
+                        "name": s.get('name', f"Station {s.get('id')}"),
+                        "type": s.get('type', 'regular'),
+                        "pos": s.get('pos', [0, 0]) # [lat, lon]
+                    })
+                
+                # Extract edges (tracks)
+                edges = []
+                for t in data.get('tracks', []):
+                    s_ids = t.get('station_ids', [])
+                    if len(s_ids) >= 2:
+                        edges.append({
+                            "id": t.get('id'),
+                            "source": s_ids[0],
+                            "target": s_ids[1],
+                            "capacity": t.get('capacity', 1),
+                            "is_single": t.get('is_single_track', False)
+                        })
+                
+                return {
+                    "scenario": path.stem,
+                    "nodes": nodes,
+                    "edges": edges
+                }
+    except Exception as e:
+        logger.error(f"Error reading topology from {path}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return {"nodes": [], "edges": []}
 
 if __name__ == "__main__":
     import uvicorn

@@ -176,6 +176,7 @@ function switchView(view) {
     const viewSettings = document.getElementById('view-settings');
     const viewApiKeys = document.getElementById('view-api-keys');
     const viewAI = document.getElementById('view-ai-management');
+    const viewTopology = document.getElementById('view-topology');
 
     const navMon = document.getElementById('nav-monitoring');
     const navTrain = document.getElementById('nav-training');
@@ -185,12 +186,13 @@ function switchView(view) {
     const navSettings = document.getElementById('nav-settings');
     const navApiKeys = document.getElementById('nav-api-keys');
     const navAI = document.getElementById('nav-ai-management');
+    const navTopology = document.getElementById('nav-topology');
 
     // Reset visibility
-    [viewMon, viewTrain, viewOpt, viewUsers, viewSMTP, viewSettings, viewApiKeys, viewAI].forEach(v => {
+    [viewMon, viewTrain, viewOpt, viewUsers, viewSMTP, viewSettings, viewApiKeys, viewAI, viewTopology].forEach(v => {
         if (v) v.classList.add('hidden');
     });
-    [navMon, navTrain, navOpt, navUsers, navSMTP, navSettings, navApiKeys, navAI].forEach(n => {
+    [navMon, navTrain, navOpt, navUsers, navSMTP, navSettings, navApiKeys, navAI, navTopology].forEach(n => {
         if (n) n.classList.remove('active');
     });
 
@@ -222,6 +224,10 @@ function switchView(view) {
     } else if (view === 'ai-management') {
         if (viewAI) viewAI.classList.remove('hidden');
         if (navAI) navAI.classList.add('active');
+    } else if (view === 'topology') {
+        if (viewTopology) viewTopology.classList.remove('hidden');
+        if (navTopology) navTopology.classList.add('active');
+        if (window.loadTopology) window.loadTopology();
     }
 }
 

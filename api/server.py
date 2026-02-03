@@ -1168,7 +1168,7 @@ async def optimize_scheduled_trains(
             )
         
         # RECORD ACTIVITY for Idle Training
-        idle_manager.record_activity()
+        idle_manager.record_activity("Optimization Endpoint")
 
         # STRATEGY FOR COMPLEX NETWORKS: Limit to 100 active trains
         # We process the 100 most 'critical' trains if the network is too large

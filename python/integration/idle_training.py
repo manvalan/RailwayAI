@@ -39,11 +39,11 @@ class IdleTrainingManager:
         if scenarios_dir.exists():
             self.available_scenarios = sorted([str(p) for p in scenarios_dir.glob("*.json")])
 
-    def record_activity(self):
+    def record_activity(self, source: str = "unknown"):
         """Notifica che c'è stata attività da parte di un utente."""
         self.last_activity = time.time()
         if self.is_training:
-            logger.info("Activity detected! Suspending background training...")
+            logger.info(f"Activity detected from {source}! Suspending background training...")
             self.stop_training()
 
     async def start(self):
@@ -59,10 +59,16 @@ class IdleTrainingManager:
                     continue
                     
                 idle_time = time.time() - self.last_activity
-                if idle_time > self.idle_threshold and not self.is_training:
+                if self.is_training:
+                    # Log status every check while training
+                    logger.debug(f"Training active. Idle time: {idle_time:.1f}s / Threshold: {self.idle_threshold}s")
+                    
+                    if idle_time <= self.idle_threshold:
+                         logger.info(f"Suspending training: idle_time ({idle_time:.1f}s) <= threshold ({self.idle_threshold}s)")
+                         self.stop_training()
+                elif idle_time > self.idle_threshold:
+                    logger.info(f"System idle for {idle_time:.1f}s. Starting background training.")
                     await self._run_training()
-                elif idle_time <= self.idle_threshold and self.is_training:
-                    self.stop_training()
             except Exception as e:
                 logger.error(f"Error in Idle Training loop: {e}")
             
@@ -115,7 +121,7 @@ class IdleTrainingManager:
         try:
             # Prepare command
             cmd = [
-                sys.executable, "-u", "python/marl_scheduling/train_mappo.py",
+                "python3", "-u", "python/marl_scheduling/train_mappo.py",
                 "--scenario", scenario,
                 "--episodes", str(self.episodes_per_run),
                 "--background"
@@ -143,7 +149,7 @@ class IdleTrainingManager:
                 raise startup_err
             
             # Start monitoring in a separate background task so we don't block the loop
-            asyncio.create_task(self._monitor_process_output(scenario))
+            self._monitor_task = asyncio.create_task(self._monitor_process_output(scenario))
             
         except Exception as e:
             logger.error(f"Failed to start training process: {e}")

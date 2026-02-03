@@ -1,16 +1,25 @@
 
 // ==================== AI Management Functions ====================
 
+let aiStatusInterval = null;
+
 async function loadAIManagement() {
-    await Promise.all([
-        fetchAIStatus(),
-        fetchScenarios(),
-        fetchModelStats(),
-        loadAIConfig(),
-        populateScenarioDropdown(),
-        fetchAIQualityMetrics(),
-        fetchNetworkStats()
-    ]);
+    // Initial load
+    await refreshAIManagementData();
+
+    // Set refresh interval to 1 second
+    if (aiStatusInterval) clearInterval(aiStatusInterval);
+    aiStatusInterval = setInterval(async () => {
+        // Only refresh if the AI Management view is still visible
+        const aiView = document.getElementById('view-ai-management');
+        if (aiView && !aiView.classList.contains('hidden')) {
+            await fetchAIStatus();
+            // We can also refresh model stats less frequently, but user asked for "ogny secondo" for the page
+        } else {
+            clearInterval(aiStatusInterval);
+            aiStatusInterval = null;
+        }
+    }, 1000);
 
     // Slider listener
     const slider = document.getElementById('config-threshold');
@@ -20,11 +29,18 @@ async function loadAIManagement() {
             valDisplay.textContent = e.target.value + 's';
         });
     }
+}
 
-    // Subscribe to training logs via WebSocket
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        // Logs will come through existing WebSocket connection
-    }
+async function refreshAIManagementData() {
+    return Promise.all([
+        fetchAIStatus(),
+        fetchScenarios(),
+        fetchModelStats(),
+        loadAIConfig(),
+        populateScenarioDropdown(),
+        fetchAIQualityMetrics(),
+        fetchNetworkStats()
+    ]);
 }
 
 

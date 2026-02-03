@@ -5,12 +5,14 @@ from pathlib import Path
 # IMMEDIATE DIAGNOSTIC
 print(">>> PYTHON INTERPRETER STARTED", flush=True)
 
-# Limit threads to prevent VPS freeze during torch import/execution
+# Limit threads and force stability to prevent VPS freeze
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
 os.environ["OMP_PROC_BIND"] = "FALSE"
 os.environ["TORCH_NUM_THREADS"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "" # Disable GPU lookup
+os.environ["MKL_THREADING_LAYER"] = "GNU" # Use GNU threading instead of Intel's to avoid hangs in subprocesses
 
 import time
 print(">>> COOLING DOWN (2s)...", flush=True)

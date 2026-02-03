@@ -139,7 +139,7 @@ async function fetchScenarios() {
 
                         // Click to select in config
                         item.onclick = () => {
-                            if (selectEl) selectEl.value = s.filename;
+                            if (selectEl) selectEl.value = s.path;
                             // Reset styles
                             Array.from(listEl.children).forEach(c => c.style.background = 'transparent');
                             item.style.background = 'rgba(255,255,255,0.1)';
@@ -164,7 +164,7 @@ async function fetchScenarios() {
                     // Populate Dropdown
                     if (selectEl) {
                         const option = document.createElement('option');
-                        option.value = s.filename;
+                        option.value = s.path;
                         option.textContent = `${s.name} (${s.stations} staz.)`;
                         selectEl.appendChild(option);
                     }

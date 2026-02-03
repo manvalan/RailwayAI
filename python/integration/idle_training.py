@@ -164,6 +164,7 @@ class IdleTrainingManager:
             while True:
                 line_bytes = await self.training_process.stdout.readline()
                 if not line_bytes:
+                    self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] End of process stream reached.")
                     break
                 
                 line = line_bytes.decode('utf-8').strip()
@@ -174,6 +175,7 @@ class IdleTrainingManager:
 
             # Wait for completion
             return_code = await self.training_process.wait()
+            self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Process exited with code: {return_code}")
             if return_code != 0:
                  status = "error" if return_code != -15 else "suspended"
                  error_msg = f"Exit code {return_code}"

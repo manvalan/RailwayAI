@@ -4,6 +4,11 @@ from pathlib import Path
 
 # IMMEDIATE DIAGNOSTIC
 print(">>> PYTHON INTERPRETER STARTED", flush=True)
+
+# Limit threads to prevent VPS freeze during torch import/execution
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+
 import resource
 def get_mem():
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 # KB on Mac, but usually KB on Linux too

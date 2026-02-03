@@ -326,6 +326,42 @@
                     </div>
                 </div>
 
+                <!-- Auto-Training Configuration -->
+                <div class="glass" style="padding: 2rem;">
+                    <h3>⚙️ Configurazione Auto-Training</h3>
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Threshold Inattività
+                                (secondi)</label>
+                            <input type="number" id="config-threshold" min="60" max="3600" value="300"
+                                style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text); font-size: 1rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Episodi per
+                                Sessione</label>
+                            <input type="number" id="config-episodes" min="10" max="10000" value="100"
+                                style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text); font-size: 1rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Scenario da
+                                Usare</label>
+                            <select id="config-scenario"
+                                style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text); font-size: 1rem;">
+                                <option value="">Auto (primo disponibile)</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 1rem; padding-top: 1.5rem;">
+                            <label style="font-weight: 600;">Auto-Training Attivo</label>
+                            <input type="checkbox" id="config-enabled" checked
+                                style="width: 24px; height: 24px; cursor: pointer;">
+                        </div>
+                    </div>
+                    <button id="save-config-btn" style="margin-top: 1.5rem; background: var(--primary); width: 100%;">💾
+                        Salva Configurazione</button>
+                    <div id="config-status-msg" style="margin-top: 1rem; text-align: center; font-weight: 600;"></div>
+                </div>
+
                 <!-- Scenarios List -->
                 <div class="glass" style="padding: 2rem;">
                     <h3>📁 Scenari Disponibili</h3>

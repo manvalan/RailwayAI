@@ -152,6 +152,86 @@ function clearAILogs() {
     document.getElementById('ai-logs').innerHTML = '<div style="color: var(--text-secondary);">Logs puliti.</div>';
 }
 
+async function loadAIConfig() {
+    try {
+        const response = await fetch('/api/v1/ai/config', {
+            headers: { 'X-API-Key': accessToken }
+        });
+
+        if (response.ok) {
+            const config = await response.json();
+            document.getElementById('config-threshold').value = config.threshold_seconds || 300;
+            document.getElementById('config-episodes').value = config.episodes_per_run || 100;
+            document.getElementById('config-scenario').value = config.scenario_path || '';
+            document.getElementById('config-enabled').checked = config.enabled !== false;
+        }
+    } catch (error) {
+        console.error('Error loading AI config:', error);
+    }
+}
+
+async function saveAIConfig() {
+    const threshold = parseInt(document.getElementById('config-threshold').value);
+    const episodes = parseInt(document.getElementById('config-episodes').value);
+    const scenario = document.getElementById('config-scenario').value || null;
+    const enabled = document.getElementById('config-enabled').checked;
+
+    const msgEl = document.getElementById('config-status-msg');
+    msgEl.textContent = '⏳ Salvando...';
+    msgEl.style.color = 'var(--primary)';
+
+    try {
+        const response = await fetch('/api/v1/ai/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': accessToken
+            },
+            body: JSON.stringify({ threshold, episodes, scenario, enabled })
+        });
+
+        if (response.ok) {
+            msgEl.textContent = '✅ Configurazione salvata!';
+            msgEl.style.color = 'var(--success)';
+            setTimeout(() => { msgEl.textContent = ''; }, 3000);
+            fetchAIStatus(); // Refresh status
+        } else {
+            const error = await response.json();
+            msgEl.textContent = `❌ Errore: ${error.detail}`;
+            msgEl.style.color = 'var(--accent)';
+        }
+    } catch (error) {
+        msgEl.textContent = `❌ Errore di connessione`;
+        msgEl.style.color = 'var(--accent)';
+    }
+}
+
+async function populateScenarioDropdown() {
+    try {
+        const response = await fetch('/api/v1/ai/scenarios', {
+            headers: { 'X-API-Key': accessToken }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const select = document.getElementById('config-scenario');
+
+            // Keep "Auto" option
+            select.innerHTML = '<option value="">Auto (primo disponibile)</option>';
+
+            // Add scenarios
+            data.scenarios.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.path;
+                option.textContent = `${s.name} (${s.stations} stazioni)`;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error populating scenarios:', error);
+    }
+}
+
 // Intercept WebSocket messages for AI logs
 const originalHandleWsMessage = handleWsMessage;
 handleWsMessage = function (data) {

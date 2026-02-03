@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('ai-stop-btn')?.addEventListener('click', stopAutoTraining);
     document.getElementById('ai-refresh-btn')?.addEventListener('click', loadAIManagement);
     document.getElementById('ai-clear-logs-btn')?.addEventListener('click', clearAILogs);
+    document.getElementById('save-config-btn')?.addEventListener('click', saveAIConfig);
 });
 
 

@@ -1626,6 +1626,44 @@ async def get_model_statistics(current_user: dict = Depends(get_current_user)):
         "accuracy": metrics.get('model_accuracy', 0.0)
     }
 
+@app.post("/api/v1/ai/config", tags=["AI Management"])
+async def update_ai_config(
+    threshold: Optional[int] = None,
+    scenario: Optional[str] = None,
+    episodes: Optional[int] = None,
+    enabled: Optional[bool] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update auto-training configuration (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    from python.integration.idle_training import idle_manager
+    
+    if idle_manager:
+        idle_manager.update_config(
+            threshold=threshold,
+            scenario=scenario,
+            episodes=episodes,
+            enabled=enabled
+        )
+        return {"message": "Configuration updated", "config": idle_manager.get_config()}
+    else:
+        raise HTTPException(status_code=500, detail="Idle training manager not available")
+
+@app.get("/api/v1/ai/config", tags=["AI Management"])
+async def get_ai_config(current_user: dict = Depends(get_current_user)):
+    """Get current auto-training configuration (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    from python.integration.idle_training import idle_manager
+    
+    if idle_manager:
+        return idle_manager.get_config()
+    else:
+        raise HTTPException(status_code=500, detail="Idle training manager not available")
+
 if __name__ == "__main__":
     import uvicorn
     

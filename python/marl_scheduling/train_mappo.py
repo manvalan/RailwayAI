@@ -2,20 +2,32 @@ import sys
 import os
 from pathlib import Path
 
+# IMMEDIATE DIAGNOSTIC
+print(">>> PYTHON INTERPRETER STARTED", flush=True)
+print(f">>> CWD: {os.getcwd()}", flush=True)
+print(f">>> PYTHONPATH: {os.environ.get('PYTHONPATH')}", flush=True)
+
 # Add current directory to sys.path BEFORE any other imports
 current_dir = Path(__file__).parent.absolute()
 if str(current_dir) not in sys.path:
     sys.path.insert(0, str(current_dir))
 
+print(f">>> SYS.PATH UPDATED: {sys.path[0]}", flush=True)
+
 import torch
+print(f">>> TORCH LOADED: {torch.__version__}", flush=True)
 import torch.optim as optim
 import numpy as np
 import argparse
 import logging
+
+print(">>> ATTEMPTING LOCAL IMPORTS...", flush=True)
 from env import RailwayGymEnv
 from scenario_loader import ScenarioLoader
 from constraints import SafetyConstraintLayer
 from models import ActorNetwork, CriticNetwork
+
+print(">>> ALL IMPORTS SUCCESSFUL", flush=True)
 
 # Force INFO level logging
 logging.basicConfig(

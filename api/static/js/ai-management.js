@@ -52,11 +52,54 @@ async function fetchAIStatus() {
 
         if (response.ok) {
             const data = await response.json();
-            document.getElementById('ai-status').textContent = data.status === 'active' ? 'Attivo' : 'Inattivo';
-            document.getElementById('ai-status').style.color = data.status === 'active' ? 'var(--success)' : 'var(--accent)';
-            document.getElementById('ai-threshold').textContent = `${data.threshold_seconds}s`;
-            document.getElementById('ai-last-run').textContent = data.last_run ? new Date(data.last_run).toLocaleString('it-IT') : '--';
-            document.getElementById('ai-next-run').textContent = data.is_training ? 'Training in corso...' : data.next_run_estimate;
+
+            // 1. Status Indicator
+            const indicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('ai-status-text');
+
+            if (data.status === 'training') {
+                indicator.style.background = 'var(--success)';
+                indicator.style.boxShadow = '0 0 8px var(--success)';
+                statusText.innerHTML = `<span style="color:var(--success)">Training in corso:</span> ${data.current_scenario}`;
+                statusText.style.fontWeight = '600';
+            } else {
+                indicator.style.background = 'var(--text-secondary)';
+                indicator.style.boxShadow = 'none';
+                statusText.textContent = `Idle (Next: ${data.queued_scenario})`;
+                statusText.style.fontWeight = 'normal';
+            }
+
+            // 2. Logs Preview
+            const logsContainer = document.getElementById('ai-logs');
+            if (logsContainer) {
+                if (data.logs_preview && data.logs_preview.length > 0) {
+                    logsContainer.innerHTML = data.logs_preview.map(l => `<div style="margin-bottom:2px;">${l}</div>`).join('');
+                    // Auto scroll to bottom
+                    logsContainer.scrollTop = logsContainer.scrollHeight;
+                } else {
+                    // Show history if no active logs
+                    if (data.history && data.history.length > 0) {
+                        const historyHtml = data.history.map(h => {
+                            const color = h.status === 'completed' ? 'var(--success)' : 'var(--accent)';
+                            return `
+                                <div style="border-left: 2px solid ${color}; padding-left: 0.5rem; margin-bottom: 0.5rem;">
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">${new Date(h.timestamp).toLocaleTimeString()}</div>
+                                    <div>${h.scenario} - <span style="color:${color}">${h.status}</span> (${h.duration_seconds}s)</div>
+                                </div>
+                             `;
+                        }).join('');
+                        logsContainer.innerHTML = `<div style="color:var(--text-secondary); margin-bottom:0.5rem; font-weight:600;">Last Activity:</div>` + historyHtml;
+                    } else {
+                        logsContainer.innerHTML = '<div style="color:var(--text-secondary)">Nessuna attività recente.</div>';
+                    }
+                }
+            }
+
+            // 3. Update Sliders/Inputs if not focused (avoid fighting user)
+            if (document.activeElement.id !== 'config-threshold') {
+                // Update specific config fields if returned, but usually config is separate.
+                // We trust get_status_report covers operational state.
+            }
         }
     } catch (error) {
         console.error('Error fetching AI status:', error);

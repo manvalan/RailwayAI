@@ -2,9 +2,11 @@ import asyncio
 import time
 import subprocess
 import logging
+import json
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from pathlib import Path
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -14,12 +16,27 @@ class IdleTrainingManager:
         self.last_activity = time.time()
         self.last_training_time: Optional[datetime] = None
         self.is_training = False
-        self.enabled = True  # Auto-training enabled by default
+        self.enabled = True
         self.training_process: Optional[subprocess.Popen] = None
-        self.check_interval = 30 # Check every 30 seconds
-        self.scenario_path: Optional[str] = None  # Scenario to use for training
-        self.episodes_per_run = 100  # Episodes per training session
+        self.check_interval = 30
+        self.scenario_path: Optional[str] = None
+        self.episodes_per_run = 100
         self._task = None
+        
+        # New: History and Rotation
+        self.history: List[Dict[str, Any]] = []  # List of past sessions
+        self.last_logs: List[str] = []           # Output of the last run
+        self.current_scenario_index = 0          # For rotation
+        
+        # Determine available scenarios
+        self.available_scenarios: List[str] = []
+        self._refresh_scenarios()
+
+    def _refresh_scenarios(self):
+        """Refresh list of available scenarios."""
+        scenarios_dir = Path("scenarios")
+        if scenarios_dir.exists():
+            self.available_scenarios = sorted([str(p) for p in scenarios_dir.glob("*.json")])
 
     def record_activity(self):
         """Notifica che c'è stata attività da parte di un utente."""
@@ -50,93 +67,151 @@ class IdleTrainingManager:
             
             await asyncio.sleep(self.check_interval)
 
+    def _get_next_scenario(self) -> Optional[str]:
+        """Selects the next scenario based on config or rotation."""
+        self._refresh_scenarios()
+        
+        if not self.available_scenarios:
+            return None
+            
+        # 1. If explicit scenario set
+        if self.scenario_path:
+             if self.scenario_path in self.available_scenarios:
+                 return self.scenario_path
+             # Fallback if file deleted
+        
+        # 2. Rotation
+        if not self.available_scenarios:
+            return None
+            
+        scenario = self.available_scenarios[self.current_scenario_index % len(self.available_scenarios)]
+        # Prepare for next time
+        self.current_scenario_index = (self.current_scenario_index + 1) % len(self.available_scenarios)
+        return scenario
+
     async def _run_training(self):
         """Avvia il processo di addestramento in background."""
         if not self.enabled:
             return
             
-        # Find a scenario to use
-        scenario = self.scenario_path
+        scenario = self._get_next_scenario()
         if not scenario:
-            # Auto-select first available scenario
-            scenarios_dir = Path("scenarios")
-            if scenarios_dir.exists():
-                scenarios = list(scenarios_dir.glob("*.json"))
-                if scenarios:
-                    scenario = str(scenarios[0])
-        
-        if not scenario:
-            logger.warning("No scenario available for auto-training. Skipping.")
+            logger.warning("No scenario available for auto-training.")
             return
         
         logger.info(f"System is idle. Starting background training on {scenario}...")
         self.is_training = True
         self.last_training_time = datetime.now()
+        self.last_logs = [] # Clear logs
         
         try:
-            # Run training with selected scenario
+            # Prepare command
+            cmd = [
+                "python3", "python/marl_scheduling/train_mappo.py",
+                "--scenario", scenario,
+                "--episodes", str(self.episodes_per_run),
+                "--background"
+            ]
+            
+            # Start process, capturing output
             self.training_process = subprocess.Popen(
-                [
-                    "python3", "python/marl_scheduling/train_mappo.py",
-                    "--scenario", scenario,
-                    "--episodes", str(self.episodes_per_run),
-                    "--background"
-                ],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
             )
             
-            # Wait for completion in background
-            await asyncio.create_task(self._wait_for_training())
+            # Wait and capture output asynchronously
+            await asyncio.create_task(self._monitor_process_output(scenario))
+            
         except Exception as e:
             logger.error(f"Failed to start training process: {e}")
             self.is_training = False
+            self._add_history_entry(scenario, "failed", str(e))
 
-    async def _wait_for_training(self):
-        """Wait for training process to complete."""
-        if self.training_process:
-            try:
-                await asyncio.to_thread(self.training_process.wait)
-                logger.info("Background training completed.")
-            except Exception as e:
-                logger.error(f"Error waiting for training: {e}")
-            finally:
-                self.is_training = False
-                self.training_process = None
+    async def _monitor_process_output(self, scenario: str):
+        """Read stdout from the training process."""
+        start_time = time.time()
+        output_buffer = []
+        status = "completed"
+        error_msg = None
+
+        if not self.training_process or not self.training_process.stdout:
+            self.is_training = False
+            return
+
+        try:
+            # Read line by line asynchronously (using run_in_executor for blocking IO)
+            while self.training_process and self.training_process.poll() is None:
+                # Note: readline is blocking, so we should be careful. 
+                # Ideally use asyncio subprocess, but we are using Popen for better control (kill).
+                # For simplicity here we poll.
+                line = self.training_process.stdout.readline()
+                if line:
+                    line = line.strip()
+                    if line:
+                        self.last_logs.append(line)
+                        if len(self.last_logs) > 1000: # Keep last 1000 lines
+                             self.last_logs.pop(0)
+                else:
+                    await asyncio.sleep(0.1)
+
+            # Check exit code
+            if self.training_process:
+                return_code = self.training_process.poll()
+                if return_code != 0 and return_code is not None:
+                     status = "error" if return_code != -15 else "suspended" # -15 is SIGTERM
+                     error_msg = f"Exit code {return_code}"
+
+        except Exception as e:
+            logger.error(f"Error monitoring training output: {e}")
+            status = "error"
+            error_msg = str(e)
+        finally:
+            duration = time.time() - start_time
+            self._add_history_entry(scenario, status, error_msg, duration)
+            self.is_training = False
+            self.training_process = None
+            logger.info(f"Background training finished: {status}")
+
+    def _add_history_entry(self, scenario: str, status: str, details: str = None, duration: float = 0):
+        """Add entry to history log."""
+        self.history.insert(0, {
+            "timestamp": datetime.now().isoformat(),
+            "scenario": Path(scenario).name,
+            "status": status,
+            "duration_seconds": round(duration, 1),
+            "details": details
+        })
+        # Keep last 50 entries
+        self.history = self.history[:50]
 
     def stop_training(self):
-        """Ferma il processo di addestramento."""
-        self.is_training = False
-        if self.training_process:
+        """Ferma il processo."""
+        if self.is_training and self.training_process:
+            logger.info("Stopping background training...")
             try:
-                self.training_process.terminate()
-                self.training_process.wait(timeout=5)
-                logger.info("Background training suspended.")
+                self.training_process.terminate() 
+                # Monitoring loop will handle cleanup
             except Exception as e:
-                logger.error(f"Error stopping training process: {e}")
-                if self.training_process:
-                    self.training_process.kill()
-            finally:
-                self.training_process = None
+                logger.error(f"Error killing process: {e}")
 
     def update_config(self, threshold: Optional[int] = None, scenario: Optional[str] = None, 
                      episodes: Optional[int] = None, enabled: Optional[bool] = None):
-        """Update auto-training configuration."""
+        """Update configuration."""
         if threshold is not None:
             self.idle_threshold = threshold
-            logger.info(f"Auto-training threshold updated to {threshold}s")
         if scenario is not None:
             self.scenario_path = scenario
-            logger.info(f"Auto-training scenario set to {scenario}")
         if episodes is not None:
             self.episodes_per_run = episodes
-            logger.info(f"Episodes per run set to {episodes}")
         if enabled is not None:
             self.enabled = enabled
-            logger.info(f"Auto-training {'enabled' if enabled else 'disabled'}")
+        logger.info(f"Config updated: {self.get_config()}")
 
     def get_config(self):
-        """Get current configuration."""
+        """Get config."""
         return {
             "enabled": self.enabled,
             "threshold_seconds": self.idle_threshold,
@@ -144,6 +219,21 @@ class IdleTrainingManager:
             "episodes_per_run": self.episodes_per_run
         }
 
+    def get_status_report(self):
+        """Get full status report for dashboard."""
+        self._refresh_scenarios()
+        next_scenario = self._get_next_scenario() if not self.scenario_path else self.scenario_path
+        
+        return {
+            "status": "training" if self.is_training else "idle",
+            "current_scenario": Path(next_scenario).name if next_scenario else None,
+            "last_run": self.last_training_time.isoformat() if self.last_training_time else None,
+            "history": self.history[:10], # Last 10 runs
+            "queued_scenario": Path(next_scenario).name if next_scenario else "None",
+            "available_scenarios_count": len(self.available_scenarios),
+            "logs_preview": self.last_logs[-20:] if self.last_logs else ["No recent logs"]
+        }
+        
     def stop(self):
         if self._task:
             self._task.cancel()

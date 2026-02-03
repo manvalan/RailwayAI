@@ -1717,12 +1717,10 @@ async def get_ai_status(current_user: dict = Depends(get_current_user)):
     
     from python.integration.idle_training import idle_manager
     
-    return {
-        "status": "active" if idle_manager else "inactive",
-        "threshold_seconds": 300,
-        "last_run": idle_manager.last_training_time.isoformat() if idle_manager and idle_manager.last_training_time else None,
-        "next_run_estimate": "On idle (300s)",
-        "is_training": idle_manager.is_training if idle_manager else False
+    return idle_manager.get_status_report() if idle_manager else {
+        "status": "inactive",
+        "history": [],
+        "logs_preview": []
     }
 
 @app.get("/api/v1/ai/scenarios", tags=["AI Management"])

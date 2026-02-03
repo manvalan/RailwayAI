@@ -12,7 +12,7 @@ os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
 os.environ["OMP_PROC_BIND"] = "FALSE"
 os.environ["TORCH_NUM_THREADS"] = "1"
 os.environ["CUDA_VISIBLE_DEVICES"] = "" # Disable GPU lookup
-os.environ["MKL_THREADING_LAYER"] = "GNU" # Use GNU threading instead of Intel's to avoid hangs in subprocesses
+os.environ["MKL_THREADING_LAYER"] = "SEQUENTIAL" # Force sequential to prevent deadlocks in subprocesses
 
 import time
 print(">>> COOLING DOWN (2s)...", flush=True)

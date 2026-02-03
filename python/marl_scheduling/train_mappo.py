@@ -2,39 +2,23 @@ import sys
 import os
 from pathlib import Path
 
-# IMMEDIATE DIAGNOSTIC
-print(">>> PYTHON INTERPRETER STARTED", flush=True)
-
-# Limit threads and force stability to prevent VPS freeze
+# Limit threads and force stability for background training
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
 os.environ["OMP_PROC_BIND"] = "FALSE"
 os.environ["TORCH_NUM_THREADS"] = "1"
-os.environ["CUDA_VISIBLE_DEVICES"] = "" # Disable GPU lookup
-os.environ["MKL_THREADING_LAYER"] = "SEQUENTIAL" # Force sequential to prevent deadlocks in subprocesses
-
-import time
-print(">>> COOLING DOWN (2s)...", flush=True)
-time.sleep(2) # Give system a moment
-
-import resource
-def get_mem():
-    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 # KB on Mac, but usually KB on Linux too
-print(f">>> MEMORY USAGE (START): {get_mem():.2f} MB", flush=True)
-print(f">>> CWD: {os.getcwd()}", flush=True)
-print(f">>> PYTHONPATH: {os.environ.get('PYTHONPATH')}", flush=True)
-
-# Add current directory to sys.path BEFORE any other imports
-current_dir = Path(__file__).parent.absolute()
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
-
-print(f">>> SYS.PATH UPDATED: {sys.path[0]}", flush=True)
+os.environ["CUDA_VISIBLE_DEVICES"] = "" 
+os.environ["MKL_THREADING_LAYER"] = "SEQUENTIAL" 
 
 import numpy as np
 import argparse
 import logging
+
+# Add current directory to sys.path
+current_dir = Path(__file__).parent.absolute()
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
 
 # Force INFO level logging
 logging.basicConfig(
@@ -48,24 +32,18 @@ def train_mappo(args):
     """
     MAPPO training with scenario scaling and checkpointing.
     """
-    print(">>> ENTERING train_mappo function", flush=True)
-    
-    # Load Scenario FIRST before heavy imports
-    scenario_abs_path = os.path.abspath(args.scenario)
-    print(f">>> LOADING SCENARIO: {scenario_abs_path}", flush=True)
-    
-    from scenario_loader import ScenarioLoader
-    scenario = ScenarioLoader.load_scenario(args.scenario)
-    print(f">>> SCENARIO DATA LOADED ({len(scenario['trains'])} trains)", flush=True)
-
-    print(">>> ATTEMPTING TO IMPORT TORCH AND ENV...", flush=True)
+    # Heavy imports inside to ensure quick process startup signal
     import torch
     import torch.optim as optim
     from env import RailwayGymEnv
+    from scenario_loader import ScenarioLoader
     from constraints import SafetyConstraintLayer
     from models import ActorNetwork, CriticNetwork
-    print(f">>> TORCH AND ENV LOADED SUCCESSFULLY (Torch: {torch.__version__})", flush=True)
 
+    logger.info(f"Loading scenario: {args.scenario}")
+    scenario = ScenarioLoader.load_scenario(args.scenario)
+    
+    logger.info(f"Initializing environment with {len(scenario['trains'])} agents...")
     env = RailwayGymEnv(scenario['tracks'], scenario['stations'], scenario['trains'])
     
     agent_ids = env.agent_ids

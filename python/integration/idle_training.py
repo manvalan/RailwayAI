@@ -39,16 +39,18 @@ class IdleTrainingManager:
         if scenarios_dir.exists():
             self.available_scenarios = sorted([str(p) for p in scenarios_dir.glob("*.json")])
 
-    def record_activity(self, source: str = "unknown"):
-        """Notifica che c'è stata attività da parte di un utente."""
+    def record_activity(self, source: str = "User Action"):
+        """Notifica che c'è stata attività reale. Ignora le letture di monitoraggio."""
+        # Se la sorgente è una di quelle che vogliamo ignorare (facoltativo, 
+        # ma qui lo rendiamo esplicito via chiamate nel server.py)
         self.last_activity = time.time()
         if self.is_training:
-            logger.info(f"Activity detected from {source}! Suspending background training...")
+            logger.info(f"Activity detected: {source}. Suspending training to prioritize user.")
             self.stop_training()
 
     async def start(self):
         """Avvia il loop di monitoraggio."""
-        logger.info(f"Idle Training Manager started (threshold: {self.idle_threshold}s, enabled: {self.enabled})")
+        logger.info(f"Idle Training Manager started (threshold: {self.idle_threshold}s)")
         self._task = asyncio.create_task(self._monitor_loop())
 
     async def _monitor_loop(self):
@@ -60,13 +62,12 @@ class IdleTrainingManager:
                     
                 idle_time = time.time() - self.last_activity
                 if self.is_training:
-                    # Log status every check while training
-                    logger.debug(f"Training active. Idle time: {idle_time:.1f}s / Threshold: {self.idle_threshold}s")
-                    
+                    # Se l'attività è tornata sotto la soglia (es. utente è tornato attivo)
                     if idle_time <= self.idle_threshold:
-                         logger.info(f"Suspending training: idle_time ({idle_time:.1f}s) <= threshold ({self.idle_threshold}s)")
+                         logger.info(f"Stopping training: System is no longer idle (Idle time: {idle_time:.1f}s)")
                          self.stop_training()
                 elif idle_time > self.idle_threshold:
+                    # Sistema a riposo, possiamo allenare
                     logger.info(f"System idle for {idle_time:.1f}s. Starting background training.")
                     await self._run_training()
             except Exception as e:

@@ -30,6 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchSMTPConfig();
     });
     document.getElementById('nav-settings').addEventListener('click', () => switchView('settings'));
+    document.getElementById('nav-topology')?.addEventListener('click', () => switchView('topology'));
+    document.getElementById('nav-api-keys')?.addEventListener('click', () => switchView('api-keys'));
 
     document.getElementById('nav-logout').addEventListener('click', () => {
         localStorage.removeItem('access_token');

@@ -5,7 +5,9 @@ async function loadAIManagement() {
     await Promise.all([
         fetchAIStatus(),
         fetchScenarios(),
-        fetchModelStats()
+        fetchModelStats(),
+        loadAIConfig(),
+        populateScenarioDropdown()
     ]);
 
     // Subscribe to training logs via WebSocket

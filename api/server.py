@@ -529,6 +529,7 @@ class TrainingRequest(BaseModel):
     raw_scenario: Optional[Dict[str, Any]] = None
     episodes: int = 100
     lr: float = 1e-3
+    use_curriculum: bool = False
 
 class ScenarioGenerationRequest(BaseModel):
     """Request to generate a real-world scenario from OSM"""
@@ -1041,6 +1042,9 @@ async def trigger_training(
             "--lr", str(request.lr),
             "--out_dir", "api/models/checkpoints_marl"
         ]
+        
+        if request.use_curriculum:
+            cmd.append("--curriculum")
         
         logger.info(f"Executing command: {' '.join(cmd)}")
         

@@ -400,6 +400,7 @@ async function startScenarioGeneration() {
 async function triggerMarlTraining(scenarioPath) {
     const episodes = document.getElementById('train-episodes').value;
     const lr = document.getElementById('train-lr').value;
+    const curriculum = document.getElementById('train-curriculum')?.checked || false;
     const msgEl = document.getElementById('training-status-msg');
 
     msgEl.textContent = "🚀 Starting MARL training...";
@@ -415,7 +416,8 @@ async function triggerMarlTraining(scenarioPath) {
             body: JSON.stringify({
                 scenario_path: scenarioPath,
                 episodes: parseInt(episodes),
-                lr: parseFloat(lr)
+                lr: parseFloat(lr),
+                use_curriculum: curriculum
             })
         });
 

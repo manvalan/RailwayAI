@@ -145,12 +145,13 @@ async function fetchScenarios() {
             headers: { 'X-API-Key': accessToken }
         });
         if (!response.ok) return;
-        const scenarios = await response.json();
+        const data = await response.json();
+        const scenarios = data.scenarios || [];
 
         const list = document.getElementById('scenarios-list');
         if (!list) return;
 
-        if (!scenarios || scenarios.length === 0) {
+        if (scenarios.length === 0) {
             list.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-secondary); font-size: 0.8rem;">Nessuno scenario disponibile. Creane uno nel laboratorio!</div>';
             return;
         }

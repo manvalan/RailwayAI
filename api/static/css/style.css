@@ -216,3 +216,48 @@ button:hover {
 .hidden {
     display: none !important;
 }
+
+/* AI Management Specifics */
+.ai-view-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.scenario-item:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+#ai-logs {
+    font-family: 'Fira Code', 'Courier New', monospace;
+    font-size: 0.8rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+}
+
+#ai-logs::-webkit-scrollbar {
+    width: 6px;
+}
+
+#ai-logs::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 10px;
+}
+
+@keyframes pulse-success {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+.active-pulse {
+    animation: pulse-success 2s infinite;
+}

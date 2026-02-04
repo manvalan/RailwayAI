@@ -287,7 +287,9 @@ class IdleTrainingManager:
             "queued_scenario": Path(next_scenario).name if next_scenario else "None",
             "available_scenarios_count": len(self.available_scenarios),
             "logs_preview": self.last_logs[-20:] if self.last_logs else ["No recent logs"],
-            "seconds_until_next_run": round(remaining)
+            "seconds_until_next_run": round(remaining),
+            "curriculum_level": self.curriculum_level,
+            "curriculum_enabled": self.curriculum_enabled
         }
         
     def stop(self):

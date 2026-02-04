@@ -1709,6 +1709,95 @@ async def generate_api_key_endpoint(
     else:
         raise HTTPException(status_code=500, detail="Could not generate API Key")
 
+# ==================== Network Downloads ====================
+
+@app.post("/api/v1/network/download-europe", tags=["Network"])
+async def download_network_data(
+    country: str = Query(..., description="Country name (e.g., Italia, Germania)"),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Downloads railway infrastructure data for a European country.
+    Admin only because it uses background processing and public API calls.
+    """
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    import subprocess
+    import os
+    
+    # Map country name to a standard slug for the filename
+    slug = country.lower().replace(" ", "_")
+    output_path = f"scenarios/{slug}_osm.json"
+    
+    # Trigger the script in the background
+    try:
+        # We use Popen to not block the API
+        cmd = [
+            sys.executable, "scripts/fetch_osm_rail.py",
+            "--area", country,
+            "--output", output_path
+        ]
+        
+        # Start the process
+        subprocess.Popen(cmd)
+        
+        return {
+            "message": f"Download for {country} started in background.",
+            "expected_file": output_path,
+            "status": "pending"
+        }
+    except Exception as e:
+        logger.error(f"Failed to start network download: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/network/export-rail", tags=["Network"])
+async def export_to_rail(scenario: str = Query(...), current_user: dict = Depends(get_current_user)):
+    """
+    Exports a scenario JSON to .rail format (custom JSON compatible with Swift app).
+    """
+    from fastapi.responses import FileResponse
+    import json
+    
+    # Path handling
+    json_path = Path(f"scenarios/{scenario}.json")
+    if not json_path.exists():
+        # Try with _osm suffix which downloader uses
+        json_path = Path(f"scenarios/{scenario}_osm.json")
+        if not json_path.exists():
+             raise HTTPException(status_code=404, detail="Scenario not found")
+        
+    output_path = Path(f"exports/{scenario}.rail")
+    os.makedirs("exports", exist_ok=True)
+    
+    try:
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+            
+        # The Swift app expects a specific nesting or format. 
+        # Based on RailwayGraphManager.swift: 
+        # struct NetworkFile { let stations: [Station], let tracks: [Track] }
+        rail_data = {
+            "stations": data.get("stations", []),
+            "tracks": data.get("tracks", []),
+            "metadata": {
+                "exported_at": datetime.now().isoformat(),
+                "original_scenario": scenario
+            }
+        }
+        
+        with open(output_path, 'w') as f:
+            json.dump(rail_data, f, indent=2)
+            
+        return FileResponse(
+            path=output_path, 
+            filename=f"{scenario}.rail",
+            media_type='application/octet-stream'
+        )
+    except Exception as e:
+        logger.error(f"Export failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
 # ==================== AI Management Endpoints ====================
 
 @app.get("/api/v1/ai/status", tags=["AI Management"])

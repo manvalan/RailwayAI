@@ -21,6 +21,18 @@ async function loadAIManagement() {
         }
     }, 1000);
 
+    // Curriculum Settings listeners
+    document.getElementById('config-curriculum')?.addEventListener('change', (e) => {
+        const lvlGroup = document.getElementById('config-level-group');
+        if (lvlGroup) lvlGroup.style.display = e.target.checked ? 'block' : 'none';
+    });
+
+    // Backup Actions
+    document.getElementById('ai-backup-btn')?.addEventListener('click', createBackup);
+
+    // Network Download
+    document.getElementById('dl-net-btn')?.addEventListener('click', downloadGlobalNetwork);
+
     // Slider listener
     const slider = document.getElementById('config-threshold');
     const valDisplay = document.getElementById('config-threshold-val');
@@ -39,7 +51,8 @@ async function refreshAIManagementData() {
         loadAIConfig(),
         populateScenarioDropdown(),
         fetchAIQualityMetrics(),
-        fetchNetworkStats()
+        fetchNetworkStats(),
+        fetchBackups()
     ]);
 }
 
@@ -74,19 +87,27 @@ async function fetchAIStatus() {
             const statusText = document.getElementById('ai-status-text');
 
             if (data.status === 'training') {
-                indicator.style.background = 'var(--success)';
-                indicator.style.boxShadow = '0 0 8px var(--success)';
-                statusText.innerHTML = `<span style="color:var(--success)">Training in corso:</span> ${data.current_scenario}`;
-                statusText.style.fontWeight = '600';
-            } else {
-                indicator.style.background = 'var(--text-secondary)';
-                indicator.style.boxShadow = 'none';
-                if (data.seconds_until_next_run > 0) {
-                    statusText.textContent = `Attesa (${data.seconds_until_next_run}s) - Next: ${data.queued_scenario}`;
-                } else {
-                    statusText.textContent = `Avvio in corso...`;
+                if (indicator) {
+                    indicator.style.background = 'var(--success)';
+                    indicator.style.boxShadow = '0 0 8px var(--success)';
                 }
-                statusText.style.fontWeight = 'normal';
+                if (statusText) {
+                    statusText.innerHTML = `<span style="color:var(--success)">Training in corso:</span> ${data.current_scenario || 'Scenario'}`;
+                    statusText.style.fontWeight = '600';
+                }
+            } else {
+                if (indicator) {
+                    indicator.style.background = 'var(--text-secondary)';
+                    indicator.style.boxShadow = 'none';
+                }
+                if (statusText) {
+                    if (data.seconds_until_next_run > 0) {
+                        statusText.textContent = `Attesa (${data.seconds_until_next_run}s) - Next: ${data.queued_scenario}`;
+                    } else {
+                        statusText.textContent = `Avvio in corso...`;
+                    }
+                    statusText.style.fontWeight = 'normal';
+                }
             }
 
             // 2. Logs Preview
@@ -94,31 +115,49 @@ async function fetchAIStatus() {
             if (logsContainer) {
                 if (data.logs_preview && data.logs_preview.length > 0) {
                     logsContainer.innerHTML = data.logs_preview.map(l => `<div style="margin-bottom:2px;">${l}</div>`).join('');
-                    // Auto scroll to bottom
                     logsContainer.scrollTop = logsContainer.scrollHeight;
+                } else if (data.history && data.history.length > 0) {
+                    const historyHtml = data.history.map(h => {
+                        const color = h.status === 'completed' ? 'var(--success)' : 'var(--accent)';
+                        return `
+                            <div style="border-left: 2px solid ${color}; padding-left: 0.5rem; margin-bottom: 0.5rem;">
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">${new Date(h.timestamp).toLocaleTimeString()}</div>
+                                <div style="font-size: 0.8rem;">${h.scenario} - <span style="color:${color}">${h.status}</span></div>
+                            </div>
+                         `;
+                    }).join('');
+                    logsContainer.innerHTML = `<div style="color:var(--text-secondary); margin-bottom:0.5rem; font-weight:600; font-size:0.8rem;">Last Activity:</div>` + historyHtml;
                 } else {
-                    // Show history if no active logs
-                    if (data.history && data.history.length > 0) {
-                        const historyHtml = data.history.map(h => {
-                            const color = h.status === 'completed' ? 'var(--success)' : 'var(--accent)';
-                            return `
-                                <div style="border-left: 2px solid ${color}; padding-left: 0.5rem; margin-bottom: 0.5rem;">
-                                    <div style="font-size: 0.75rem; color: var(--text-secondary);">${new Date(h.timestamp).toLocaleTimeString()}</div>
-                                    <div>${h.scenario} - <span style="color:${color}">${h.status}</span> (${h.duration_seconds}s)</div>
-                                </div>
-                             `;
-                        }).join('');
-                        logsContainer.innerHTML = `<div style="color:var(--text-secondary); margin-bottom:0.5rem; font-weight:600;">Last Activity:</div>` + historyHtml;
-                    } else {
-                        logsContainer.innerHTML = '<div style="color:var(--text-secondary)">Nessuna attività recente.</div>';
-                    }
+                    logsContainer.innerHTML = '<div style="color:var(--text-secondary); font-size:0.8rem;">Nessuna attività recente.</div>';
                 }
             }
 
-            // 3. Update Sliders/Inputs if not focused (avoid fighting user)
+            // 3. Curriculum Progress
+            const levelNum = document.getElementById('curr-level-num');
+            if (levelNum && data.curriculum_level !== undefined) {
+                levelNum.textContent = data.curriculum_level;
+                const levelNames = [
+                    "",
+                    "Basic Conflict (2 Trains)",
+                    "Bottleneck Mgmt (4 Trains)",
+                    "Junctions (Star Topology)",
+                    "Linear Congestion (20 Trains)",
+                    "Full Network Analysis"
+                ];
+                const nameEl = document.getElementById('curr-level-name');
+                if (nameEl) nameEl.textContent = levelNames[data.curriculum_level] || "Advanced Training";
+
+                const progress = (data.curriculum_level / 5) * 100;
+                const progressBar = document.getElementById('curr-level-progress');
+                if (progressBar) progressBar.style.width = `${progress}%`;
+
+                const targetEl = document.getElementById('curr-reward-target');
+                if (targetEl) targetEl.textContent = -100;
+            }
+
+            // 4. Config Sync
             if (document.activeElement.id !== 'config-threshold') {
-                // Update specific config fields if returned, but usually config is separate.
-                // We trust get_status_report covers operational state.
+                // threshold logic if needed
             }
         }
     } catch (error) {
@@ -163,14 +202,19 @@ async function fetchScenarios() {
 
                         item.innerHTML = `
                             <div style="display: flex; justify-content: space-between; align-items: start;">
-                                <div>
+                                <div style="flex: 1;">
                                     <div style="font-weight: 600; font-size: 0.9rem; color: #fff;">${s.name}</div>
                                     <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">
                                         ${s.stations} stazioni • ${s.tracks} binari
                                     </div>
+                                    <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 4px;">
+                                        ${new Date(s.modified * 1000).toLocaleDateString('it-IT')}
+                                    </div>
                                 </div>
-                                <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                                    ${new Date(s.modified * 1000).toLocaleDateString('it-IT')}
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button onclick="exportToRail('${s.name}')" 
+                                            style="padding: 0.3rem 0.6rem; font-size: 0.65rem; background: var(--primary); border:none; border-radius:4px; color:white; cursor:pointer;"
+                                            title="Esporta per App Swift">.rail</button>
                                 </div>
                             </div>
                         `;
@@ -423,15 +467,165 @@ function updateBenchmark(id, value) {
     barEl.style.width = `${Math.min(improvement, 100)}%`;
 }
 
-// Intercept WebSocket messages for AI logs (only if handleWsMessage exists)
+// ==================== Global Network Download ====================
+
+async function downloadGlobalNetwork() {
+    const countryInp = document.getElementById('dl-country');
+    const country = countryInp.value.trim();
+    if (!country) return;
+
+    const btn = document.getElementById('dl-net-btn');
+    const oldText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ ...';
+
+    try {
+        const response = await fetch(`/api/v1/network/download-europe?country=${encodeURIComponent(country)}`, {
+            method: 'POST',
+            headers: { 'X-API-Key': accessToken }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            addAILog(`🌍 Download avviato per ${country}. Ci vorrà qualche minuto.`, 'info');
+            countryInp.value = '';
+            // Refresh list eventually
+            setTimeout(fetchScenarios, 5000);
+        } else {
+            const err = await response.json();
+            addAILog(`❌ Download fallito: ${err.detail}`, 'error');
+        }
+    } catch (e) { addAILog(`❌ Errore download: ${e.message}`, 'error'); }
+    finally {
+        btn.disabled = false;
+        btn.textContent = oldText;
+    }
+}
+
+async function exportToRail(scenarioName) {
+    try {
+        const url = `/api/v1/network/export-rail?scenario=${encodeURIComponent(scenarioName)}`;
+        // Trigger download
+        const a = document.createElement('a');
+        a.href = url + `&token=${accessToken}`; // Note: simplified for direct download, better use fetch or temp link
+
+        // Use fetch to handle headers if token is needed
+        const response = await fetch(url, {
+            headers: { 'X-API-Key': accessToken }
+        });
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `${scenarioName}.rail`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(downloadUrl);
+            addAILog(`✅ Esportazione ${scenarioName}.rail completata.`, 'success');
+        } else {
+            const err = await response.json();
+            addAILog(`❌ Esportazione fallita: ${err.detail}`, 'error');
+        }
+    } catch (e) { addAILog(`❌ Errore esportazione: ${e.message}`, 'error'); }
+}
+
+// ==================== Backup & Weights ====================
+
+async function fetchBackups() {
+    try {
+        const response = await fetch('/api/v1/ai/backups', {
+            headers: { 'X-API-Key': accessToken }
+        });
+        if (response.ok) {
+            const backups = await response.json();
+            const listEl = document.getElementById('backups-list');
+            if (!listEl) return;
+
+            if (backups.length === 0) {
+                listEl.innerHTML = '<div style="color: var(--text-secondary); text-align: center; padding: 1rem; font-size: 0.8rem;">Nessun backup trovato.</div>';
+                return;
+            }
+
+            listEl.innerHTML = backups.map(b => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem; border-bottom: 1px solid var(--glass-border); font-size: 0.8rem;">
+                    <div>
+                        <div style="font-weight: 600; color: #fff;">${b.filename}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary);">${new Date(b.date).toLocaleString()} • ${b.size_kb} KB</div>
+                    </div>
+                    <button onclick="restoreBackup('${b.filename}')" 
+                            style="background: transparent; border: 1px solid var(--primary); color: var(--primary); padding: 0.2rem 0.6rem; font-size: 0.7rem;">
+                        Restore
+                    </button>
+                </div>
+            `).join('');
+        }
+    } catch (e) { console.error('Error fetching backups:', e); }
+}
+
+async function createBackup() {
+    const btn = document.getElementById('ai-backup-btn');
+    const oldText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ ...';
+
+    try {
+        const response = await fetch('/api/v1/ai/backup', {
+            method: 'POST',
+            headers: { 'X-API-Key': accessToken }
+        });
+        if (response.ok) {
+            addAILog('✅ Backup creato con successo.', 'success');
+            await fetchBackups();
+        } else {
+            const err = await response.json();
+            addAILog(`❌ Backup fallito: ${err.detail}`, 'error');
+        }
+    } catch (e) { addAILog(`❌ Errore backup: ${e.message}`, 'error'); }
+    finally {
+        btn.disabled = false;
+        btn.textContent = oldText;
+    }
+}
+
+async function restoreBackup(filename) {
+    if (!confirm(`⚠️ Ripristinare i pesi dal backup ${filename}?\nL'addestramento in corso verrà interrotto.`)) return;
+
+    try {
+        const response = await fetch(`/api/v1/ai/restore?filename=${encodeURIComponent(filename)}`, {
+            method: 'POST',
+            headers: { 'X-API-Key': accessToken }
+        });
+        if (response.ok) {
+            addAILog(`✅ Ripristino completato da ${filename}.`, 'success');
+            setTimeout(refreshAIManagementData, 1000);
+        } else {
+            const err = await response.json();
+            addAILog(`❌ Ripristino fallito: ${err.detail}`, 'error');
+        }
+    } catch (e) { addAILog(`❌ Errore ripristino: ${e.message}`, 'error'); }
+}
+
+// Intercept WebSocket messages for AI logs
 if (typeof handleWsMessage !== 'undefined') {
     const originalHandleWsMessage = handleWsMessage;
     handleWsMessage = function (data) {
         originalHandleWsMessage(data);
 
         // Forward training logs to AI Management panel
-        if (data.type === 'log' && data.message.includes('training')) {
+        if (data.type === 'log' && (data.message.includes('training') || data.message.includes('complexity'))) {
             addAILog(data.message, data.level);
+        }
+
+        // Update reward indicator if available
+        if (data.type === 'training_update') {
+            const rewardVal = document.getElementById('curr-reward-val');
+            if (rewardVal) {
+                rewardVal.textContent = data.reward.toFixed(1);
+                rewardVal.style.color = data.reward > -100 ? 'var(--success)' : 'var(--accent)';
+            }
         }
     };
 }

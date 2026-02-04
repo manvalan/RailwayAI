@@ -21,18 +21,33 @@ def haversine(lat1, lon1, lat2, lon2):
 
 OVERPASS_URL = "http://overpass-api.de/api/interpreter"
 
+COUNTRY_MAPPING = {
+    "italia": "Italy",
+    "francia": "France",
+    "spagna": "Spain",
+    "germania": "Germany",
+    "belgio": "Belgium",
+    "olanda": "Netherlands",
+    "svizzera": "Switzerland",
+    "inghilterra": "United Kingdom",
+    "regno unito": "United Kingdom"
+}
+
 def fetch_railway_data(area_name: str):
     """
     Queries Overpass API for railway infrastructure in a specific area.
     """
-    logger.info(f"Fetching railway data for: {area_name}")
+    # Normalize area name
+    normalized_area = COUNTRY_MAPPING.get(area_name.lower(), area_name)
+    logger.info(f"Fetching railway data for: {normalized_area}")
     
+    # Increase timeout for countries and filter by main lines to avoid overload
     query = f"""
-    [out:json][timeout:180];
-    area[name="{area_name}"]->.searchArea;
+    [out:json][timeout:300];
+    area[name="{normalized_area}"]->.searchArea;
     (
-      way["railway"="rail"](area.searchArea);
-      node["railway"~"station|halt"](area.searchArea);
+      way["railway"="rail"]["usage"~"main|regional"](area.searchArea);
+      node["railway"="station"](area.searchArea);
     );
     out body;
     >;

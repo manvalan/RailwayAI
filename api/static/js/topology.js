@@ -97,7 +97,7 @@ class TopologyVisualizer {
         this.degrees = {};
         data.edges.forEach(e => {
             this.degrees[e.source] = (this.degrees[e.source] || 0) + 1;
-            this.degrees[e.target] = (degrees[e.target] || 0) + 1;
+            this.degrees[e.target] = (this.degrees[e.target] || 0) + 1;
         });
 
         // Calculate geographical bounds

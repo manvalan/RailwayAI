@@ -58,6 +58,10 @@ async def get_current_user(
     # 3. Use token from oauth2_scheme as last resort
     if not final_key and token:
         final_key = token
+        
+    # Record activity to stay synchronized with idle manager
+    from python.integration.idle_training import idle_manager
+    idle_manager.record_activity(f"API: {request.method} {request.url.path}")
 
     # DEBUG LOGGING (Sanitized)
     if final_key:

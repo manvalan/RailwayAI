@@ -1162,6 +1162,7 @@ async def optimize_scheduled_trains(
                 {t.id: t.dict() for t in request.tracks}
             )
         
+        if route_planner is None or temporal_simulator is None:
             raise HTTPException(
                 status_code=400,
                 detail="Route planner not initialized. Please provide tracks and stations."
@@ -1807,6 +1808,8 @@ async def update_ai_config(
     scenario: Optional[str] = None,
     episodes: Optional[int] = None,
     enabled: Optional[bool] = None,
+    curriculum: Optional[bool] = None,
+    level: Optional[int] = None,
     current_user: dict = Depends(get_current_user)
 ):
     """Update auto-training configuration (Admin only)"""
@@ -1821,11 +1824,94 @@ async def update_ai_config(
             threshold=threshold,
             scenario=scenario,
             episodes=episodes,
-            enabled=enabled
+            enabled=enabled,
+            curriculum=curriculum,
+            level=level
         )
         return {"message": "Configuration updated", "config": idle_manager.get_config()}
     else:
         raise HTTPException(status_code=500, detail="Idle training manager not available")
+
+@app.post("/api/v1/ai/backup", tags=["AI Management"])
+async def backup_model(current_user: dict = Depends(get_current_user)):
+    """Create a backup of current model weights (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    import shutil
+    from datetime import datetime
+    
+    os.makedirs("backups", exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Per semplicità, copiamo l'ultimo checkpoint prodotto dall'addestramento
+    # Nella realtà caricherebbe dal percorso configurato
+    source_dir = "checkpoints"
+    if not os.path.exists(source_dir):
+        raise HTTPException(status_code=404, detail="No checkpoints found to backup")
+        
+    latest_file = None
+    max_time = 0
+    for f in os.listdir(source_dir):
+        if f.endswith(".pth"):
+            fpath = os.path.join(source_dir, f)
+            t = os.path.getmtime(fpath)
+            if t > max_time:
+                max_time = t
+                latest_file = fpath
+                
+    if not latest_file:
+        raise HTTPException(status_code=404, detail="No weight files (.pth) found in checkpoints")
+        
+    backup_name = f"model_backup_{timestamp}.pth"
+    dest = os.path.join("backups", backup_name)
+    shutil.copy2(latest_file, dest)
+    
+    return {"message": "Backup created", "file": backup_name, "source": os.path.basename(latest_file)}
+
+@app.get("/api/v1/ai/backups", tags=["AI Management"])
+async def list_backups(current_user: dict = Depends(get_current_user)):
+    """List available model backups (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if not os.path.exists("backups"):
+        return []
+        
+    backups = []
+    for f in os.listdir("backups"):
+        if f.endswith(".pth"):
+            fpath = os.path.join("backups", f)
+            stats = os.stat(fpath)
+            backups.append({
+                "filename": f,
+                "size_kb": round(stats.st_size / 1024, 2),
+                "date": datetime.fromtimestamp(stats.st_mtime).isoformat()
+            })
+    return sorted(backups, key=lambda x: x['date'], reverse=True)
+
+@app.post("/api/v1/ai/restore", tags=["AI Management"])
+async def restore_model(filename: str, current_user: dict = Depends(get_current_user)):
+    """Restore model weights from a backup (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    source = os.path.join("backups", filename)
+    if not os.path.exists(source):
+        raise HTTPException(status_code=404, detail="Backup file not found")
+        
+    # Ripristina sovrascrivendo un file "checkpoint_latest.pth" che il trainer caricherà al prossimo avvio
+    dest = "checkpoints/checkpoint_latest.pth"
+    os.makedirs("checkpoints", exist_ok=True)
+    import shutil
+    shutil.copy2(source, dest)
+    
+    # Se l'idle_manager sta andando, interrompiamo per caricare i nuovi pesi
+    from python.integration.idle_training import idle_manager
+    if idle_manager and idle_manager.is_training:
+        idle_manager.stop_training()
+        
+    return {"message": "Restore successful. Next training run will use these weights.", "restored_from": filename}
 
 @app.get("/api/v1/ai/config", tags=["AI Management"])
 async def get_ai_config(current_user: dict = Depends(get_current_user)):
@@ -1963,11 +2049,17 @@ async def get_network_topology(current_user: dict = Depends(get_current_user)):
                 # Extract nodes (stations)
                 nodes = []
                 for s in data.get('stations', []):
+                    pos = s.get('pos')
+                    if not pos:
+                        lat = s.get('lat', 0)
+                        lon = s.get('lon', 0)
+                        pos = [lat, lon]
+                        
                     nodes.append({
                         "id": s.get('id'),
                         "name": s.get('name', f"Station {s.get('id')}"),
                         "type": s.get('type', 'regular'),
-                        "pos": s.get('pos', [0, 0]) # [lat, lon]
+                        "pos": pos
                     })
                 
                 # Extract edges (tracks)

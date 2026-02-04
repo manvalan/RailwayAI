@@ -22,6 +22,8 @@ class IdleTrainingManager:
         self.check_interval = 30
         self.scenario_path: Optional[str] = None
         self.episodes_per_run = 100
+        self.curriculum_enabled = False  # New: Curriculum mode
+        self.curriculum_level = 1
         self._task = None
         
         # New: History and Rotation
@@ -64,11 +66,11 @@ class IdleTrainingManager:
                 if self.is_training:
                     # Se l'attività è tornata sotto la soglia (es. utente è tornato attivo)
                     if idle_time <= self.idle_threshold:
-                         logger.info(f"Stopping training: System is no longer idle (Idle time: {idle_time:.1f}s)")
-                         self.stop_training()
+                        logger.info(f"Activity detected ({idle_time:.1f}s ago). Stopping background training.")
+                        self.stop_training()
                 elif idle_time > self.idle_threshold:
                     # Sistema a riposo, possiamo allenare
-                    logger.info(f"System idle for {idle_time:.1f}s. Starting background training.")
+                    logger.info(f"System idle for {idle_time:.1f}s (Threshold: {self.idle_threshold}s). Triggering training.")
                     await self._run_training()
             except Exception as e:
                 logger.error(f"Error in Idle Training loop: {e}")
@@ -123,10 +125,14 @@ class IdleTrainingManager:
             # Prepare command
             cmd = [
                 "python3", "-u", "python/marl_scheduling/train_mappo.py",
-                "--scenario", scenario,
                 "--episodes", str(self.episodes_per_run),
                 "--background"
             ]
+            
+            if self.curriculum_enabled:
+                cmd.extend(["--curriculum", "--level", str(self.curriculum_level)])
+            else:
+                cmd.extend(["--scenario", scenario])
             
             # Immediate feedback
             self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Initializing training process on {Path(scenario).name}...")
@@ -179,6 +185,18 @@ class IdleTrainingManager:
                 line = line_bytes.decode('utf-8').strip()
                 if line:
                     self.last_logs.append(line)
+                    
+                    # Log parsing for curriculum updates
+                    if "Network complexity increased to Level" in line:
+                         try:
+                             parts = line.split("Level")
+                             if len(parts) > 1:
+                                 new_lvl = int(parts[1].strip().split()[0])
+                                 self.curriculum_level = new_lvl
+                                 logger.info(f"IdleManager captured level update from logs: Level {new_lvl}")
+                         except Exception as parse_err:
+                             logger.warning(f"Failed to parse level from log: {line} -> {parse_err}")
+
                     if len(self.last_logs) > 1000:
                          self.last_logs.pop(0)
 
@@ -226,7 +244,7 @@ class IdleTrainingManager:
                 logger.error(f"Error killing process: {e}")
 
     def update_config(self, threshold: Optional[int] = None, scenario: Optional[str] = None, 
-                     episodes: Optional[int] = None, enabled: Optional[bool] = None):
+                     episodes: Optional[int] = None, enabled: Optional[bool] = None, **kwargs):
         """Update configuration."""
         if threshold is not None:
             self.idle_threshold = threshold
@@ -236,6 +254,10 @@ class IdleTrainingManager:
             self.episodes_per_run = episodes
         if enabled is not None:
             self.enabled = enabled
+        if kwargs.get('curriculum') is not None:
+            self.curriculum_enabled = kwargs.get('curriculum')
+        if kwargs.get('level') is not None:
+            self.curriculum_level = kwargs.get('level')
         logger.info(f"Config updated: {self.get_config()}")
 
     def get_config(self):
@@ -244,7 +266,9 @@ class IdleTrainingManager:
             "enabled": self.enabled,
             "threshold_seconds": self.idle_threshold,
             "scenario_path": self.scenario_path,
-            "episodes_per_run": self.episodes_per_run
+            "episodes_per_run": self.episodes_per_run,
+            "curriculum_enabled": self.curriculum_enabled,
+            "curriculum_level": self.curriculum_level
         }
 
     def get_status_report(self):

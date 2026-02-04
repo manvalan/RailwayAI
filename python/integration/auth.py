@@ -57,8 +57,21 @@ async def get_current_user(
             detail="Invalid, expired or disabled API Key"
         )
 
-    # 2. Verifica JWT Token
+    # 2. Verifica JWT Token o API Key in formato Bearer
     if token:
+        # Se il token inizia con il prefisso delle nostre API Key, trattalo come tale
+        if token.startswith("rw-"):
+            user_data = UserService.validate_api_key(token)
+            if user_data:
+                return user_data
+            
+            logger.warning(f"Invalid API Key provided as Bearer token: {token[:12]}...")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid, expired or disabled API Key"
+            )
+
+        # Altrimenti procedi con la validazione JWT standard
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             username: str = payload.get("sub")

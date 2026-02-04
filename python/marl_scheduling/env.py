@@ -171,20 +171,44 @@ class RailwayGymEnv(gym.Env):
 
     def _get_obs(self):
         obs = {}
+        # Pre-calculate track occupancy
+        track_occupancy = {}
+        for t in self.trains:
+            if not t['has_arrived']:
+                tid = t['current_track']
+                track_occupancy[tid] = track_occupancy.get(tid, 0) + 1
+
         for train in self.trains:
             agent_id = str(train['id'])
+            curr_track_id = train.get('current_track', 0)
             
-            # Local topology from graph
-            curr_track = train.get('current_track', 0)
+            # neighbor_occ: [curr_track_load, prev_track_load, next_track_load, ... ]
             neighbor_occ = [0.0] * 5
+            neighbor_occ[0] = track_occupancy.get(curr_track_id, 1) - 1 # excluding self
             
-            # Simple local view: occupancy of connected edges
-            if self.graph.has_node(curr_track): # Dummy mapping for now
+            # Find neighbors in graph
+            # Note: current_track is an edge in our nx graph
+            try:
+                # In our graph, nodes are station IDs. 
+                # To find neighbor track occupancy, we look at tracks connected to the stations of the current track.
+                curr_track_data = self.raw_tracks.get(curr_track_id)
+                if curr_track_data:
+                    s_ids = curr_track_data['station_ids']
+                    idx = 1
+                    for s_id in s_ids:
+                        for _, _, edge_data in self.graph.edges(s_id, data=True):
+                            other_track_id = edge_data['id']
+                            if other_track_id != curr_track_id:
+                                neighbor_occ[idx] = track_occupancy.get(other_track_id, 0)
+                                idx += 1
+                                if idx >= 5: break
+                        if idx >= 5: break
+            except Exception:
                 pass
                 
             obs[agent_id] = {
                 "position": np.array([train.get('position_on_track', 0.0)], dtype=np.float32),
-                "current_track": train.get('current_track', 0),
+                "current_track": curr_track_id, 
                 "velocity": np.array([train.get('velocity_kmh', 120.0)], dtype=np.float32),
                 "neighbor_occupancy": np.array(neighbor_occ, dtype=np.float32)
             }

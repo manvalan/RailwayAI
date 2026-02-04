@@ -1947,6 +1947,53 @@ async def export_to_rail(scenario: str = Query(...), current_user: dict = Depend
         logger.error(f"Export failed: {e}")
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 
+@app.post("/api/v1/network/import-rail", tags=["Network"])
+async def import_from_rail(
+    file: bytes = Form(...),
+    filename: str = Form("scenario.rail"),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Imports a .rail file (JSON) and saves it as a scenario.
+    """
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+        
+    import json
+    try:
+        data = json.loads(file.decode('utf-8'))
+        
+        # Validation
+        if "stations" not in data or "tracks" not in data:
+            raise HTTPException(status_code=400, detail="Invalid .rail format. Missing stations or tracks.")
+            
+        # Ensure 'trains' exist for the training engine
+        if "trains" not in data:
+            data["trains"] = []
+            
+        # Save to scenarios/
+        safe_name = "".join(x for x in filename if x.isalnum() or x in "._-").replace(".rail", "")
+        if not safe_name: safe_name = f"imported_{int(time.time())}"
+        
+        output_path = f"scenarios/{safe_name}.json"
+        with open(output_path, 'w') as f:
+            json.dump(data, f, indent=2)
+            
+        # Refresh idle manager
+        if idle_manager:
+            idle_manager._refresh_scenarios()
+            
+        return {
+            "success": True,
+            "message": f"Scenario '{safe_name}' importato con successo.",
+            "stations": len(data["stations"]),
+            "tracks": len(data["tracks"]),
+            "trains": len(data["trains"])
+        }
+    except Exception as e:
+        logger.error(f"Import failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
+
 # ==================== AI Management Endpoints ====================
 
 @app.get("/api/v1/ai/status", tags=["AI Management"])

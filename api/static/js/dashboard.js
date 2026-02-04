@@ -11,9 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initDashboard();
     }
 
-    document.getElementById('login-btn').addEventListener('click', login);
-
-    // Sidebar Navigation
+    // Sidebar Navigation (Tradotto in Italiano)
     document.getElementById('nav-monitoring').addEventListener('click', () => switchView('monitoring'));
     document.getElementById('nav-optimization').addEventListener('click', () => switchView('optimization'));
     document.getElementById('nav-ai-management').addEventListener('click', () => {
@@ -158,7 +156,7 @@ async function login() {
             initDashboard();
         } else {
             errorEl.style.display = 'block';
-            errorEl.textContent = "Invalid username or password";
+            errorEl.textContent = "Nome utente o password non validi";
         }
     } catch (err) {
         console.error('Login error:', err);
@@ -347,13 +345,16 @@ async function deleteMeAccount() {
 async function startScenarioGeneration() {
     const area = document.getElementById('train-area').value;
     const msgEl = document.getElementById('training-status-msg');
+    const btn = document.getElementById('start-train-btn');
 
     if (!area) {
-        alert("Enter an area or region!");
+        alert("Inserisci un'area o regione!");
         return;
     }
 
-    msgEl.textContent = "⚙️ Initializing scenario generation...";
+    btn.disabled = true;
+    btn.textContent = "GENERAZIONE...";
+    msgEl.textContent = "⚙️ Inizializzazione generazione scenario...";
     msgEl.style.color = "var(--primary)";
 
     try {
@@ -367,16 +368,21 @@ async function startScenarioGeneration() {
         });
 
         if (response.ok) {
-            addLog(`Generation request sent for: ${area}`, 'info');
+            addLog(`Richiesta inviata per: ${area}`, 'info');
+            document.getElementById('train-area').value = "";
         } else {
-            const error = await response.json().catch(() => ({ detail: "Unknown error" }));
+            btn.disabled = false;
+            btn.textContent = "Genera & Addestra";
+            const error = await response.json().catch(() => ({ detail: "Errore sconosciuto" }));
             const status = response.status;
-            addLog(`Error ${status}: ${error.detail || JSON.stringify(error)}`, 'error');
-            msgEl.textContent = `❌ Error ${status}: ${error.detail || "Check logs"}`;
+            addLog(`Errore ${status}: ${error.detail || JSON.stringify(error)}`, 'error');
+            msgEl.textContent = `❌ Errore ${status}: ${error.detail || "Controlla i log"}`;
             msgEl.style.color = "var(--accent)";
         }
     } catch (err) {
-        addLog(`Network error: ${err}`, 'error');
+        btn.disabled = false;
+        btn.textContent = "Genera & Addestra";
+        addLog(`Errore di rete: ${err}`, 'error');
     }
 }
 
@@ -457,7 +463,7 @@ function connectWebSocket() {
         if (placeholder && placeholder.textContent.includes('waiting')) {
             placeholder.remove();
         }
-        addLog('Neural link established.', 'success');
+        addLog('Link neurale stabilito.', 'success');
     };
 
     ws.onmessage = (event) => {
@@ -466,19 +472,22 @@ function connectWebSocket() {
     };
 
     ws.onerror = (err) => {
-        addLog('Neural link failure. Check firewall/proxy.', 'error');
+        addLog('Errore link neurale. Controlla firewall/proxy.', 'error');
     };
 
     ws.onclose = () => {
-        addLog('Neural link disconnected. Retrying in 5s...', 'warning');
-        setTimeout(connectWebSocket, 5000);
+        addLog('Link neurale disconnesso. Riconnessione in 5s...', 'warning');
+        setTimeout(() => {
+            ws = new WebSocket(wsUrl);
+            connectWebSocket();
+        }, 5000);
     };
 }
 
 function handleWsMessage(data) {
     if (data.type === 'training_update') {
         updateChart(data.episode, data.reward, data.conflicts);
-        addLog(`Episode ${data.episode}: Reward ${data.reward.toFixed(2)}, Conflicts: ${data.conflicts}`, 'success');
+        addLog(`Episodio ${data.episode}: Ricompensa ${data.reward.toFixed(2)}, Conflitti: ${data.conflicts}`, 'success');
     } else if (data.type === 'state_update') {
         if (data.train_count !== undefined) document.getElementById('train-count').textContent = data.train_count;
         if (data.conflicts !== undefined) document.getElementById('conflict-count').textContent = data.conflicts;
@@ -488,7 +497,22 @@ function handleWsMessage(data) {
 
         // If scenario generated successfully, auto-trigger training
         if (data.level === 'success' && data.scenario_path) {
+            // Restore button
+            const btn = document.getElementById('start-train-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = "Genera & Addestra";
+            }
+            // Refresh scenarios list if we are in AI management view
+            if (window.refreshAIManagementData) window.refreshAIManagementData();
+
             triggerMarlTraining(data.scenario_path);
+        } else if (data.level === 'error') {
+            const btn = document.getElementById('start-train-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = "Genera & Addestra";
+            }
         }
     }
 }

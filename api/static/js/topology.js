@@ -217,8 +217,8 @@ class TopologyVisualizer {
             overlay.style.display = 'block';
             document.getElementById('topo-node-name').textContent = hovered.name;
             document.getElementById('topo-node-details').innerHTML = `
-                TAG: ${hovered.type || 'STATION'}<br>
-                DEGREE: ${this.degrees[hovered.id] || 0} links<br>
+                TIPO: ${hovered.type || 'STAZIONE'}<br>
+                CONNESSIONI: ${this.degrees[hovered.id] || 0} linee<br>
                 GPS: ${hovered.pos[0].toFixed(4)}, ${hovered.pos[1].toFixed(4)}
             `;
             this.canvas.style.cursor = 'pointer';
@@ -262,7 +262,7 @@ function updateTopologyStats(data) {
     document.getElementById('topo-stat-hubs').textContent = hubCount;
 
     const title = document.getElementById('topo-title');
-    if (title) title.textContent = `🗺️ Network Topology: ${data.scenario || 'Primary Sector'}`;
+    if (title) title.textContent = `🗺️ Topologia di Rete: ${data.scenario || 'Settore Primario'}`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {

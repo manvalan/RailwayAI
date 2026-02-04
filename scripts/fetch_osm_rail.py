@@ -46,7 +46,7 @@ def fetch_railway_data(area_name: str):
     [out:json][timeout:300];
     area[name="{normalized_area}"]->.searchArea;
     (
-      way["railway"="rail"]["usage"~"main|regional"](area.searchArea);
+      way["railway"="rail"]["usage"~"main|regional|high_speed|suburban|branch"](area.searchArea);
       node["railway"="station"](area.searchArea);
     );
     out body;

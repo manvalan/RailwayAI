@@ -82,6 +82,20 @@ def train_mappo(args):
     running_reward = 0
     window_size = 5
     
+    # Buffer for PPO
+    obs_buffer = []
+    action_buffer = []
+    log_prob_buffer = []
+    reward_buffer = []
+    value_buffer = []
+    mask_buffer = []
+    
+    ppo_epochs = 4
+    mini_batch_size = 64
+    gamma = 0.99
+    gae_lambda = 0.95
+    clip_param = 0.2
+    
     for episode in range(args.episodes):
         obs, _ = env.reset()
         episode_reward = 0
@@ -89,30 +103,42 @@ def train_mappo(args):
         
         while not done:
             actions = {}
-            all_o_tensors = []
+            log_probs = {}
+            values = {}
             
-            # Map agents to current identifiers (they might change if level changes)
             current_agent_ids = env.agent_ids
+            curr_obs_list = []
+            curr_action_list = []
+            curr_log_prob_list = []
             
             for aid in current_agent_ids:
                 o = obs.get(aid)
                 if o is None: continue
                 o_vec = np.concatenate([o['position'], [o['current_track']], o['velocity'], o['neighbor_occupancy']])
                 o_tensor = torch.FloatTensor(o_vec).unsqueeze(0)
-                all_o_tensors.append(o_tensor)
                 
-                probs = actor(o_tensor)
-                dist = torch.distributions.Categorical(probs)
-                action = dist.sample()
+                with torch.no_grad():
+                    probs = actor(o_tensor)
+                    dist = torch.distributions.Categorical(probs)
+                    action = dist.sample()
+                    log_prob = dist.log_prob(action)
+                
                 actions[aid] = action.item()
+                log_probs[aid] = log_prob
+                curr_obs_list.append(o_vec)
+                curr_action_list.append(action.item())
+                curr_log_prob_list.append(log_prob.item())
             
-            if not all_o_tensors:
+            if not curr_obs_list:
                 break
 
-            # Critic processing (Mean Field)
-            batch_obs = torch.cat(all_o_tensors, dim=0)
-            value = critic(batch_obs)
-            
+            # Centralized Critic
+            with torch.no_grad():
+                batch_obs_tensor = torch.FloatTensor(np.array(curr_obs_list))
+                val = critic(batch_obs_tensor)
+                # We use the same central value for all agents in this step (simplified MAPPO)
+                step_value = val.item()
+
             # Constraint Layer (Safety)
             safe_actions = safety_layer.apply_constraints(actions, {"trains": env.trains})
             
@@ -121,9 +147,79 @@ def train_mappo(args):
             
             total_reward = sum(rewards.values())
             episode_reward += total_reward
+            
+            # Store in buffer
+            obs_buffer.append(curr_obs_list)
+            action_buffer.append(curr_action_list)
+            log_prob_buffer.append(curr_log_prob_list)
+            reward_buffer.append(total_reward)
+            value_buffer.append(step_value)
+            mask_buffer.append(1.0 - float(done or truncated))
+            
             obs = next_obs
             if truncated: done = True
                 
+        # Update Logic (Every Episode for simplicity in background)
+        if len(reward_buffer) > 0:
+            # Compute Returns and Advantages (GAE)
+            returns = []
+            advantages = []
+            gae = 0
+            next_value = 0 # Assume 0 for terminal
+            
+            for i in reversed(range(len(reward_buffer))):
+                delta = reward_buffer[i] + gamma * next_value * mask_buffer[i] - value_buffer[i]
+                gae = delta + gamma * gae_lambda * mask_buffer[i] * gae
+                advantages.insert(0, gae)
+                next_value = value_buffer[i]
+                returns.insert(0, advantages[0] + value_buffer[i])
+            
+            adv_tensor = torch.FloatTensor(advantages)
+            ret_tensor = torch.FloatTensor(returns)
+            
+            # PPO Update
+            adv_tensor = (adv_tensor - adv_tensor.mean()) / (adv_tensor.std() + 1e-8)
+            
+            for _ in range(ppo_epochs):
+                indices = np.arange(len(obs_buffer))
+                np.random.shuffle(indices)
+                
+                for start in range(0, len(obs_buffer), mini_batch_size):
+                    end = start + mini_batch_size
+                    mb_indices = indices[start:end]
+                    
+                    for i in mb_indices:
+                        o_t = torch.FloatTensor(np.array(obs_buffer[i]))
+                        a_t = torch.LongTensor(np.array(action_buffer[i]))
+                        old_lp = torch.FloatTensor(np.array(log_prob_buffer[i]))
+                        
+                        # Actor Loss
+                        probs = actor(o_t)
+                        dist = torch.distributions.Categorical(probs)
+                        new_lp = dist.log_prob(a_t)
+                        entropy = dist.entropy().mean()
+                        
+                        ratio = torch.exp(new_lp - old_lp)
+                        surr1 = ratio * adv_tensor[i]
+                        surr2 = torch.clamp(ratio, 1.0 - clip_param, 1.0 + clip_param) * adv_tensor[i]
+                        actor_loss = -torch.min(surr1, surr2).mean() - 0.01 * entropy
+                        
+                        # Critic Loss
+                        val_pred = critic(o_t)
+                        critic_loss = F.mse_loss(val_pred, ret_tensor[i].unsqueeze(0))
+                        
+                        # Optimize
+                        actor_opt.zero_grad()
+                        actor_loss.backward()
+                        actor_opt.step()
+                        
+                        critic_opt.zero_grad()
+                        critic_loss.backward()
+                        critic_opt.step()
+            
+            # Clear buffers
+            obs_buffer, action_buffer, log_prob_buffer, reward_buffer, value_buffer, mask_buffer = [], [], [], [], [], []
+
         # Curriculum update logic
         running_reward = 0.9 * running_reward + 0.1 * episode_reward if episode > 0 else episode_reward
         

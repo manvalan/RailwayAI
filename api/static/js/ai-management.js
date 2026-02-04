@@ -68,8 +68,16 @@ async function fetchAIStatus() {
                 indicator.classList.add('active-pulse');
             }
             if (statusText) {
-                statusText.textContent = `OPTIMIZING: ${data.current_scenario || 'Active Session'}`;
+                statusText.textContent = 'OTTIMIZZAZIONE IN CORSO';
                 statusText.style.color = 'var(--success)';
+            }
+
+            // Scenario Display
+            const scenarioLabel = document.getElementById('ai-current-scenario-label');
+            const scenarioName = document.getElementById('active-scenario-name');
+            if (scenarioLabel && scenarioName) {
+                scenarioLabel.style.display = 'block';
+                scenarioName.textContent = (data.current_scenario || 'Sessione Attiva').replace('.json', '').replace('scenarios/', '');
             }
         } else {
             if (indicator) {
@@ -77,9 +85,12 @@ async function fetchAIStatus() {
                 indicator.classList.remove('active-pulse');
             }
             if (statusText) {
-                statusText.textContent = data.seconds_until_next_run > 0 ? `IDLE (Next in ${data.seconds_until_next_run}s)` : 'STANDBY';
+                statusText.textContent = data.seconds_until_next_run > 0 ? `IDLE (Prossimo tra ${data.seconds_until_next_run}s)` : 'STANDBY';
                 statusText.style.color = 'var(--text-secondary)';
             }
+
+            const scenarioLabel = document.getElementById('ai-current-scenario-label');
+            if (scenarioLabel) scenarioLabel.style.display = 'none';
         }
 
         // 2. Curriculum Progress
@@ -129,20 +140,20 @@ async function fetchScenarios() {
         if (!list) return;
 
         if (!scenarios || scenarios.length === 0) {
-            list.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-secondary); font-size: 0.8rem;">No scenarios available. Build one in the lab!</div>';
+            list.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-secondary); font-size: 0.8rem;">Nessuno scenario disponibile. Creane uno nel laboratorio!</div>';
             return;
         }
 
         list.innerHTML = scenarios.map(s => `
             <div class="scenario-item" style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
                 <div style="flex: 1;">
-                    <div style="font-weight: 600; color: #fff; font-size: 0.85rem;">${s.name.replace('_osm', '')}</div>
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">${s.stations} nodes • ${s.tracks} links</div>
+                    <div style="font-weight: 600; color: #fff; font-size: 0.85rem;">${s.name.replace('_osm', '').toUpperCase()}</div>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">${s.stations} nodi • ${s.tracks} binari</div>
                 </div>
                 <div style="display: flex; gap: 0.4rem;">
-                    <button onclick="activateScenario('${s.name}')" style="background: var(--success); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Set Active">RUN</button>
-                    <button onclick="exportToRail('${s.name}')" style="background: var(--primary); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Export .rail">EXPORT</button>
-                    <button onclick="deleteScenario('${s.name}')" style="background: var(--accent); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Purge">🗑️</button>
+                    <button onclick="activateScenario('${s.name}')" style="background: var(--success); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Attiva">AVVIA</button>
+                    <button onclick="exportToRail('${s.name}')" style="background: var(--primary); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Esporta .rail">EXPORT</button>
+                    <button onclick="deleteScenario('${s.name}')" style="background: var(--accent); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Elimina">🗑️</button>
                 </div>
             </div>
         `).join('');
@@ -158,9 +169,9 @@ async function activateScenario(name) {
             body: JSON.stringify({ scenario: path, enabled: true })
         });
         if (response.ok) {
-            addAILog(`Scenario "${name}" mounted for neural optimization.`, 'success');
+            addAILog(`Scenario "${name}" montato per l'ottimizzazione neurale.`, 'success');
         }
-    } catch (e) { addAILog(`Activation error: ${e.message}`, 'error'); }
+    } catch (e) { addAILog(`Errore attivazione: ${e.message}`, 'error'); }
 }
 
 async function deleteScenario(name) {
@@ -186,7 +197,7 @@ async function downloadGlobalNetwork() {
 
     const btn = document.getElementById('dl-net-btn');
     btn.disabled = true;
-    btn.textContent = 'WAIT';
+    btn.textContent = 'ATTESA';
 
     try {
         const response = await fetch(`/api/v1/network/download-europe?country=${encodeURIComponent(country)}`, {
@@ -194,17 +205,17 @@ async function downloadGlobalNetwork() {
             headers: { 'X-API-Key': accessToken }
         });
         if (response.ok) {
-            addAILog(`Downloading infrastructure map for "${country}"...`, 'info');
+            addAILog(`Download infrastruttura per "${country}" in corso...`, 'info');
             inp.value = '';
             if (!dlStatusTimer) dlStatusTimer = setInterval(pollDownloadStatus, 4000);
         } else {
             const err = await response.json();
-            addAILog(`Download error: ${err.detail}`, 'error');
+            addAILog(`Errore download: ${err.detail}`, 'error');
             btn.disabled = false;
             btn.textContent = 'DOWNLOAD';
         }
     } catch (e) {
-        addAILog(`Connectivity error: ${e.message}`, 'error');
+        addAILog(`Errore di connessione: ${e.message}`, 'error');
         btn.disabled = false;
         btn.textContent = 'DOWNLOAD';
     }
@@ -228,10 +239,10 @@ async function pollDownloadStatus() {
         let pendingCount = 0;
         items.forEach(info => {
             if (info.status === 'completed') {
-                addAILog(`Infrastructure map "${info.country}" synced successfully.`, 'success');
+                addAILog(`Mappa infrastruttura "${info.country}" sincronizzata con successo.`, 'success');
                 fetchScenarios();
             } else if (info.status === 'failed') {
-                addAILog(`Sync failed for "${info.country}": ${info.error}`, 'error');
+                addAILog(`Sincronizzazione fallita per "${info.country}": ${info.error}`, 'error');
             } else {
                 pendingCount++;
             }
@@ -291,13 +302,13 @@ async function createBackup() {
             headers: { 'X-API-Key': accessToken }
         });
         if (response.ok) {
-            addAILog('Neural weights snapshot committed successfully.', 'success');
+            addAILog('Snapshot pesi neurali completato con successo.', 'success');
             await fetchBackups();
         } else {
             const err = await response.json();
-            addAILog(`Snapshot failure: ${err.detail}`, 'error');
+            addAILog(`Errore snapshot: ${err.detail}`, 'error');
         }
-    } catch (e) { addAILog(`Communication failure: ${e.message}`, 'error'); }
+    } catch (e) { addAILog(`Errore di comunicazione: ${e.message}`, 'error'); }
     finally {
         btn.disabled = false;
         btn.textContent = oldText;

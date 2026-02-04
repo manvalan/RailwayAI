@@ -60,8 +60,12 @@ async def get_current_user(
         final_key = token
         
     # Record activity to stay synchronized with idle manager
-    from python.integration.idle_training import idle_manager
-    idle_manager.record_activity(f"API: {request.method} {request.url.path}")
+    # EXCLUSION: Don't count background polling/monitoring as "activity" 
+    # otherwise training will be killed by the dashboard just for being open.
+    ignore_paths = ["/api/v1/ai/status", "/api/v1/metrics", "/api/v1/ai/scenarios", "/api/v1/ai/backups", "/api/v1/users/me", "/api/v1/network/topology"]
+    if request.method != "GET" or request.url.path not in ignore_paths:
+        from python.integration.idle_training import idle_manager
+        idle_manager.record_activity(f"API: {request.method} {request.url.path}")
 
     # DEBUG LOGGING (Sanitized)
     if final_key:

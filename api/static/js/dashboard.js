@@ -15,11 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Sidebar Navigation
     document.getElementById('nav-monitoring').addEventListener('click', () => switchView('monitoring'));
-    document.getElementById('nav-training').addEventListener('click', () => switchView('training'));
     document.getElementById('nav-optimization').addEventListener('click', () => switchView('optimization'));
     document.getElementById('nav-ai-management').addEventListener('click', () => {
         switchView('ai-management');
-        loadAIManagement();
+        if (window.refreshAIManagementData) window.refreshAIManagementData();
     });
     document.getElementById('nav-users').addEventListener('click', () => {
         switchView('users');
@@ -30,38 +29,40 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchSMTPConfig();
     });
     document.getElementById('nav-settings').addEventListener('click', () => switchView('settings'));
-    document.getElementById('nav-topology')?.addEventListener('click', () => switchView('topology'));
+    document.getElementById('nav-topology')?.addEventListener('click', () => {
+        switchView('topology');
+        if (window.loadTopology) window.loadTopology();
+    });
     document.getElementById('nav-api-keys')?.addEventListener('click', () => switchView('api-keys'));
 
-    document.getElementById('nav-logout').addEventListener('click', () => {
-        localStorage.removeItem('access_token');
-        location.reload();
-    });
+    // Sidebar Logout - Fixed and robust
+    const logoutBtn = document.getElementById('nav-logout');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            console.log("🔒 System sign-out initiated...");
+            localStorage.removeItem('access_token');
+            sessionStorage.clear();
+            window.location.href = '/';
+        });
+    }
 
     // Actions
-    document.getElementById('start-train-btn').addEventListener('click', startScenarioGeneration);
-    document.getElementById('optimize-btn').addEventListener('click', triggerOptimization);
-    document.getElementById('admin-add-user-btn').addEventListener('click', addUser);
+    document.getElementById('start-train-btn')?.addEventListener('click', () => {
+        if (window.startScenarioGeneration) window.startScenarioGeneration();
+    });
+    document.getElementById('optimize-btn')?.addEventListener('click', triggerOptimization);
+    document.getElementById('admin-add-user-btn')?.addEventListener('click', addUser);
 
     // Settings Actions
-    document.getElementById('change-pass-btn').addEventListener('click', changePassword);
-    document.getElementById('reactivate-btn').addEventListener('click', reactivateAccount);
-    document.getElementById('delete-me-btn').addEventListener('click', deleteMeAccount);
+    document.getElementById('change-pass-btn')?.addEventListener('click', changePassword);
+    document.getElementById('reactivate-btn')?.addEventListener('click', reactivateAccount);
+    document.getElementById('delete-me-btn')?.addEventListener('click', deleteMeAccount);
 
     // SMTP Actions
-    document.getElementById('save-smtp-btn').addEventListener('click', saveSMTPConfig);
-    document.getElementById('test-smtp-btn').addEventListener('click', testSMTP);
+    document.getElementById('save-smtp-btn')?.addEventListener('click', saveSMTPConfig);
+    document.getElementById('test-smtp-btn')?.addEventListener('click', testSMTP);
 
-    // AI Management Actions
-    document.getElementById('ai-start-btn')?.addEventListener('click', startManualTraining);
-    document.getElementById('ai-stop-btn')?.addEventListener('click', stopTrainingManual);
-    document.getElementById('ai-refresh-btn')?.addEventListener('click', refreshAIManagementData);
-    document.getElementById('ai-clear-logs-btn')?.addEventListener('click', () => {
-        const container = document.getElementById('ai-logs');
-        if (container) container.innerHTML = '<div style="color: #444;">[SYSTEM] Stream cleared by operator.</div>';
-    });
-    document.getElementById('save-config-btn')?.addEventListener('click', saveAIConfig);
-
+    // AI Management specific actions are handled in ai-management.js
     // API Keys
     document.getElementById('generate-key-btn')?.addEventListener('click', generateApiKey);
     document.getElementById('copy-key-btn')?.addEventListener('click', () => {
@@ -73,26 +74,30 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function checkUserRole() {
+    if (!accessToken) return;
     try {
         const response = await fetch('/api/v1/users/me', {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-API-Key': accessToken
+            }
         });
 
         if (response.ok) {
             const user = await response.json();
-            window.isUserAdmin = user.privilege === 'admin';
+            window.isUserAdmin = (user.privilege === 'admin');
+            console.log(`👤 Identity verified: ${user.username} (Role: ${user.privilege})`);
 
-            // Show/Hide admin elements
             document.querySelectorAll('.admin-only').forEach(el => {
-                if (user.privilege === 'admin') {
-                    el.style.display = ''; // Restore default (block/flex/etc)
-                } else {
-                    el.style.display = 'none';
-                }
+                el.style.display = window.isUserAdmin ? '' : 'none';
             });
+        } else if (response.status === 401) {
+            console.warn("⚠️ Session expired. Forcing re-auth.");
+            localStorage.removeItem('access_token');
+            location.reload();
         }
     } catch (error) {
-        console.error('Error checking user role:', error);
+        console.error('Role Verification Failure:', error);
     }
 }
 
@@ -163,10 +168,15 @@ async function login() {
 }
 
 function initDashboard() {
-    initChart();
-    connectWebSocket();
-    fetchStats();
-    checkUserRole();
+    console.log("🚀 Initializing Operational Intelligence Dashboard...");
+    try {
+        initChart();
+        connectWebSocket();
+        fetchStats();
+        checkUserRole();
+    } catch (err) {
+        console.error("Dashboard Init Error:", err);
+    }
 }
 
 function switchView(view) {

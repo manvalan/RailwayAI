@@ -39,14 +39,17 @@
 
     <!-- Sidebar -->
     <aside class="sidebar">
-        <div class="logo">RAILWAY AI</div>
-        <nav style="flex: 1;">
+        <div class="sidebar-header">
+            <div class="logo">RAILWAY AI</div>
+        </div>
+
+        <nav class="sidebar-nav">
             <ul>
                 <li id="nav-monitoring" class="active"><span>📊</span> Overview</li>
                 <li id="nav-topology"><span>🗺️</span> Network Map</li>
 
                 <div class="admin-only"
-                    style="margin: 2rem 0 0.75rem 1rem; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.7;">
+                    style="margin: 1.5rem 0 0.5rem 0.5rem; font-size: 0.65rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.6;">
                     Command Center
                 </div>
                 <li id="nav-ai-management" class="admin-only"><span>🤖</span> AI Intelligence</li>
@@ -54,7 +57,7 @@
                 <li id="nav-users" class="admin-only"><span>👥</span> Registry</li>
 
                 <div
-                    style="margin: 2rem 0 0.75rem 1rem; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.7;">
+                    style="margin: 1.5rem 0 0.5rem 0.5rem; font-size: 0.65rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.6;">
                     User Space
                 </div>
                 <li id="nav-api-keys"><span>🔑</span> API Keys</li>
@@ -62,13 +65,14 @@
                 <li id="nav-smtp" class="admin-only"><span>📧</span> Comms</li>
             </ul>
         </nav>
-        <div
-            style="padding-top: 2rem; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 1rem;">
+
+        <div class="sidebar-footer">
             <div id="nav-logout"
-                style="color: var(--accent); cursor: pointer; padding: 0.75rem 1.25rem; border-radius: 12px; transition: 0.2s; font-weight: 600; display: flex; align-items: center; gap: 1rem;">
+                style="color: var(--accent); cursor: pointer; padding: 0.75rem 1rem; border-radius: 12px; transition: 0.2s; font-weight: 600; display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem;">
                 <span>🚪</span> Sign Out
             </div>
-            <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.5; text-align: center;">
+            <div
+                style="font-size: 0.65rem; color: var(--text-secondary); opacity: 0.4; text-align: center; margin-top: 0.75rem;">
                 v2.0.0-MARL-CORE
             </div>
         </div>

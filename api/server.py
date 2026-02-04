@@ -1407,6 +1407,7 @@ async def suggest_schedule(
 
 
 
+@app.post("/api/v1/analyze", response_model=LineAnalysisResponse, tags=["Planning"])
 @app.post("/api/v1/analyze_line", response_model=LineAnalysisResponse, tags=["Planning"])
 async def analyze_line(request: LineAnalysisRequest, current_user: dict = Depends(get_current_user)):
     """

@@ -36,6 +36,7 @@ def train_mappo(args):
     # Heavy imports inside to ensure quick process startup signal
     import torch
     import torch.optim as optim
+    import torch.nn.functional as F
     from env import RailwayGymEnv
     from scenario_loader import ScenarioLoader
     from constraints import SafetyConstraintLayer

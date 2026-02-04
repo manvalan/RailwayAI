@@ -81,7 +81,7 @@ async def get_current_user(
         return user_data
 
     # 2. Try as JWT (if it doesn't look like our API key)
-    if not final_key.startswith("rw-"):
+    if not final_key.startswith("rw-") and final_key.startswith("eyJ"):
         try:
             payload = jwt.decode(final_key, SECRET_KEY, algorithms=[ALGORITHM])
             username: str = payload.get("sub")
@@ -89,8 +89,15 @@ async def get_current_user(
                 user = UserService.get_user(username)
                 if user and user.get('is_active', True):
                     return user
-        except JWTError:
-            pass # Not a valid JWT, move to failure
+                logger.warning(f"JWT valid but user '{username}' not found or inactive")
+        except JWTError as e:
+            logger.warning(f"JWT Validation Error for prefix {final_key[:12]}: {e}")
+            # Se è un JWT palesemente rotto/scaduto, non provare altre strade
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid or expired session: {str(e)}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     logger.warning(f"Auth failed for key prefix: {final_key[:8]}...")
     raise HTTPException(

@@ -1,35 +1,38 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Railway AI | Governance Dashboard</title>
+    <title>Railway AI | Infrastructure Governance</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Fira+Code&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
     <!-- Authentication Overlay -->
-    <div id="auth-overlay" style="background: radial-gradient(circle at center, #1e1b4b 0%, #0b0d11 100%);">
+    <div id="auth-overlay"
+        style="background: radial-gradient(circle at center, #1e1b4b 0%, #0b0d11 100%); z-index: 9999;">
         <div class="auth-card glass" style="padding: 4rem; width: 450px;">
-            <div class="logo" style="margin-bottom: 3rem; font-size: 2.2rem; text-align: center;">RAILWAY AI</div>
+            <div class="logo"
+                style="margin-bottom: 3rem; font-size: 2.2rem; text-align: center; font-family: 'Outfit', sans-serif;">
+                RAILWAY AI</div>
             <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                 <input type="text" id="username" placeholder="Username" value="admin" style="padding: 1rem 1.5rem;">
                 <input type="password" id="password" placeholder="Password" style="padding: 1rem 1.5rem;">
                 <button id="login-btn"
-                    style="background: var(--primary); padding: 1rem; font-size: 1.1rem; box-shadow: 0 4px 15px var(--primary-glow);">Accedi
-                    al Sistema</button>
+                    style="background: var(--primary); padding: 1rem; font-size: 1.1rem; box-shadow: 0 4px 15px var(--primary-glow);">System
+                    Access</button>
                 <p id="auth-error" style="color: var(--accent); font-size: 0.85rem; text-align: center; display: none;">
-                    Credenziali errate</p>
+                    Invalid credentials</p>
             </div>
             <div style="margin-top: 2.5rem; text-align: center; font-size: 0.9rem; color: var(--text-secondary);">
-                Non hai un account? <a href="/static/register.html"
-                    style="color: var(--primary); text-decoration: none; font-weight: 600;">Registrati ora</a>
+                Don't have an account? <a href="/static/register.html"
+                    style="color: var(--primary); text-decoration: none; font-weight: 600;">Register Now</a>
             </div>
         </div>
     </div>
@@ -39,503 +42,308 @@
         <div class="logo">RAILWAY AI</div>
         <nav style="flex: 1;">
             <ul>
-                <li id="nav-monitoring" class="active"><span>📊</span> Dashboard</li>
-                <li id="nav-optimization"><span>⚡</span> Neural Optimizer</li>
+                <li id="nav-monitoring" class="active"><span>📊</span> Overview</li>
                 <li id="nav-topology"><span>🗺️</span> Network Map</li>
-                <li id="nav-api-keys"><span>🔑</span> API Access</li>
+
+                <div class="admin-only"
+                    style="margin: 2rem 0 0.75rem 1rem; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.7;">
+                    Command Center
+                </div>
+                <li id="nav-ai-management" class="admin-only"><span>🤖</span> AI Intelligence</li>
+                <li id="nav-optimization" class="admin-only"><span>⚡</span> Optimizer</li>
+                <li id="nav-users" class="admin-only"><span>👥</span> Registry</li>
 
                 <div
                     style="margin: 2rem 0 0.75rem 1rem; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.7;">
-                    Control Room
+                    User Space
                 </div>
-                <li id="nav-training"><span>🚂</span> Fleet Training</li>
-                <li id="nav-ai-management"><span>🤖</span> AI Intelligence</li>
-                <li id="nav-users"><span>👥</span> Personnel</li>
-                <li id="nav-smtp"><span>📧</span> Comms Stack</li>
+                <li id="nav-api-keys"><span>🔑</span> API Keys</li>
                 <li id="nav-settings"><span>🔒</span> Security</li>
+                <li id="nav-smtp" class="admin-only"><span>📧</span> Comms</li>
             </ul>
         </nav>
         <div
             style="padding-top: 2rem; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 1rem;">
             <div id="nav-logout"
                 style="color: var(--accent); cursor: pointer; padding: 0.75rem 1.25rem; border-radius: 12px; transition: 0.2s; font-weight: 600; display: flex; align-items: center; gap: 1rem;">
-                <span>🚪</span> System Logout
+                <span>🚪</span> Sign Out
             </div>
             <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.5; text-align: center;">
-                Build v2.0.0-MARL-CORE
+                v2.0.0-MARL-CORE
             </div>
         </div>
     </aside>
 
     <!-- Main Content -->
     <main class="main-content">
-        <header style="margin-bottom: 2rem;">
+        <header style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
                 <h1 style="font-size: 2.2rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 0.5rem;"
                     id="page-title">Operational Intelligence</h1>
-                <p style="color: var(--text-secondary); font-size: 1rem;">Live monitoring and predictive maintenance
-                    dashboard.</p>
+                <p style="color: var(--text-secondary); font-size: 1rem;" id="page-desc">Live monitoring and neural
+                    predictive dashboard.</p>
             </div>
             <div id="status-badge" class="glass"
                 style="padding: 0.6rem 1.25rem; color: var(--success); font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 0.75rem; border: 1px solid var(--success-glow);">
                 <div
-                    style="width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 10px var(--success);">
+                    style="width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 10px var(--success); animation: pulse 2s infinite;">
                 </div>
-                SYTEM CORE: ONLINE
+                SYSTEM CORE: ONLINE
             </div>
         </header>
 
-        <!-- Monitoring View -->
+        <!-- View: Monitoring (Unified Dashboard) -->
         <div id="view-monitoring" style="animation: fadeIn 0.4s ease-out;">
-            <!-- Stats Overview -->
             <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
-                <div class="stat-card glass" style="padding: 2rem; position: relative; overflow: hidden;">
+                <div class="stat-card glass" style="padding: 2rem;">
                     <h3
-                        style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 1.5rem; letter-spacing: 1px;">
+                        style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 1.25rem; letter-spacing: 1px;">
                         Live Traffic</h3>
                     <div class="value" id="train-count" style="font-size: 2.5rem; font-weight: 700;">--</div>
                     <div style="font-size: 0.8rem; color: var(--success); margin-top: 0.5rem;">Active Agents</div>
                 </div>
                 <div class="stat-card glass" style="padding: 2rem;">
                     <h3
-                        style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 1.5rem; letter-spacing: 1px;">
+                        style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 1.25rem; letter-spacing: 1px;">
                         Conflicts</h3>
                     <div class="value" id="conflict-count"
                         style="font-size: 2.5rem; font-weight: 700; color: var(--accent);">--</div>
-                    <div style="font-size: 0.8rem; color: var(--accent); margin-top: 0.5rem;">Immediate Action</div>
+                    <div style="font-size: 0.8rem; color: var(--accent); margin-top: 0.5rem;">Neural Hot-Fix Pending
+                    </div>
                 </div>
                 <div class="stat-card glass" style="padding: 2rem;">
                     <h3
-                        style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 1.5rem; letter-spacing: 1px;">
+                        style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 1.25rem; letter-spacing: 1px;">
                         Reliability</h3>
                     <div class="value" id="efficiency" style="font-size: 2.5rem; font-weight: 700;">--%</div>
-                    <div style="font-size: 0.8rem; color: var(--primary); margin-top: 0.5rem;">Global Score</div>
+                    <div style="font-size: 0.8rem; color: var(--primary); margin-top: 0.5rem;">Global Stability</div>
                 </div>
                 <div class="stat-card glass" style="padding: 2rem;">
                     <h3
-                        style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 1.5rem; letter-spacing: 1px;">
+                        style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 1.25rem; letter-spacing: 1px;">
                         Core Engine</h3>
                     <div class="value" id="core-status"
                         style="font-size: 1.5rem; font-weight: 700; color: var(--primary); margin-top: 0.5rem; line-height: 2.5rem;">
-                        C++ OPT V2</div>
-                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">Hybrid Analysis
+                        C++ MARL V2</div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">GPU Accelerated
                     </div>
                 </div>
             </div>
 
-            <!-- Training Monitor -->
             <div class="monitor-grid"
-                style="margin-top: 2.5rem; display: grid; grid-template-columns: 2fr 1fr; gap: 2.5rem;">
+                style="margin-top: 2rem; display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
                 <div class="graph-container glass" style="padding: 2rem;">
-                    <h3 style="margin-bottom: 2rem; font-size: 1.1rem; color: #fff;">Network Convergence Trend</h3>
-                    <div style="height: 400px; position: relative;">
+                    <h3 style="margin-bottom: 2rem; font-size: 1rem; color: #fff;">Network Convergence Trend</h3>
+                    <div style="height: 400px;">
                         <canvas id="training-chart"></canvas>
                     </div>
                 </div>
                 <div class="log-container glass"
                     style="display: flex; flex-direction: column; overflow: hidden; height: 500px;">
                     <div
-                        style="padding: 1.25rem 2rem; border-bottom: 1px solid var(--glass-border); background: rgba(0,0,0,0.15);">
-                        <h3 style="font-size: 0.9rem; color: #fff;">Intelligence Stream</h3>
+                        style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--glass-border); background: rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="font-size: 0.8rem; text-transform: uppercase; display: flex; align-items: center;">
+                            <span class="live-indicator"></span> Intelligence Stream
+                        </h3>
+                        <div style="font-size: 0.7rem; color: var(--primary); font-weight: 600;">REAL-TIME FEED</div>
                     </div>
                     <div id="event-logs"
-                        style="flex: 1; overflow-y: auto; padding: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.6; background: #05070a;">
-                        <div class="log-entry" style="color: var(--text-secondary);">Connecting to neural link...</div>
+                        style="flex: 1; overflow-y: auto; padding: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.8rem; background: #05070a;">
+                        <div class="log-entry info">
+                            <span class="log-timestamp">...</span> Awaiting neural link establishment...
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Training Control View -->
-        <div id="view-training" class="hidden">
-            <div class="glass"
-                style="padding: 2.5rem; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
-                <h2>Configurazione Addestramento</h2>
-                <p style="color: var(--text-secondary);">Genera uno scenario reale da OpenStreetMap e avvia il training
-                    MARL.</p>
-
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <label style="font-weight: 600;">Regione / Area OSM</label>
-                    <input type="text" id="train-area" placeholder="Es: Lombardia, Toscana, Berlin, Paris"
-                        value="Lombardia">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        <label style="font-weight: 600;">Episodi</label>
-                        <input type="number" id="train-episodes" value="500" min="10" max="5000">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        <label style="font-weight: 600;">Learning Rate</label>
-                        <input type="text" id="train-lr" value="0.001">
-                    </div>
-                </div>
-
-                <div style="margin-top: 1rem; display: flex; gap: 1rem;">
-                    <button id="start-train-btn" style="flex: 2;">Genera scenario e Avvia Training</button>
-                    <button id="stop-train-btn" style="flex: 1; background: var(--accent);">Stop Training</button>
-                </div>
-
-                <div id="training-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;"></div>
-            </div>
-
-            <!-- Optimization View -->
-            <div id="view-optimization" class="hidden">
+        <!-- View: AI Intelligence (Admin Only) -->
+        <div id="view-ai-management" class="hidden" style="animation: fadeIn 0.4s ease-out;">
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <!-- Status Bar -->
                 <div class="glass"
-                    style="padding: 2.5rem; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
-                    <h2>Ottimizzazione Orari</h2>
-                    <p style="color: var(--text-secondary);">Avvia l'algoritmo di ottimizzazione su uno scenario
-                        esistente per ridurre i conflitti.</p>
-
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        <label style="font-weight: 600;">Percorso Scenario (.json)</label>
-                        <input type="text" id="optimize-scenario-path" placeholder="es: scenarios/toscana_real.json">
-                        <button id="optimize-btn">Avvia Ottimizzazione</button>
-                    </div>
-
-                    <div id="optimize-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- SMTP Configuration View -->
-        <div id="view-smtp" class="hidden">
-            <div class="glass"
-                style="padding: 2.5rem; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
-                <h2>Configurazione SMTP</h2>
-                <p style="color: var(--text-secondary);">Configura il server per l'invio delle email di attivazione.</p>
-
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
-                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                        <label style="font-weight: 600;">Host SMTP</label>
-                        <input type="text" id="smtp-host" placeholder="smtp.esempio.com">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                        <label style="font-weight: 600;">Porta</label>
-                        <input type="number" id="smtp-port" value="587">
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                        <label style="font-weight: 600;">Username / Email</label>
-                        <input type="text" id="smtp-user" placeholder="utente@esempio.com">
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                        <label style="font-weight: 600;">Password</label>
-                        <input type="password" id="smtp-pass" placeholder="Password (lascia vuoto per non cambiare)">
-                    </div>
-                </div>
-
-                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                    <label style="font-weight: 600;">Email Mittente (Sender Address)</label>
-                    <input type="email" id="smtp-sender" placeholder="noreply@railway-ai.com">
-                </div>
-
-                <div style="display: flex; gap: 2rem;">
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                        <input type="checkbox" id="smtp-tls" checked style="width: auto;"> Usa TLS
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                        <input type="checkbox" id="smtp-active" style="width: auto;"> Servizio Attivo
-                    </label>
-                </div>
-
-                <div style="display: flex; gap: 1rem;">
-                    <button id="save-smtp-btn" style="flex: 2;">Salva Configurazione</button>
-                </div>
-
-                <hr style="border: 0; border-top: 1px solid var(--glass-border);">
-
-                <h3>Test Email</h3>
-                <div style="display: flex; gap: 1rem;">
-                    <input type="email" id="smtp-test-email" placeholder="Email di destinazione" style="flex: 2;">
-                    <button id="test-smtp-btn" style="flex: 1; background: var(--success);">Invia Test</button>
-                </div>
-
-                <div id="smtp-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;"></div>
-            </div>
-        </div>
-
-        <!-- User Management View -->
-        <div id="view-users" class="hidden">
-            <div class="glass"
-                style="padding: 2.5rem; max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
-                <h2>Gestione Utenti</h2>
-
-                <div class="glass" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
-                    <h3>Aggiungi Nuovo Utente</h3>
-                    <div style="display: flex; gap: 1rem; align-items: flex-end;">
-                        <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
-                            <label style="font-size: 0.8rem;">Username</label>
-                            <input type="text" id="admin-new-username" placeholder="Username">
-                        </div>
-                        <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
-                            <label style="font-size: 0.8rem;">Password</label>
-                            <input type="password" id="admin-new-password" placeholder="Password">
-                        </div>
-                        <button id="admin-add-user-btn" style="height: 42px;">Aggiungi</button>
-                    </div>
-                </div>
-
-                <div class="glass" style="padding: 1.5rem;">
-                    <h3>Lista Utenti</h3>
-                    <div id="user-list-container" style="margin-top: 1rem;">
-                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
-                            <thead>
-                                <tr style="border-bottom: 1px solid var(--glass-border);">
-                                    <th style="padding: 0.5rem;">Username</th>
-                                    <th style="padding: 0.5rem;">Stato</th>
-                                    <th style="padding: 0.5rem; text-align: right;">Azioni</th>
-                                </tr>
-                            </thead>
-                            <tbody id="user-table-body">
-                                <!-- Popolato via JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- API Keys View -->
-        <div id="view-api-keys" class="hidden">
-            <div class="glass" style="max-width: 800px; margin: 0 auto;">
-                <h2>🔑 API Keys Generation</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    Generate API keys for external applications (like the Swift App) to access Railway AI features.
-                </p>
-                <div style="background: rgba(0,0,0,0.3); padding: 1.5rem; border-radius: 8px;">
-                    <div style="margin-bottom: 1rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Key Name</label>
-                        <input type="text" id="api-key-name" placeholder="e.g. Swift App"
-                            style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); border-radius: 4px; color: var(--text);">
-                    </div>
-                    <button id="generate-key-btn" style="width: 100%; background: var(--primary);">Generate New
-                        Key</button>
-                    <div id="api-key-result" style="margin-top: 1.5rem; display: none;">
-                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Your API
-                            Key:</div>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" id="generated-key" readonly
-                                style="flex: 1; padding: 0.75rem; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); border-radius: 4px; color: var(--success); font-family: monospace;">
-                            <button id="copy-key-btn" style="background: var(--glass-bg);">Copy</button>
-                        </div>
-                        <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--accent);">
-                            ⚠️ Copy this key now. You won't be able to see it again!
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Settings View -->
-        <div id="view-settings" class="hidden">
-            <div class="glass"
-                style="padding: 2.5rem; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
-                <h2>Impostazioni Sicurezza</h2>
-                <p style="color: var(--text-secondary);">Gestisci il tuo profilo e le credenziali di accesso.</p>
-
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <label style="font-weight: 600;">Cambia Password</label>
-                    <input type="password" id="new-password" placeholder="Nuova Password (min 6 caratteri)">
-                    <button id="change-pass-btn">Aggiorna Password</button>
-                </div>
-
-                <hr style="border: 0; border-top: 1px solid var(--glass-border);">
-
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <label style="font-weight: 600;">Reattività Account (Admin Only)</label>
-                    <input type="text" id="reactivate-username" placeholder="Username da riattivare">
-                    <button id="reactivate-btn" style="background: var(--success);">Riattiva Utente</button>
-                </div>
-
-                <hr style="border: 0; border-top: 1px solid var(--glass-border);">
-
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <label style="font-weight: 600; color: var(--accent);">Zona Pericolosa</label>
-                    <p style="font-size: 0.8rem; color: var(--text-secondary);">Elimina permanentemente il tuo account e
-                        tutti i dati associati (Linee guida Apple e GDPR).</p>
-                    <button id="delete-me-btn"
-                        style="background: transparent; border: 1px solid var(--accent); color: var(--accent);">Elimina
-                        il mio Account</button>
-                </div>
-
-                <div id="settings-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;"></div>
-            </div>
-        </div>
-
-        <!-- AI Management View (Admin Only) -->
-        <div id="view-ai-management" class="hidden"
-            style="max-width: 1400px; margin: 0 auto; width: 100%; animation: fadeIn 0.5s ease-out;">
-            <div style="display: flex; flex-direction: column; gap: 2.5rem;">
-
-                <!-- HEADER: Status & Progress -->
-                <div class="glass"
-                    style="padding: 2.5rem; display: grid; grid-template-columns: 1.2fr 2fr 1.2fr; gap: 4rem; align-items: center; border: 1px solid rgba(99, 102, 241, 0.2);">
-                    <div style="text-align: left;">
-                        <h2
-                            style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 0.75rem; font-weight: 700;">
-                            System Status</h2>
-                        <div style="display: flex; align-items: center; gap: 1rem;">
+                    style="padding: 1.5rem 2rem; display: flex; gap: 3rem; align-items: center; border-left: 4px solid var(--primary); background: rgba(99, 102, 241, 0.03);">
+                    <div style="min-width: 180px;">
+                        <div
+                            style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.25rem;">
+                            AI AGENT STATUS</div>
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
                             <div id="status-indicator"
-                                style="width: 14px; height: 14px; border-radius: 50%; background: var(--text-secondary);">
+                                style="width: 10px; height: 10px; border-radius: 50%; background: var(--text-secondary);">
                             </div>
                             <span id="ai-status-text"
-                                style="font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px;">Initializing...</span>
+                                style="font-size: 1rem; font-weight: 700; letter-spacing: -0.5px;">STANDBY</span>
                         </div>
                     </div>
 
-                    <div style="text-align: center;">
+                    <div style="flex: 1;">
                         <div
-                            style="display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 0.9rem;">
-                            <span style="color: var(--text-secondary); font-weight: 500;">Curriculum Level: <strong
-                                    id="curr-level-num"
-                                    style="color: var(--primary); font-size: 1.1rem;">--</strong></span>
-                            <span style="color: var(--text-secondary); font-weight: 500;">Learning Phase: <strong
-                                    id="curr-level-name" style="color: #fff;">...</strong></span>
+                            style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.75rem;">
+                            <span style="color: var(--text-secondary); text-transform: uppercase;">Optimization
+                                Progress: <strong id="curr-level-name"
+                                    style="color: var(--primary);">ANALYZING</strong></span>
+                            <span style="color: var(--text-secondary);">REWARD: <strong id="curr-reward-val"
+                                    style="color: var(--success);">0.00</strong></span>
                         </div>
                         <div
-                            style="background: rgba(255,255,255,0.03); border-radius: 30px; height: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); padding: 2px;">
+                            style="background: rgba(255,255,255,0.05); height: 6px; border-radius: 10px; overflow: hidden;">
                             <div id="curr-level-progress"
-                                style="width: 0%; height: 100%; border-radius: 30px; background: linear-gradient(90deg, var(--primary), #818cf8); transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 0 20px var(--primary-glow);">
+                                style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); transition: width 0.8s ease-in-out;">
                             </div>
                         </div>
                     </div>
 
-                    <div style="text-align: right;">
-                        <h2
-                            style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 0.75rem; font-weight: 700;">
-                            AI Efficiency</h2>
-                        <div style="font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px;">
-                            <span id="curr-reward-val" style="color: var(--primary);">--</span>
-                            <span
-                                style="font-size: 1rem; color: var(--text-secondary); font-weight: 400; opacity: 0.7;">
-                                / <span id="curr-reward-target">--</span></span>
+                    <div
+                        style="display: flex; gap: 1rem; border-left: 1px solid var(--glass-border); padding-left: 3rem;">
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase;">
+                                CURRICULUM</div>
+                            <div id="curr-level-num" style="font-size: 1.2rem; font-weight: 700;">--</div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: 1rem;">
+                            <button id="ai-start-btn"
+                                style="background: var(--success); padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 700;">INITIATE</button>
+                            <button id="ai-stop-btn"
+                                style="background: var(--accent); padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 700;">KILL</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- MAIN WORKSPACE -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;">
-
-                    <!-- LEFT COLUMN: Scenarios & Data Acquisition -->
-                    <div style="display: flex; flex-direction: column; gap: 2.5rem;">
-
-                        <!-- Panel: Scenarios Management -->
-                        <div class="glass"
-                            style="display: flex; flex-direction: column; overflow: hidden; min-height: 550px;">
-                            <div
-                                style="padding: 1.75rem 2rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
-                                <h3
-                                    style="margin: 0; font-size: 1.25rem; color: #fff; display: flex; align-items: center; gap: 0.75rem; font-weight: 600;">
-                                    <span style="opacity: 0.8;">📂</span> Scenario Manager
-                                </h3>
-                                <button id="ai-start-btn"
-                                    style="background: linear-gradient(135deg, var(--success), #059669); padding: 0.6rem 1.25rem; font-size: 0.85rem; box-shadow: 0 4px 12px var(--success-glow); color: #fff;">
-                                    <span>▶️</span> Run Training
-                                </button>
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr 1.2fr; gap: 1.5rem;">
+                    <!-- Panel 1: Scenarios -->
+                    <div class="glass" style="display: flex; flex-direction: column; height: 500px;">
+                        <div style="padding: 1.25rem; border-bottom: 1px solid var(--glass-border); font-weight: 700;">
+                            📂 Scenario Lab</div>
+                        <div
+                            style="padding: 1.25rem; background: rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 0.75rem;">
+                            <input type="text" id="train-area" placeholder="Region Name (e.g. Tuscany)"
+                                style="padding: 0.6rem;">
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button id="start-train-btn" style="flex: 1; background: var(--primary);">Generate &
+                                    Train</button>
+                                <button id="dl-net-btn"
+                                    style="padding: 0.6rem; background: rgba(255,255,255,0.05);">Download</button>
                             </div>
-
-                            <!-- Search & Download -->
+                            <input type="text" id="dl-country" placeholder="Import Network URL (Optional)"
+                                style="padding: 0.5rem; font-size: 0.75rem; background: rgba(0,0,0,0.2);">
+                        </div>
+                        <div id="scenarios-list" style="flex: 1; overflow-y: auto; padding: 0.5rem;">
                             <div
-                                style="padding: 1.25rem 2rem; border-bottom: 1px solid var(--glass-border); background: rgba(0,0,0,0.15);">
-                                <div style="display: flex; gap: 0.75rem;">
-                                    <div style="position: relative; flex: 1;">
-                                        <input type="text" id="dl-country"
-                                            placeholder="City or Country (e.g. Rome, Berlin...)"
-                                            style="width: 100%; padding: 0.8rem 1rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; font-size: 0.9rem;">
-                                    </div>
-                                    <div style="font-size: 0.7rem; color: var(--text-secondary);">Recall</div>
-                                </div>
-                                <div style="grid-column: span 2; text-align: center;">
-                                    <div style="font-size: 1.2rem; font-weight: 600; color: var(--accent);"
-                                        id="test-loss">--</div>
-                                    <div style="font-size: 0.7rem; color: var(--text-secondary);">Test Loss</div>
-                                </div>
+                                style="padding: 2rem; text-align: center; color: var(--text-secondary); font-size: 0.8rem;">
+                                Loading index...</div>
+                        </div>
+                    </div>
+
+                    <!-- Panel 2: Config -->
+                    <div class="glass" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+                        <div style="font-weight: 700;">⚙️ Engine Parameters</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label style="font-size: 0.7rem; color: var(--text-secondary);">Episodes</label>
+                                <input type="number" id="train-episodes" value="500" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.7rem; color: var(--text-secondary);">LR</label>
+                                <input type="text" id="train-lr" value="0.001" style="width: 100%;">
                             </div>
                         </div>
-
-                        <!-- Model Confidence -->
-                        <div class="glass" style="padding: 0; overflow: hidden;">
-                            <div
-                                style="background: rgba(255,255,255,0.03); padding: 1rem; border-bottom: 1px solid var(--glass-border);">
-                                <h3 style="margin: 0; font-size: 1rem;">🔍 Affidabilità</h3>
+                        <hr style="border: 0; border-top: 1px solid var(--glass-border);">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span style="font-size: 0.8rem;">Idle Threshold</span>
+                                <span id="config-threshold-val"
+                                    style="color: var(--primary); font-weight: 700;">300s</span>
                             </div>
-                            <div style="padding: 1rem; font-size: 0.9rem;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                    <span style="color: var(--text-secondary);">Confidenza Media</span>
-                                    <span id="avg-confidence">--%</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                    <span style="color: var(--text-secondary);">Stabilità</span>
-                                    <span id="model-stability">--</span>
-                                </div>
-                                <div style="margin-top: 10px; border-top: 1px solid var(--glass-border); padding-top: 5px; text-align: center;"
-                                    id="quality-assessment">
-                                    --
-                                </div>
-                            </div>
+                            <input type="range" id="config-threshold" min="60" max="3600" step="60"
+                                style="width: 100%;">
                         </div>
+                        <label
+                            style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: 8px; cursor: pointer;">
+                            <span style="font-size: 0.8rem;">Auto-Learning Mode</span>
+                            <input type="checkbox" id="config-enabled">
+                        </label>
+                        <button id="save-config-btn"
+                            style="background: var(--primary); padding: 0.75rem; width: 100%;">Sync Engine
+                            Config</button>
+                        <div id="training-status-msg"
+                            style="text-align: center; font-size: 0.75rem; color: var(--text-secondary);">Ready for
+                            operation.</div>
+                    </div>
 
-                    </div> <!-- End Column 3 -->
+                    <!-- Panel 3: Backups -->
+                    <div class="glass" style="display: flex; flex-direction: column; height: 500px;">
+                        <div
+                            style="padding: 1.25rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700;">💾 Weights Vault</span>
+                            <button id="ai-backup-btn"
+                                style="padding: 0.3rem 0.6rem; font-size: 0.7rem;">Backup</button>
+                        </div>
+                        <div id="backups-list" style="flex: 1; overflow-y: auto; padding: 0.5rem;">
+                            <!-- List via JS -->
+                        </div>
+                    </div>
+                </div>
 
-                </div> <!-- End Grid -->
+                <!-- Logs Grid -->
+                <div class="glass" style="height: 300px; display: flex; flex-direction: column; overflow: hidden;">
+                    <div
+                        style="padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2);">
+                        <h3
+                            style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; margin: 0;">
+                            <span class="live-indicator"
+                                style="background: var(--primary); box-shadow: 0 0 10px var(--primary-glow);"></span>
+                            Admin Log Stream
+                        </h3>
+                        <button id="ai-clear-logs-btn"
+                            style="background: transparent; border: 1px solid var(--glass-border); font-size: 0.65rem; padding: 0.2rem 0.5rem; opacity: 0.6;">PURGE
+                            STREAM</button>
+                    </div>
+                    <div id="ai-logs"
+                        style="flex: 1; overflow-y: auto; padding: 1.25rem; background: #05070a; font-family: 'Fira Code', monospace; font-size: 0.75rem;">
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Network Topology View -->
+        <!-- View: Network Map -->
         <div id="view-topology" class="hidden">
             <div class="glass"
-                style="padding: 2rem; height: calc(100vh - 100px); display: flex; flex-direction: column;">
+                style="padding: 2rem; height: calc(100vh - 120px); display: flex; flex-direction: column;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                     <div>
-                        <h2 id="topo-title">🗺️ Topologia di Rete</h2>
-                        <p id="topo-desc" style="color: var(--text-secondary); font-size: 0.9rem;">Analisi spaziale e
-                            interconnessioni della rete ferroviaria.</p>
+                        <h2 id="topo-title">🗺️ Network Topology</h2>
+                        <p id="topo-desc" style="color: var(--text-secondary); font-size: 0.9rem;">Spatial analysis and
+                            interconnected rail nodes.</p>
                     </div>
-                    <div style="display: flex; gap: 1rem;">
-                        <button id="topo-refresh-btn"
-                            style="background: transparent; border: 1px solid var(--glass-border); padding: 0.5rem 1rem;">🔄
-                            Aggiorna</button>
-                        <div id="topo-status"
-                            style="font-size: 0.8rem; color: var(--success); display: flex; align-items: center; gap: 0.5rem;">
-                            <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--success);"></div>
-                            Real-time Data
-                        </div>
-                    </div>
+                    <button id="topo-refresh-btn" class="glass" style="padding: 0.5rem 1rem;">🔄 Sync Data</button>
                 </div>
-
                 <div id="topo-container"
-                    style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 12px; position: relative; overflow: hidden; border: 1px solid var(--glass-border);">
-                    <canvas id="topo-canvas"
-                        style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;"></canvas>
+                    style="flex: 1; background: #000; border-radius: 12px; position: relative; border: 1px solid var(--glass-border); overflow: hidden;">
+                    <canvas id="topo-canvas" style="width: 100%; height: 100%;"></canvas>
                     <div id="topo-overlay"
-                        style="position: absolute; top: 1rem; right: 1rem; padding: 1rem; background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 0.8rem; border: 1px solid var(--glass-border); display: none;">
-                        <div style="font-weight: 700; margin-bottom: 0.5rem; color: var(--primary);"
-                            id="topo-node-name">--</div>
-                        <div id="topo-node-details">Seleziona un nodo...</div>
+                        style="position: absolute; top: 1rem; right: 1rem; padding: 1rem; background: rgba(20,20,30,0.9); border: 1px solid var(--glass-border); border-radius: 8px; font-size: 0.8rem; display: none;">
+                        <div style="font-weight: 700; color: var(--primary);" id="topo-node-name">--</div>
+                        <div id="topo-node-details">Details...</div>
                     </div>
                 </div>
-
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-top: 1.5rem;">
+                <!-- Stats footer for topology -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1.5rem;">
                     <div class="glass" style="padding: 1rem; text-align: center;">
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Nodi (Stazioni)</div>
-                        <div id="topo-stat-nodes" style="font-size: 1.2rem; font-weight: 700; color: #fff;">--</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary);">Stations</div>
+                        <div id="topo-stat-nodes" style="font-size: 1.2rem; font-weight: 700;">--</div>
                     </div>
                     <div class="glass" style="padding: 1rem; text-align: center;">
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Archi (Binari)</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary);">Tracks</div>
                         <div id="topo-stat-edges" style="font-size: 1.2rem; font-weight: 700; color: var(--primary);">--
                         </div>
                     </div>
                     <div class="glass" style="padding: 1rem; text-align: center;">
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Densità Archi</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary);">Density</div>
                         <div id="topo-stat-density" style="font-size: 1.2rem; font-weight: 700; color: var(--success);">
                             --</div>
                     </div>
                     <div class="glass" style="padding: 1rem; text-align: center;">
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Hub Principali</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary);">Hubs Identified</div>
                         <div id="topo-stat-hubs" style="font-size: 1.2rem; font-weight: 700; color: var(--accent);">--
                         </div>
                     </div>
@@ -543,48 +351,148 @@
             </div>
         </div>
 
+        <!-- View: Optimizer (Admin Only) -->
+        <div id="view-optimization" class="hidden">
+            <div class="glass"
+                style="padding: 3rem; max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
+                <h2>⚡ Schedule Optimizer</h2>
+                <p style="color: var(--text-secondary);">Trigger legacy C++ optimization algorithm on existing scenario
+                    files.</p>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <label>Scenario Path (.json)</label>
+                    <input type="text" id="optimize-scenario-path" placeholder="e.g. scenarios/london_central.json">
+                    <button id="optimize-btn" style="background: var(--primary); padding: 1rem;">Execute Optimization
+                        Sequence</button>
+                </div>
+                <div id="optimize-status-msg" style="text-align: center; font-weight: 600;"></div>
+            </div>
+        </div>
 
-        <!-- Settings View -->
+        <!-- View: Personnel (Admin Only) -->
+        <div id="view-users" class="hidden">
+            <div class="glass" style="padding: 2.5rem; max-width: 900px; margin: 0 auto;">
+                <h2>👥 User Registry</h2>
+                <div class="glass" style="padding: 1.5rem; margin: 2rem 0; background: rgba(255,255,255,0.02);">
+                    <h3>Add New Operator</h3>
+                    <div
+                        style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; margin-top: 1rem; align-items: flex-end;">
+                        <div>
+                            <label style="font-size: 0.75rem;">Username</label>
+                            <input type="text" id="admin-new-username" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem;">Password</label>
+                            <input type="password" id="admin-new-password" style="width: 100%;">
+                        </div>
+                        <button id="admin-add-user-btn" style="height: 42px;">Register</button>
+                    </div>
+                </div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 2px solid var(--glass-border);">
+                            <th style="padding: 1rem;">Username</th>
+                            <th style="padding: 1rem;">Status</th>
+                            <th style="padding: 1rem; text-align: right;">Management</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- View: API Keys -->
+        <div id="view-api-keys" class="hidden">
+            <div class="glass" style="max-width: 700px; margin: 0 auto; padding: 3rem;">
+                <h2>🔑 System API Keys</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">Generate private keys for external neural
+                    bridge integration.</p>
+                <div
+                    style="background: rgba(0,0,0,0.3); padding: 2rem; border-radius: 12px; border: 1px solid var(--glass-border);">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Key Descriptor</label>
+                    <input type="text" id="api-key-name" placeholder="e.g. Satellite System"
+                        style="width: 100%; margin-bottom: 1.5rem;">
+                    <button id="generate-key-btn" style="width: 100%; background: var(--primary);">Generate Access
+                        Key</button>
+                    <div id="api-key-result" style="margin-top: 2rem; display: none;">
+                        <label style="font-size: 0.75rem; color: var(--text-secondary);">Private API Key:</label>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                            <input type="text" id="generated-key" readonly
+                                style="flex: 1; background: #000; color: var(--success); font-family: monospace;">
+                            <button id="copy-key-btn">Copy</button>
+                        </div>
+                        <p style="margin-top: 1rem; font-size: 0.75rem; color: var(--accent);">⚠️ Secure this key. It
+                            will never be shown again.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View: Security Settings -->
         <div id="view-settings" class="hidden">
             <div class="glass"
-                style="padding: 2.5rem; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
-                <h2>Impostazioni Sicurezza</h2>
-                <p style="color: var(--text-secondary);">Gestisci il tuo profilo e le credenziali di accesso.</p>
-
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <label style="font-weight: 600;">Cambia Password</label>
-                    <input type="password" id="new-password" placeholder="Nuova Password (min 6 caratteri)">
-                    <button id="change-pass-btn">Aggiorna Password</button>
+                style="padding: 3rem; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
+                <h2>🔒 Security Protocol</h2>
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem;">Rotate Password</label>
+                    <div style="display: flex; gap: 1rem;">
+                        <input type="password" id="new-password" placeholder="New Secret" style="flex: 1;">
+                        <button id="change-pass-btn">Update</button>
+                    </div>
                 </div>
-
-                <hr style="border: 0; border-top: 1px solid var(--glass-border);">
-
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <label style="font-weight: 600;">Reattività Account (Admin Only)</label>
-                    <input type="text" id="reactivate-username" placeholder="Username da riattivare">
-                    <button id="reactivate-btn" style="background: var(--success);">Riattiva Utente</button>
+                <div class="admin-only">
+                    <hr style="border: 0; border-top: 1px solid var(--glass-border); margin: 1rem 0;">
+                    <label style="display: block; margin-bottom: 0.5rem;">Restore Operator</label>
+                    <div style="display: flex; gap: 1rem;">
+                        <input type="text" id="reactivate-username" placeholder="Username to restore" style="flex: 1;">
+                        <button id="reactivate-btn" style="background: var(--success);">Reactivate</button>
+                    </div>
                 </div>
-
-                <hr style="border: 0; border-top: 1px solid var(--glass-border);">
-
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <label style="font-weight: 600; color: var(--accent);">Zona Pericolosa</label>
-                    <p style="font-size: 0.8rem; color: var(--text-secondary);">Elimina permanentemente il tuo account e
-                        tutti i dati associati (Linee guida Apple e GDPR).</p>
+                <div>
+                    <hr style="border: 0; border-top: 1px solid var(--glass-border); margin: 1rem 0;">
+                    <h3 style="color: var(--accent); margin-bottom: 1rem;">Decommission Account</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Irreversibly delete
+                        your operator profile and associated telemetry.</p>
                     <button id="delete-me-btn"
-                        style="background: transparent; border: 1px solid var(--accent); color: var(--accent);">Elimina
-                        il mio Account</button>
+                        style="background: transparent; color: var(--accent); border: 1px solid var(--accent); width: 100%;">Purge
+                        Profile</button>
                 </div>
+                <div id="settings-status-msg" style="text-align: center; font-weight: 600;"></div>
+            </div>
+        </div>
 
-                <div id="settings-status-msg" style="text-align: center; font-weight: 600; min-height: 1.5rem;"></div>
+        <!-- View: Comms Setup (Admin Only) -->
+        <div id="view-smtp" class="hidden">
+            <div class="glass"
+                style="padding: 3rem; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem;">
+                <h2>📧 SMTP Gateway</h2>
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+                    <input type="text" id="smtp-host" placeholder="SMTP Host (e.g. mail.railway.ai)">
+                    <input type="number" id="smtp-port" value="587">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <input type="text" id="smtp-user" placeholder="Login User">
+                    <input type="password" id="smtp-pass" placeholder="Secret Key">
+                </div>
+                <input type="email" id="smtp-sender" placeholder="Broadcast Sender Address">
+                <div style="display: flex; gap: 2rem;">
+                    <label><input type="checkbox" id="smtp-tls" checked> Use TLS</label>
+                    <label><input type="checkbox" id="smtp-active"> Service Active</label>
+                </div>
+                <button id="save-smtp-btn" style="background: var(--primary);">Save Cluster Comms</button>
+                <hr style="border: 0; border-top: 1px solid var(--glass-border);">
+                <h3>Gateway Connectivity Test</h3>
+                <div style="display: flex; gap: 1rem;">
+                    <input type="email" id="smtp-test-email" placeholder="Probe Target Email" style="flex: 1;">
+                    <button id="test-smtp-btn" style="background: var(--success);">Fire Probe</button>
+                </div>
+                <div id="smtp-status-msg" style="text-align: center; font-weight: 600;"></div>
             </div>
         </div>
     </main>
 
-    <script src="js/dashboard.js?v=2"></script>
-    <script src="js/ai-management.js?v=2"></script>
-    <script src="js/topology.js?v=1"></script>
-
+    <script src="js/dashboard.js?v=3"></script>
+    <script src="js/ai-management.js?v=3"></script>
+    <script src="js/topology.js?v=2"></script>
 </body>
 
 </html>

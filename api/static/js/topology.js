@@ -1,17 +1,18 @@
 /**
- * Railway Network Topology Visualization v2
- * Handles interactive drawing, zoom, and pan for network graph.
+ * Railway Network Topology Visualization v3 (English)
+ * Advanced interactive graph renderer for infrastructure monitoring.
  */
 
 class TopologyVisualizer {
     constructor(canvasId, containerId) {
         this.canvas = document.getElementById(canvasId);
         this.container = document.getElementById(containerId);
+        if (!this.canvas) return;
         this.ctx = this.canvas.getContext('2d');
         this.data = null;
         this.degrees = {};
 
-        this.scale = 0.9; // Base scale
+        this.scale = 0.9;
         this.offsetX = 0;
         this.offsetY = 0;
 
@@ -20,7 +21,6 @@ class TopologyVisualizer {
         this.lastMouseY = 0;
 
         this.bounds = { minLat: 0, maxLat: 1, minLon: 0, maxLon: 1 };
-
         this.initEvents();
     }
 
@@ -52,22 +52,17 @@ class TopologyVisualizer {
 
         this.canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
-            const zoomSpeed = 0.001;
-            const factor = 1 - e.deltaY * zoomSpeed;
+            const factor = 1 - e.deltaY * 0.001;
             this.zoomAt(e.offsetX, e.offsetY, factor);
         }, { passive: false });
 
-        this.canvas.addEventListener('dblclick', () => {
-            this.resetView();
-        });
+        this.canvas.addEventListener('dblclick', () => this.resetView());
     }
 
     zoomAt(x, y, factor) {
-        // Limit zoom
         const newScale = this.scale * factor;
-        if (newScale < 0.1 || newScale > 20) return;
+        if (newScale < 0.1 || newScale > 30) return;
 
-        // Zoom relative to mouse position
         this.offsetX = x - (x - this.offsetX) * factor;
         this.offsetY = y - (y - this.offsetY) * factor;
         this.scale = newScale;
@@ -76,7 +71,7 @@ class TopologyVisualizer {
 
     resetView() {
         if (!this.data) return;
-        this.scale = 0.8;
+        this.scale = Math.min(this.canvas.width, this.canvas.height) / 1000;
         this.offsetX = this.canvas.width / 2;
         this.offsetY = this.canvas.height / 2;
         this.draw();
@@ -93,14 +88,12 @@ class TopologyVisualizer {
         this.data = data;
         if (!data.nodes || data.nodes.length === 0) return;
 
-        // Pre-calculate degrees
         this.degrees = {};
         data.edges.forEach(e => {
             this.degrees[e.source] = (this.degrees[e.source] || 0) + 1;
             this.degrees[e.target] = (this.degrees[e.target] || 0) + 1;
         });
 
-        // Calculate geographical bounds
         const lats = data.nodes.map(n => n.pos[0]);
         const lons = data.nodes.map(n => n.pos[1]);
         this.bounds = {
@@ -114,30 +107,21 @@ class TopologyVisualizer {
         this.resetView();
     }
 
-    // Convert Geo to Local Map coordinates (keeping aspect ratio)
     geoToLocal(lat, lon) {
         const { minLat, maxLat, minLon, maxLon } = this.bounds;
-
-        // Use a fixed reference scale to keep aspect ratio
-        // 1 degree lat is approx 111km, 1 degree lon is approx 111km * cos(lat)
-        // For simplicity we use 1:1 if lat range is small
         const rangeLat = maxLat - minLat || 0.0001;
         const rangeLon = maxLon - minLon || 0.0001;
 
-        // Normalized coordinates (-1 to 1 range relative to center)
         const nx = ((lon - minLon) / rangeLon - 0.5) * 2;
         const ny = ((lat - minLat) / rangeLat - 0.5) * 2;
 
-        // Apply scale based on viewport
-        const viewSize = Math.min(this.canvas.width, this.canvas.height) * 0.45;
-
-        // Preserving aspect ratio:
-        // We want to map the larger dimension to the viewSize
+        const viewSize = Math.min(this.canvas.width, this.canvas.height) * 0.4;
         const aspect = rangeLon / rangeLat;
+
         let x, y;
         if (aspect > 1) {
             x = nx * viewSize;
-            y = -ny * (viewSize / aspect); // Inverted Y for canvas
+            y = -ny * (viewSize / aspect);
         } else {
             x = nx * (viewSize * aspect);
             y = -ny * viewSize;
@@ -154,14 +138,24 @@ class TopologyVisualizer {
         const ctx = this.ctx;
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Draw grid or background
-        this.drawBackground();
+        // Grid
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+        const spacing = 40 * this.scale;
+        if (spacing > 5) {
+            for (let x = this.offsetX % spacing; x < this.canvas.width; x += spacing) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, this.canvas.height); ctx.stroke();
+            }
+            for (let y = this.offsetY % spacing; y < this.canvas.height; y += spacing) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(this.canvas.width, y); ctx.stroke();
+            }
+        }
+        ctx.restore();
 
-        // Draw Edges
+        // Links
         ctx.beginPath();
-        ctx.strokeStyle = 'rgba(79, 70, 229, 0.4)';
-        ctx.lineWidth = Math.max(0.5, 1.5 * this.scale);
-
+        ctx.strokeStyle = 'rgba(79, 70, 229, 0.3)';
+        ctx.lineWidth = Math.max(0.5, 1 * this.scale);
         this.data.edges.forEach(edge => {
             const s = this.data.nodes.find(n => n.id === edge.source);
             const t = this.data.nodes.find(n => n.id === edge.target);
@@ -174,49 +168,35 @@ class TopologyVisualizer {
         });
         ctx.stroke();
 
-        // Draw Nodes
+        // Nodes
         this.data.nodes.forEach(node => {
             const pos = this.geoToLocal(node.pos[0], node.pos[1]);
             const degree = this.degrees[node.id] || 0;
-            const radius = (3 + Math.min(degree, 8)) * Math.sqrt(this.scale);
+            const radius = (2 + Math.min(degree, 6)) * Math.sqrt(this.scale);
 
-            let color = '#fff';
-            if (degree > 4) color = '#f43f5e'; // Hub
-            else if (degree > 2) color = '#4f46e5'; // Junction
+            let color = '#94a3b8';
+            if (degree > 4) color = '#f43f5e';
+            else if (degree > 2) color = '#4f46e5';
 
             ctx.fillStyle = color;
-            ctx.shadowBlur = degree > 4 ? 10 * this.scale : 0;
-            ctx.shadowColor = color;
+            if (degree > 4) {
+                ctx.shadowBlur = 15 * this.scale;
+                ctx.shadowColor = color;
+            } else {
+                ctx.shadowBlur = 0;
+            }
 
             ctx.beginPath();
             ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
             ctx.fill();
 
-            // Label for hubs or if zoomed in enough
-            if (degree > 3 || this.scale > 3) {
+            if (degree > 4 || this.scale > 5) {
                 ctx.shadowBlur = 0;
-                ctx.fillStyle = 'rgba(255,255,255,0.8)';
-                ctx.font = `${Math.max(8, 11 * Math.sqrt(this.scale))}px Inter`;
-                ctx.fillText(node.name, pos.x + radius + 4, pos.y + 3);
+                ctx.fillStyle = '#f8fafc';
+                ctx.font = `${Math.max(7, 10 * Math.sqrt(this.scale))}px Outfit`;
+                ctx.fillText(node.name, pos.x + radius + 3, pos.y + 3);
             }
         });
-    }
-
-    drawBackground() {
-        const ctx = this.ctx;
-        ctx.save();
-        ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-        ctx.lineWidth = 1;
-        const spacing = 50 * this.scale;
-        if (spacing > 10) {
-            for (let x = this.offsetX % spacing; x < this.canvas.width; x += spacing) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, this.canvas.height); ctx.stroke();
-            }
-            for (let y = this.offsetY % spacing; y < this.canvas.height; y += spacing) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(this.canvas.width, y); ctx.stroke();
-            }
-        }
-        ctx.restore();
     }
 
     handleHover(e) {
@@ -229,10 +209,7 @@ class TopologyVisualizer {
         for (const node of this.data.nodes) {
             const pos = this.geoToLocal(node.pos[0], node.pos[1]);
             const dist = Math.sqrt((pos.x - mx) ** 2 + (pos.y - my) ** 2);
-            if (dist < 15) {
-                hovered = node;
-                break;
-            }
+            if (dist < 10) { hovered = node; break; }
         }
 
         const overlay = document.getElementById('topo-overlay');
@@ -240,9 +217,9 @@ class TopologyVisualizer {
             overlay.style.display = 'block';
             document.getElementById('topo-node-name').textContent = hovered.name;
             document.getElementById('topo-node-details').innerHTML = `
-                ID: ${hovered.id}<br>
-                Type: ${hovered.type}<br>
-                Connessioni: ${this.degrees[hovered.id] || 0}
+                TAG: ${hovered.type || 'STATION'}<br>
+                DEGREE: ${this.degrees[hovered.id] || 0} links<br>
+                GPS: ${hovered.pos[0].toFixed(4)}, ${hovered.pos[1].toFixed(4)}
             `;
             this.canvas.style.cursor = 'pointer';
         } else {
@@ -252,7 +229,6 @@ class TopologyVisualizer {
     }
 }
 
-// Singleton instance
 let visualizer = null;
 
 window.loadTopology = async function () {
@@ -271,7 +247,7 @@ window.loadTopology = async function () {
             updateTopologyStats(data);
         }
     } catch (error) {
-        console.error('Failed to load topology:', error);
+        console.error('Topology link failed:', error);
     }
 };
 
@@ -280,16 +256,16 @@ function updateTopologyStats(data) {
     document.getElementById('topo-stat-edges').textContent = data.edges.length;
     const density = data.nodes.length > 0 ? (data.edges.length / data.nodes.length).toFixed(2) : '0';
     document.getElementById('topo-stat-density').textContent = density;
-    const degrees = {};
-    data.edges.forEach(e => {
-        degrees[e.source] = (degrees[e.source] || 0) + 1;
-        degrees[e.target] = (degrees[e.target] || 0) + 1;
-    });
-    const hubs = Object.values(degrees).filter(d => d > 3).length;
-    document.getElementById('topo-stat-hubs').textContent = hubs;
-    document.getElementById('topo-title').textContent = `🗺️ Topologia: ${data.scenario || 'Network'}`;
+
+    let hubCount = 0;
+    Object.values(visualizer.degrees).forEach(d => { if (d > 3) hubCount++; });
+    document.getElementById('topo-stat-hubs').textContent = hubCount;
+
+    const title = document.getElementById('topo-title');
+    if (title) title.textContent = `🗺️ Network Topology: ${data.scenario || 'Primary Sector'}`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('topo-refresh-btn')?.addEventListener('click', window.loadTopology);
+    const refreshBtn = document.getElementById('topo-refresh-btn');
+    if (refreshBtn) refreshBtn.addEventListener('click', window.loadTopology);
 });

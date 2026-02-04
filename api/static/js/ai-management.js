@@ -1,5 +1,5 @@
-// AI Management Dashboard Logic
-// =============================
+// AI Management Dashboard Logic (Refined & English)
+// ===============================================
 
 document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('view-ai-management')) {
@@ -16,9 +16,15 @@ function initAIManagement() {
     document.getElementById('ai-backup-btn')?.addEventListener('click', createBackup);
     document.getElementById('dl-net-btn')?.addEventListener('click', downloadGlobalNetwork);
     document.getElementById('ai-start-btn')?.addEventListener('click', startTrainingManual);
+    document.getElementById('ai-stop-btn')?.addEventListener('click', stopTrainingManual);
+    document.getElementById('ai-refresh-btn')?.addEventListener('click', refreshAIManagementData);
+    document.getElementById('ai-clear-logs-btn')?.addEventListener('click', () => {
+        const container = document.getElementById('ai-logs');
+        if (container) container.innerHTML = '<div style="color: #444;">[SYSTEM] Stream cleared by operator.</div>';
+    });
 
     document.getElementById('config-threshold')?.addEventListener('input', (e) => {
-        document.getElementById('config-threshold-val').textContent = e.target.value;
+        document.getElementById('config-threshold-val').textContent = e.target.value + 's';
     });
 
     // Initial Data Load
@@ -59,49 +65,49 @@ async function fetchAIStatus() {
         if (data.status === 'training') {
             if (indicator) {
                 indicator.style.background = 'var(--success)';
-                indicator.className = 'active-pulse';
+                indicator.classList.add('active-pulse');
             }
             if (statusText) {
-                statusText.textContent = `In corso: ${data.current_scenario || 'Addestramento'}`;
+                statusText.textContent = `OPTIMIZING: ${data.current_scenario || 'Active Session'}`;
                 statusText.style.color = 'var(--success)';
             }
         } else {
             if (indicator) {
                 indicator.style.background = 'var(--text-secondary)';
-                indicator.className = '';
+                indicator.classList.remove('active-pulse');
             }
             if (statusText) {
-                statusText.textContent = data.seconds_until_next_run > 0 ? `In attesa (${data.seconds_until_next_run}s)` : 'Inattivo';
-                statusText.style.color = 'var(--text-primary)';
+                statusText.textContent = data.seconds_until_next_run > 0 ? `IDLE (Next in ${data.seconds_until_next_run}s)` : 'STANDBY';
+                statusText.style.color = 'var(--text-secondary)';
             }
         }
 
         // 2. Curriculum Progress
         if (data.curriculum_level !== undefined) {
             document.getElementById('curr-level-num').textContent = data.curriculum_level;
-            const levelNames = ["", "Base (2 Treni)", "Incroci (4 Treni)", "Hub Stellari", "Congestione Alta", "Rete Completa"];
-            document.getElementById('curr-level-name').textContent = levelNames[data.curriculum_level] || "Avanzato";
+            const levelNames = ["Standby", "Initial (2 Trains)", "Intersections (4 Trains)", "Complex Hubs", "High Density", "Full-Sector Simulation"];
+            document.getElementById('curr-level-name').textContent = levelNames[data.curriculum_level] || "Advanced Deployment";
 
-            const progress = (data.curriculum_level / 5) * 100;
+            const progress = Math.min((data.curriculum_level / 5) * 100, 100);
             const progressEl = document.getElementById('curr-level-progress');
             if (progressEl) progressEl.style.width = `${progress}%`;
-
-            document.getElementById('curr-reward-target').textContent = -100;
         }
 
         // 3. Reward Display
         if (data.history && data.history.length > 0) {
-            // Use some metric from history or status report
-            const lastRun = data.history[0];
-            document.getElementById('curr-reward-val').textContent = (Math.random() * 20 - 110).toFixed(1); // placeholder
+            const rewardVal = document.getElementById('curr-reward-val');
+            if (rewardVal) {
+                // Approximate efficiency from reward if needed, for now use placeholder or real value if available
+                rewardVal.textContent = (data.history[0].reward || -100).toFixed(1);
+            }
         }
 
         // 4. Logs Preview
         const logsContainer = document.getElementById('ai-logs');
         if (logsContainer && data.logs_preview) {
-            const html = data.logs_preview.map(line => `<div>${line}</div>`).join('');
-            if (logsContainer.innerHTML !== html) {
-                logsContainer.innerHTML = html;
+            const lines = data.logs_preview.map(line => `<div style="margin-bottom:2px;">${line}</div>`).join('');
+            if (logsContainer.innerHTML !== lines) {
+                logsContainer.innerHTML = lines;
                 logsContainer.scrollTop = logsContainer.scrollHeight;
             }
         }
@@ -123,20 +129,20 @@ async function fetchScenarios() {
         if (!list) return;
 
         if (!scenarios || scenarios.length === 0) {
-            list.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-secondary);">Nessuno scenario. Scaricane uno!</div>';
+            list.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-secondary); font-size: 0.8rem;">No scenarios available. Build one in the lab!</div>';
             return;
         }
 
         list.innerHTML = scenarios.map(s => `
-            <div class="scenario-item" style="padding: 1rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+            <div class="scenario-item" style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
                 <div style="flex: 1;">
-                    <div style="font-weight: 600; color: #fff;">${s.name.replace('_osm', '')}</div>
-                    <div style="font-size: 0.75rem; color: var(--text-secondary);">${s.stations} stazioni • ${s.tracks} binari</div>
+                    <div style="font-weight: 600; color: #fff; font-size: 0.85rem;">${s.name.replace('_osm', '')}</div>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">${s.stations} nodes • ${s.tracks} links</div>
                 </div>
-                <div style="display: flex; gap: 0.5rem;">
-                    <button onclick="activateScenario('${s.name}')" style="background: var(--success); padding: 0.3rem 0.6rem; font-size: 0.7rem; border-radius: 4px;" title="Attiva per Training">▶️</button>
-                    <button onclick="exportToRail('${s.name}')" style="background: var(--primary); padding: 0.3rem 0.6rem; font-size: 0.7rem; border-radius: 4px;" title="Esporta .rail">.rail</button>
-                    <button onclick="deleteScenario('${s.name}')" style="background: var(--accent); padding: 0.3rem 0.6rem; font-size: 0.7rem; border-radius: 4px;" title="Elimina">🗑️</button>
+                <div style="display: flex; gap: 0.4rem;">
+                    <button onclick="activateScenario('${s.name}')" style="background: var(--success); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Set Active">RUN</button>
+                    <button onclick="exportToRail('${s.name}')" style="background: var(--primary); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Export .rail">EXPORT</button>
+                    <button onclick="deleteScenario('${s.name}')" style="background: var(--accent); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Purge">🗑️</button>
                 </div>
             </div>
         `).join('');
@@ -152,20 +158,20 @@ async function activateScenario(name) {
             body: JSON.stringify({ scenario: path, enabled: true })
         });
         if (response.ok) {
-            addAILog(`✅ Scenario "${name}" ora attivo per l'addestramento.`, 'success');
+            addAILog(`Scenario "${name}" mounted for neural optimization.`, 'success');
         }
-    } catch (e) { addAILog(`❌ Errore attivazione: ${e.message}`, 'error'); }
+    } catch (e) { addAILog(`Activation error: ${e.message}`, 'error'); }
 }
 
 async function deleteScenario(name) {
-    if (!confirm(`Eliminare definitivamente lo scenario "${name}"?`)) return;
+    if (!confirm(`Purge scenario data for "${name}"? This cannot be undone.`)) return;
     try {
         const response = await fetch(`/api/v1/network/scenario/${name}`, {
             method: 'DELETE',
             headers: { 'X-API-Key': accessToken }
         });
         if (response.ok) {
-            addAILog(`🗑️ Scenario ${name} rimosso.`, 'success');
+            addAILog(`Scenario "${name}" purged from disk.`, 'info');
             fetchScenarios();
         }
     } catch (e) { console.error(e); }
@@ -180,7 +186,7 @@ async function downloadGlobalNetwork() {
 
     const btn = document.getElementById('dl-net-btn');
     btn.disabled = true;
-    btn.textContent = '⏳ ...';
+    btn.textContent = 'WAIT';
 
     try {
         const response = await fetch(`/api/v1/network/download-europe?country=${encodeURIComponent(country)}`, {
@@ -188,19 +194,19 @@ async function downloadGlobalNetwork() {
             headers: { 'X-API-Key': accessToken }
         });
         if (response.ok) {
-            addAILog(`🌍 Richiesta download inviata per "${country}". Attendere completamento...`, 'info');
+            addAILog(`Downloading infrastructure map for "${country}"...`, 'info');
             inp.value = '';
             if (!dlStatusTimer) dlStatusTimer = setInterval(pollDownloadStatus, 4000);
         } else {
             const err = await response.json();
-            addAILog(`❌ Errore: ${err.detail}`, 'error');
+            addAILog(`Download error: ${err.detail}`, 'error');
             btn.disabled = false;
-            btn.textContent = 'Download';
+            btn.textContent = 'DOWNLOAD';
         }
     } catch (e) {
-        addAILog(`❌ Errore connessione: ${e.message}`, 'error');
+        addAILog(`Connectivity error: ${e.message}`, 'error');
         btn.disabled = false;
-        btn.textContent = 'Download';
+        btn.textContent = 'DOWNLOAD';
     }
 }
 
@@ -222,11 +228,10 @@ async function pollDownloadStatus() {
         let pendingCount = 0;
         items.forEach(info => {
             if (info.status === 'completed') {
-                addAILog(`✅ Network "${info.country}" scaricato e pronto!`, 'success');
-                // We'd ideally mark it as notified on server side, but status-clearing is better for UI
+                addAILog(`Infrastructure map "${info.country}" synced successfully.`, 'success');
                 fetchScenarios();
             } else if (info.status === 'failed') {
-                addAILog(`❌ Errore download "${info.country}": ${info.error}`, 'error');
+                addAILog(`Sync failed for "${info.country}": ${info.error}`, 'error');
             } else {
                 pendingCount++;
             }
@@ -234,7 +239,7 @@ async function pollDownloadStatus() {
 
         if (pendingCount === 0) {
             const btn = document.getElementById('dl-net-btn');
-            if (btn) { btn.disabled = false; btn.textContent = 'Download'; }
+            if (btn) { btn.disabled = false; btn.textContent = 'DOWNLOAD'; }
             clearInterval(dlStatusTimer);
             dlStatusTimer = null;
         }
@@ -255,19 +260,19 @@ async function fetchBackups() {
         if (!list) return;
 
         if (!backups || backups.length === 0) {
-            list.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-secondary);">Nessun backup trovato.</div>';
+            list.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-secondary); font-size: 0.8rem;">No snapshots discovered.</div>';
             return;
         }
 
         list.innerHTML = backups.map(b => `
-            <div style="padding: 1rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+            <div style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
                 <div style="flex: 1;">
-                    <div style="font-weight: 600; color: #fff; font-size: 0.85rem;">${b.filename}</div>
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">${new Date(b.date).toLocaleString()} • ${b.size_kb} KB</div>
+                    <div style="font-weight: 600; color: #fff; font-size: 0.8rem;">${b.filename}</div>
+                    <div style="font-size: 0.65rem; color: var(--text-secondary);">${new Date(b.date).toLocaleString()} • ${b.size_kb} KB</div>
                 </div>
-                <div style="display: flex; gap: 0.4rem;">
-                    <button onclick="restoreBackup('${b.filename}')" style="background: var(--success); color:#fff; padding: 0.4rem 0.6rem; font-size: 0.7rem; border-radius: 4px; border:none; cursor:pointer;">Ripristina</button>
-                    <button onclick="deleteBackup('${b.filename}')" style="background: var(--accent); color:#fff; padding: 0.4rem 0.6rem; font-size: 0.7rem; border-radius: 4px; border:none; cursor:pointer;">🗑️</button>
+                <div style="display: flex; gap: 0.3rem;">
+                    <button onclick="restoreBackup('${b.filename}')" style="background: var(--success); padding: 0.3rem 0.5rem; font-size: 0.65rem; border-radius: 4px;">LOAD</button>
+                    <button onclick="deleteBackup('${b.filename}')" style="background: var(--accent); padding: 0.3rem 0.5rem; font-size: 0.65rem; border-radius: 4px;">PURGE</button>
                 </div>
             </div>
         `).join('');
@@ -278,7 +283,7 @@ async function createBackup() {
     const btn = document.getElementById('ai-backup-btn');
     const oldText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = '⏳ ...';
+    btn.textContent = 'SNAPSHOT...';
 
     try {
         const response = await fetch('/api/v1/ai/backup', {
@@ -286,13 +291,13 @@ async function createBackup() {
             headers: { 'X-API-Key': accessToken }
         });
         if (response.ok) {
-            addAILog('✅ Backup dei pesi creato con successo.', 'success');
+            addAILog('Neural weights snapshot committed successfully.', 'success');
             await fetchBackups();
         } else {
             const err = await response.json();
-            addAILog(`❌ Backup fallito: ${err.detail}`, 'error');
+            addAILog(`Snapshot failure: ${err.detail}`, 'error');
         }
-    } catch (e) { addAILog(`❌ Errore backup: ${e.message}`, 'error'); }
+    } catch (e) { addAILog(`Communication failure: ${e.message}`, 'error'); }
     finally {
         btn.disabled = false;
         btn.textContent = oldText;
@@ -300,34 +305,32 @@ async function createBackup() {
 }
 
 async function restoreBackup(filename) {
-    if (!confirm(`⚠️ Vuoi davvero caricare i pesi da ${filename}?\nL'addestramento verrà interrotto per ricaricare il modello.`)) return;
+    if (!confirm(`Switch to neural base: "${filename}"? This will reboot the training agent.`)) return;
     try {
         const response = await fetch(`/api/v1/ai/restore?filename=${encodeURIComponent(filename)}`, {
             method: 'POST',
             headers: { 'X-API-Key': accessToken }
         });
         if (response.ok) {
-            addAILog(`✅ Ripristino completato da ${filename}.`, 'success');
+            addAILog(`Hot-swapped model weights to "${filename}".`, 'success');
             setTimeout(fetchAIStatus, 1000);
         } else {
             const err = await response.json();
-            addAILog(`❌ Ripristino fallito: ${err.detail}`, 'error');
+            addAILog(`Hot-swap aborted: ${err.detail}`, 'error');
         }
-    } catch (e) { addAILog(`❌ Errore ripristino: ${e.message}`, 'error'); }
+    } catch (e) { addAILog(`Engine error: ${e.message}`, 'error'); }
 }
 
 async function deleteBackup(filename) {
-    if (!confirm(`Eliminare il backup ${filename}?`)) return;
+    if (!confirm(`Purge snapshot "${filename}"?`)) return;
     try {
         const response = await fetch(`/api/v1/ai/backup/${filename}`, {
             method: 'DELETE',
             headers: { 'X-API-Key': accessToken }
         });
         if (response.ok) {
-            addAILog(`🗑️ Backup ${filename} eliminato.`, 'success');
+            addAILog(`Snapshot "${filename}" purged.`, 'info');
             fetchBackups();
-        } else {
-            addAILog('❌ Errore eliminazione backup.', 'error');
         }
     } catch (e) { console.error(e); }
 }
@@ -343,9 +346,9 @@ async function loadAIConfig() {
             const config = await response.json();
             document.getElementById('config-enabled').checked = config.enabled;
             document.getElementById('config-threshold').value = config.threshold_seconds;
-            document.getElementById('config-threshold-val').textContent = config.threshold_seconds;
+            document.getElementById('config-threshold-val').textContent = config.threshold_seconds + 's';
         }
-    } catch (e) { console.error('Load config failed', e); }
+    } catch (e) { console.error('Config synchronization failed', e); }
 }
 
 async function saveAIConfig() {
@@ -359,9 +362,14 @@ async function saveAIConfig() {
             body: JSON.stringify({ enabled, threshold })
         });
         if (response.ok) {
-            addAILog('✅ Configurazione AI salvata.', 'success');
+            addAILog('Engine convergence parameters synchronized.', 'success');
+            if (enabled) {
+                document.getElementById('ai-auto-badge').style.display = 'block';
+            } else {
+                document.getElementById('ai-auto-badge').style.display = 'none';
+            }
         }
-    } catch (e) { addAILog(`❌ Errore salvataggio: ${e.message}`, 'error'); }
+    } catch (e) { addAILog(`Sync failure: ${e.message}`, 'error'); }
 }
 
 async function startTrainingManual() {
@@ -371,7 +379,25 @@ async function startTrainingManual() {
             headers: { 'X-API-Key': accessToken }
         });
         if (response.ok) {
-            addAILog('🚀 Addestramento avviato manualmente.', 'success');
+            addAILog('Neural session initiated via manual override.', 'success');
+            setTimeout(fetchAIStatus, 1000);
+        } else {
+            addAILog('Manual override failed. Check system logs.', 'error');
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function stopTrainingManual() {
+    try {
+        const response = await fetch('/api/v1/ai/config', {
+            method: 'POST',
+            headers: { 'X-API-Key': accessToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: false }) // Stopping auto-training effectively stops the manager
+        });
+        if (response.ok) {
+            addAILog('Neural session terminated by operator.', 'info');
+            document.getElementById('config-enabled').checked = false;
+            document.getElementById('ai-auto-badge').style.display = 'none';
             setTimeout(fetchAIStatus, 1000);
         }
     } catch (e) { console.error(e); }
@@ -388,13 +414,13 @@ function addAILog(msg, type = 'info') {
     const time = new Date().toLocaleTimeString();
     let prefix = `[${time}] `;
 
-    if (type === 'success') entry.style.color = '#0f0';
-    else if (type === 'error') entry.style.color = '#f00';
-    else entry.style.color = '#aaa';
+    if (type === 'success') entry.style.color = 'var(--success)';
+    else if (type === 'error') entry.style.color = 'var(--accent)';
+    else entry.style.color = 'var(--text-secondary)';
 
     entry.textContent = prefix + msg;
-    container.appendChild(entry);
-    container.scrollTop = container.scrollHeight;
+    container.prepend(entry);
+    container.scrollTop = 0;
 }
 
 async function exportToRail(scenarioName) {
@@ -407,10 +433,9 @@ async function exportToRail(scenarioName) {
             link.href = window.URL.createObjectURL(blob);
             link.download = `${scenarioName}.rail`;
             link.click();
-            addAILog(`✅ Esportazione ${scenarioName}.rail completata.`, 'success');
+            addAILog(`Exported sector telemetry: ${scenarioName}.rail`, 'success');
         } else {
-            const err = await response.json();
-            addAILog(`❌ Esportazione fallita: ${err.detail}`, 'error');
+            addAILog(`Telemetry export failed for ${scenarioName}.`, 'error');
         }
     } catch (e) { console.error(e); }
 }

@@ -54,9 +54,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // AI Management Actions
     document.getElementById('ai-start-btn')?.addEventListener('click', startManualTraining);
-    document.getElementById('ai-stop-btn')?.addEventListener('click', stopAutoTraining);
-    document.getElementById('ai-refresh-btn')?.addEventListener('click', loadAIManagement);
-    document.getElementById('ai-clear-logs-btn')?.addEventListener('click', clearAILogs);
+    document.getElementById('ai-stop-btn')?.addEventListener('click', stopTrainingManual);
+    document.getElementById('ai-refresh-btn')?.addEventListener('click', refreshAIManagementData);
+    document.getElementById('ai-clear-logs-btn')?.addEventListener('click', () => {
+        const container = document.getElementById('ai-logs');
+        if (container) container.innerHTML = '<div style="color: #444;">[SYSTEM] Stream cleared by operator.</div>';
+    });
     document.getElementById('save-config-btn')?.addEventListener('click', saveAIConfig);
 
     // API Keys
@@ -65,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const keyInput = document.getElementById('generated-key');
         keyInput.select();
         document.execCommand('copy');
-        alert('API Key copiata negli appunti!');
+        alert('API Key copied to clipboard!');
     });
 });
 
@@ -77,19 +80,16 @@ async function checkUserRole() {
 
         if (response.ok) {
             const user = await response.json();
+            window.isUserAdmin = user.privilege === 'admin';
 
-            // Hide Admin Panel elements if not admin
-            if (user.privilege !== 'admin') {
-                document.querySelectorAll('li[id^="nav-"]').forEach(el => {
-                    // Hide specifi admin items
-                    if (['nav-ai-management', 'nav-users', 'nav-smtp', 'nav-training'].includes(el.id)) {
-                        el.style.display = 'none';
-                    }
-                });
-                // Hide header "Admin Panel"
-                const adminHeader = Array.from(document.querySelectorAll('li')).find(li => li.textContent.trim() === 'Admin Panel');
-                if (adminHeader) adminHeader.style.display = 'none';
-            }
+            // Show/Hide admin elements
+            document.querySelectorAll('.admin-only').forEach(el => {
+                if (user.privilege === 'admin') {
+                    el.style.display = ''; // Restore default (block/flex/etc)
+                } else {
+                    el.style.display = 'none';
+                }
+            });
         }
     } catch (error) {
         console.error('Error checking user role:', error);
@@ -118,11 +118,11 @@ async function generateApiKey() {
             document.getElementById('generated-key').value = data.api_key;
             document.getElementById('api-key-result').style.display = 'block';
         } else {
-            alert('Errore nella generazione della chiave API');
+            alert('Error generating API key');
         }
     } catch (error) {
         console.error('Error generating API key:', error);
-        alert('Errore di connessione');
+        alert('Connection error');
     } finally {
         btn.disabled = false;
         btn.textContent = 'Generate New Key';
@@ -153,10 +153,12 @@ async function login() {
             initDashboard();
         } else {
             errorEl.style.display = 'block';
+            errorEl.textContent = "Invalid username or password";
         }
     } catch (err) {
         console.error('Login error:', err);
         errorEl.style.display = 'block';
+        errorEl.textContent = "Connection lost. Try again.";
     }
 }
 
@@ -189,44 +191,57 @@ function switchView(view) {
     const navTopology = document.getElementById('nav-topology');
 
     // Reset visibility
-    [viewMon, viewTrain, viewOpt, viewUsers, viewSMTP, viewSettings, viewApiKeys, viewAI, viewTopology].forEach(v => {
+    [viewMon, viewOpt, viewUsers, viewSMTP, viewSettings, viewApiKeys, viewAI, viewTopology].forEach(v => {
         if (v) v.classList.add('hidden');
     });
-    [navMon, navTrain, navOpt, navUsers, navSMTP, navSettings, navApiKeys, navAI, navTopology].forEach(n => {
+    [navMon, navOpt, navUsers, navSMTP, navSettings, navApiKeys, navAI, navTopology].forEach(n => {
         if (n) n.classList.remove('active');
     });
 
     if (view === 'monitoring') {
         viewMon.classList.remove('hidden');
         navMon.classList.add('active');
+        document.getElementById('page-title').textContent = "Operational Intelligence";
+        document.getElementById('page-desc').textContent = "Live monitoring and neural predictive dashboard.";
         if (trainingChart) {
             trainingChart.resize();
             trainingChart.update();
         }
-    } else if (view === 'training') {
-        viewTrain.classList.remove('hidden');
-        navTrain.classList.add('active');
     } else if (view === 'optimization') {
         viewOpt.classList.remove('hidden');
         navOpt.classList.add('active');
+        document.getElementById('page-title').textContent = "Neural Optimizer";
+        document.getElementById('page-desc').textContent = "C++ Core algorithm execution panel.";
     } else if (view === 'users') {
         viewUsers.classList.remove('hidden');
         navUsers.classList.add('active');
+        document.getElementById('page-title').textContent = "Operator Registry";
+        document.getElementById('page-desc').textContent = "System access and privilege management.";
     } else if (view === 'smtp') {
         viewSMTP.classList.remove('hidden');
         navSMTP.classList.add('active');
+        document.getElementById('page-title').textContent = "Comms Stack";
+        document.getElementById('page-desc').textContent = "SMTP Gateway configuration for automated mail.";
     } else if (view === 'settings') {
         viewSettings.classList.remove('hidden');
         navSettings.classList.add('active');
+        document.getElementById('page-title').textContent = "Security Protocols";
+        document.getElementById('page-desc').textContent = "User credentials and authentication settings.";
     } else if (view === 'api-keys') {
         viewApiKeys.classList.remove('hidden');
         navApiKeys.classList.add('active');
+        document.getElementById('page-title').textContent = "Neural Bridge Keys";
+        document.getElementById('page-desc').textContent = "Generate private tokens for external API integration.";
     } else if (view === 'ai-management') {
         if (viewAI) viewAI.classList.remove('hidden');
         if (navAI) navAI.classList.add('active');
+        document.getElementById('page-title').textContent = "AI Intelligence";
+        document.getElementById('page-desc').textContent = "MARL training control and model weights management.";
     } else if (view === 'topology') {
         if (viewTopology) viewTopology.classList.remove('hidden');
         if (navTopology) navTopology.classList.add('active');
+        document.getElementById('page-title').textContent = "Infrastructure Map";
+        document.getElementById('page-desc').textContent = "Spatial topology of the railway network.";
         if (window.loadTopology) window.loadTopology();
     }
 }
@@ -236,7 +251,7 @@ async function changePassword() {
     const msgEl = document.getElementById('settings-status-msg');
 
     if (newPass.length < 6) {
-        alert("La password deve essere di almeno 6 caratteri.");
+        alert("Password must be at least 6 characters.");
         return;
     }
 
@@ -251,16 +266,16 @@ async function changePassword() {
         });
 
         if (response.ok) {
-            msgEl.textContent = "✅ Password aggiornata con successo!";
+            msgEl.textContent = "✅ Password updated successfully!";
             msgEl.style.color = "var(--success)";
             document.getElementById('new-password').value = "";
         } else {
             const error = await response.json();
-            msgEl.textContent = `❌ Errore: ${error.detail}`;
+            msgEl.textContent = `❌ Error: ${error.detail}`;
             msgEl.style.color = "var(--accent)";
         }
     } catch (err) {
-        msgEl.textContent = "❌ Errore di connessione.";
+        msgEl.textContent = "❌ Connection error.";
         msgEl.style.color = "var(--accent)";
     }
 }
@@ -270,7 +285,7 @@ async function reactivateAccount() {
     const msgEl = document.getElementById('settings-status-msg');
 
     if (!username) {
-        alert("Inserisci lo username da riattivare.");
+        alert("Enter the username to reactivate.");
         return;
     }
 
@@ -283,22 +298,22 @@ async function reactivateAccount() {
         });
 
         if (response.ok) {
-            msgEl.textContent = `✅ Utente ${username} riattivato!`;
+            msgEl.textContent = `✅ User ${username} reactivated!`;
             msgEl.style.color = "var(--success)";
             document.getElementById('reactivate-username').value = "";
         } else {
             const error = await response.json();
-            msgEl.textContent = `❌ Errore: ${error.detail}`;
+            msgEl.textContent = `❌ Error: ${error.detail}`;
             msgEl.style.color = "var(--accent)";
         }
     } catch (err) {
-        msgEl.textContent = "❌ Errore di connessione.";
+        msgEl.textContent = "❌ Connection error.";
         msgEl.style.color = "var(--accent)";
     }
 }
 
 async function deleteMeAccount() {
-    if (!confirm("⚠️ SEI SICURO? Questa azione è irreversibile e il tuo account verrà eliminato permanentemente.")) return;
+    if (!confirm("⚠️ ARE YOU SURE? This action is irreversible and your account will be permanently deleted.")) return;
 
     try {
         const response = await fetch('/api/v1/user/me', {
@@ -307,15 +322,15 @@ async function deleteMeAccount() {
         });
 
         if (response.ok) {
-            alert("Account eliminato con successo. Arrivederci.");
+            alert("Account deleted successfully. Goodbye.");
             localStorage.removeItem('access_token');
             location.reload();
         } else {
             const error = await response.json();
-            alert(`❌ Errore: ${error.detail}`);
+            alert(`❌ Error: ${error.detail}`);
         }
     } catch (err) {
-        alert("❌ Errore di connessione.");
+        alert("❌ Connection error.");
     }
 }
 
@@ -324,11 +339,11 @@ async function startScenarioGeneration() {
     const msgEl = document.getElementById('training-status-msg');
 
     if (!area) {
-        alert("Inserisci un'area o regione!");
+        alert("Enter an area or region!");
         return;
     }
 
-    msgEl.textContent = "⚙️ Inizializzazione generazione scenario...";
+    msgEl.textContent = "⚙️ Initializing scenario generation...";
     msgEl.style.color = "var(--primary)";
 
     try {
@@ -342,16 +357,16 @@ async function startScenarioGeneration() {
         });
 
         if (response.ok) {
-            addLog(`Richiesta generazione inviata per l'area: ${area}`, 'info');
+            addLog(`Generation request sent for: ${area}`, 'info');
         } else {
-            const error = await response.json().catch(() => ({ detail: "Errore sconosciuto" }));
+            const error = await response.json().catch(() => ({ detail: "Unknown error" }));
             const status = response.status;
-            addLog(`Errore ${status}: ${error.detail || JSON.stringify(error)}`, 'error');
-            msgEl.textContent = `❌ Errore ${status}: ${error.detail || "Verifica i log"}`;
+            addLog(`Error ${status}: ${error.detail || JSON.stringify(error)}`, 'error');
+            msgEl.textContent = `❌ Error ${status}: ${error.detail || "Check logs"}`;
             msgEl.style.color = "var(--accent)";
         }
     } catch (err) {
-        addLog(`Errore di rete: ${err}`, 'error');
+        addLog(`Network error: ${err}`, 'error');
     }
 }
 
@@ -360,7 +375,7 @@ async function triggerMarlTraining(scenarioPath) {
     const lr = document.getElementById('train-lr').value;
     const msgEl = document.getElementById('training-status-msg');
 
-    msgEl.textContent = "🚀 Avvio addestramento MARL...";
+    msgEl.textContent = "🚀 Starting MARL training...";
     msgEl.style.color = "var(--success)";
 
     try {
@@ -378,17 +393,17 @@ async function triggerMarlTraining(scenarioPath) {
         });
 
         if (response.ok) {
-            addLog(`Addestramento avviato su: ${scenarioPath}`, 'success');
+            addLog(`Training started on: ${scenarioPath}`, 'success');
             // Switch back to monitoring to see the progress
             setTimeout(() => switchView('monitoring'), 2000);
         } else {
             const error = await response.json();
-            addLog(`Errore avvio training: ${error.detail}`, 'error');
-            msgEl.textContent = "❌ Errore avvio training.";
+            addLog(`Training start failure: ${error.detail}`, 'error');
+            msgEl.textContent = "❌ Training start failed.";
             msgEl.style.color = "var(--accent)";
         }
     } catch (err) {
-        addLog(`Errore di rete: ${err}`, 'error');
+        addLog(`Network error: ${err}`, 'error');
     }
 }
 
@@ -429,10 +444,10 @@ function initChart() {
 function connectWebSocket() {
     ws.onopen = () => {
         const placeholder = document.getElementById('event-logs').querySelector('.log-entry');
-        if (placeholder && placeholder.textContent.includes('In attesa')) {
+        if (placeholder && placeholder.textContent.includes('waiting')) {
             placeholder.remove();
         }
-        addLog('Connessione WebSocket stabilita con successo.', 'success');
+        addLog('Neural link established.', 'success');
     };
 
     ws.onmessage = (event) => {
@@ -441,11 +456,11 @@ function connectWebSocket() {
     };
 
     ws.onerror = (err) => {
-        addLog('Errore di connessione WebSocket. Verifica firewall o proxy.', 'error');
+        addLog('Neural link failure. Check firewall/proxy.', 'error');
     };
 
     ws.onclose = () => {
-        addLog('Connessione WebSocket persa. Tentativo di riconnessione...', 'warning');
+        addLog('Neural link disconnected. Retrying in 5s...', 'warning');
         setTimeout(connectWebSocket, 5000);
     };
 }
@@ -461,7 +476,7 @@ function handleWsMessage(data) {
     } else if (data.type === 'log') {
         addLog(data.message, data.level);
 
-        // Se lo scenario è stato generato con successo, avvia il training automaticamente
+        // If scenario generated successfully, auto-trigger training
         if (data.level === 'success' && data.scenario_path) {
             triggerMarlTraining(data.scenario_path);
         }
@@ -498,13 +513,13 @@ async function fetchUsers() {
                     <td style="padding: 0.75rem;">${u.username}</td>
                     <td style="padding: 0.75rem;">
                         <span style="color: ${u.is_active ? 'var(--success)' : 'var(--accent)'};">
-                            ${u.is_active ? 'Attivo' : 'Inattivo'}
+                            ${u.is_active ? 'Active' : 'Inactive'}
                         </span>
                     </td>
                     <td style="padding: 0.75rem; text-align: right;">
                         <button onclick="deleteUser('${u.username}')" 
                                 style="background: var(--accent); padding: 0.25rem 0.5rem; font-size: 0.8rem; ${u.username === 'admin' ? 'display:none' : ''}">
-                            Elimina
+                            Revoke
                         </button>
                     </td>
                 `;
@@ -521,7 +536,7 @@ async function addUser() {
     const pass = document.getElementById('admin-new-password').value;
 
     if (!user || pass.length < 6) {
-        alert("Inserisci uno username e una password di almeno 6 caratteri.");
+        alert("Enter a username and password (6+ chars).");
         return;
     }
 
@@ -541,15 +556,15 @@ async function addUser() {
             fetchUsers();
         } else {
             const err = await response.json();
-            alert(`Errore: ${err.detail}`);
+            alert(`Error: ${err.detail}`);
         }
     } catch (err) {
-        alert("Errore di connessione.");
+        alert("Connection error.");
     }
 }
 
 async function deleteUser(username) {
-    if (!confirm(`Sei sicuro di voler eliminare l'utente ${username}?`)) return;
+    if (!confirm(`Revoke access for operator: ${username}?`)) return;
 
     try {
         const response = await fetch(`/api/v1/admin/users/${username}`, {
@@ -561,10 +576,10 @@ async function deleteUser(username) {
             fetchUsers();
         } else {
             const err = await response.json();
-            alert(`Errore: ${err.detail}`);
+            alert(`Error: ${err.detail}`);
         }
     } catch (err) {
-        alert("Errore di connessione.");
+        alert("Connection failure.");
     }
 }
 
@@ -573,11 +588,11 @@ async function triggerOptimization() {
     const msgEl = document.getElementById('optimize-status-msg');
 
     if (!path) {
-        alert("Inserisci il percorso dello scenario.");
+        alert("Enter scenario path.");
         return;
     }
 
-    msgEl.textContent = "⚙️ Avvio ottimizzazione...";
+    msgEl.textContent = "⚙️ Executing optimization sequence...";
     msgEl.style.color = "var(--primary)";
 
     try {
@@ -591,16 +606,16 @@ async function triggerOptimization() {
         });
 
         if (response.ok) {
-            msgEl.textContent = "✅ Ottimizzazione completata/avviata!";
+            msgEl.textContent = "✅ Optimization complete!";
             msgEl.style.color = "var(--success)";
-            addLog(`Ottimizzazione avviata per ${path}`, 'success');
+            addLog(`Optimization executed for ${path}`, 'success');
         } else {
             const err = await response.json();
-            msgEl.textContent = `❌ Errore: ${err.detail}`;
+            msgEl.textContent = `❌ Error: ${err.detail}`;
             msgEl.style.color = "var(--accent)";
         }
     } catch (err) {
-        msgEl.textContent = "❌ Errore di connessione.";
+        msgEl.textContent = "❌ Connection error.";
         msgEl.style.color = "var(--accent)";
     }
 }
@@ -608,11 +623,19 @@ async function triggerOptimization() {
 function addLog(message, level = 'info') {
     const container = document.getElementById('event-logs');
     if (!container) return;
+
     const entry = document.createElement('div');
     entry.className = `log-entry ${level}`;
-    const now = new Date().toLocaleTimeString();
-    entry.textContent = `[${now}] ${message}`;
-    container.prepend(entry);
+
+    const now = new Date().toLocaleTimeString([], { hour12: false });
+    entry.innerHTML = `<span class="log-timestamp">${now}</span> ${message}`;
+
+    container.appendChild(entry);
+    container.scrollTop = container.scrollHeight;
+
+    if (container.children.length > 50) {
+        container.removeChild(container.firstChild);
+    }
 }
 
 async function fetchStats() {
@@ -625,6 +648,7 @@ async function fetchStats() {
         }
     } catch (err) { }
 }
+
 async function fetchSMTPConfig() {
     try {
         const response = await fetch('/api/v1/admin/smtp', {
@@ -638,7 +662,7 @@ async function fetchSMTPConfig() {
             document.getElementById('smtp-sender').value = data.sender_email || '';
             document.getElementById('smtp-tls').checked = data.use_tls !== 0;
             document.getElementById('smtp-active').checked = data.is_active !== 0;
-            document.getElementById('smtp-pass').value = ''; // Password non viene restituita
+            document.getElementById('smtp-pass').value = '';
         }
     } catch (err) {
         console.error("Failed to fetch SMTP config:", err);
@@ -659,7 +683,7 @@ async function saveSMTPConfig() {
     const pass = document.getElementById('smtp-pass').value;
     if (pass) config.password = pass;
 
-    msgEl.textContent = "💾 Salvataggio in corso...";
+    msgEl.textContent = "💾 Synchronizing gateway config...";
     msgEl.style.color = "var(--primary)";
 
     try {
@@ -673,15 +697,15 @@ async function saveSMTPConfig() {
         });
 
         if (response.ok) {
-            msgEl.textContent = "✅ Configurazione salvata!";
+            msgEl.textContent = "✅ Gateway configuration synced!";
             msgEl.style.color = "var(--success)";
         } else {
             const err = await response.json();
-            msgEl.textContent = `❌ Errore: ${err.detail}`;
+            msgEl.textContent = `❌ Sync failure: ${err.detail}`;
             msgEl.style.color = "var(--accent)";
         }
     } catch (err) {
-        msgEl.textContent = "❌ Errore di connessione.";
+        msgEl.textContent = "❌ Connection failure.";
     }
 }
 
@@ -690,11 +714,11 @@ async function testSMTP() {
     const msgEl = document.getElementById('smtp-status-msg');
 
     if (!email) {
-        alert("Inserisci un'email di destinazione per il test.");
+        alert("Target required for probe.");
         return;
     }
 
-    msgEl.textContent = "📧 Invio email di test...";
+    msgEl.textContent = "📧 Firing probe pulse...";
     msgEl.style.color = "var(--primary)";
 
     try {
@@ -708,14 +732,14 @@ async function testSMTP() {
         });
 
         if (response.ok) {
-            msgEl.textContent = "✅ Email di test inviata con successo! Controlla la posta.";
+            msgEl.textContent = "✅ Probe delivered. Check target inbox.";
             msgEl.style.color = "var(--success)";
         } else {
             const err = await response.json();
-            msgEl.textContent = `❌ Test fallito: ${err.detail}`;
+            msgEl.textContent = `❌ Probe failure: ${err.detail}`;
             msgEl.style.color = "var(--accent)";
         }
     } catch (err) {
-        msgEl.textContent = "❌ Errore durante il test.";
+        msgEl.textContent = "❌ Connection breach.";
     }
 }

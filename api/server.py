@@ -1949,8 +1949,8 @@ async def export_to_rail(scenario: str = Query(...), current_user: dict = Depend
 
 @app.post("/api/v1/network/import-rail", tags=["Network"])
 async def import_from_rail(
-    file: bytes = Form(...),
-    filename: str = Form("scenario.rail"),
+    file: UploadFile = File(...),
+    filename: Optional[str] = Form(None),
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -1961,7 +1961,8 @@ async def import_from_rail(
         
     import json
     try:
-        data = json.loads(file.decode('utf-8'))
+        content = await file.read()
+        data = json.loads(content.decode('utf-8'))
         
         # Validation
         if "stations" not in data or "tracks" not in data:
@@ -1972,7 +1973,8 @@ async def import_from_rail(
             data["trains"] = []
             
         # Save to scenarios/
-        safe_name = "".join(x for x in filename if x.isalnum() or x in "._-").replace(".rail", "")
+        actual_filename = filename or file.filename or "new_scenario.rail"
+        safe_name = "".join(x for x in actual_filename if x.isalnum() or x in "._-").replace(".rail", "").replace(".json", "")
         if not safe_name: safe_name = f"imported_{int(time.time())}"
         
         output_path = f"scenarios/{safe_name}.json"
@@ -1985,7 +1987,7 @@ async def import_from_rail(
             
         return {
             "success": True,
-            "message": f"Scenario '{safe_name}' importato con successo.",
+            "message": safe_name,
             "stations": len(data["stations"]),
             "tracks": len(data["tracks"]),
             "trains": len(data["trains"])

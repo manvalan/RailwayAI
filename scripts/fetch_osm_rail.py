@@ -98,61 +98,75 @@ def process_to_scenario(osm_data: dict, out_file: str):
     all_station_ids = [s['id'] for s in scenario['stations']]
 
     # 2. Process Tracks (Ways)
+    # We need to find which stations each way passes through
+    station_osm_to_id = {s['osm_id']: s['id'] for s in scenario['stations'] if 'osm_id' in s}
+    
     for way in ways:
         way_nodes = way.get('nodes', [])
         if len(way_nodes) < 2: continue
         
-        start_node = nodes.get(way_nodes[0])
-        end_node = nodes.get(way_nodes[-1])
-        if not start_node or not end_node: continue
+        # Find all stations along this way
+        stations_on_way = []
+        for i, node_id in enumerate(way_nodes):
+            if node_id in station_osm_to_id:
+                stations_on_way.append((i, station_osm_to_id[node_id]))
         
-        # Calculate length
-        length = 0
-        for i in range(len(way_nodes)-1):
-            n1 = nodes.get(way_nodes[i])
-            n2 = nodes.get(way_nodes[i+1])
-            if n1 and n2:
-                length += haversine(n1['lat'], n1['lon'], n2['lat'], n2['lon'])
-        
-        if length < 0.1: continue # Skip very short segments
-        
-        # Map to exactly 2 distinct stations
-        connected = set()
-        
-        # Check nodes on the way
-        for wn_id in way_nodes:
-            if wn_id in station_osm_ids:
-                connected.add(station_osm_ids[wn_id])
-                if len(connected) >= 2: break
-        
-        # If not enough, find nearest stations to endpoints
-        if len(connected) < 2:
-            for n_end in [start_node, end_node]:
-                min_dist = 999
+        # If the way doesn't have at least 2 stations, try to find the nearest for endpoints
+        # BUT only if the distance is reasonable (< 500m)
+        if len(stations_on_way) < 2:
+            endpoint_stations = []
+            for node_idx in [0, -1]:
+                n_id = way_nodes[node_idx]
+                node_data = nodes.get(n_id)
+                if not node_data: continue
+                
+                min_dist = 0.5 # 500 meters max for "snapping"
                 best_s = -1
                 for s in scenario['stations']:
-                    if 'lat' in s:
-                        d = haversine(n_end['lat'], n_end['lon'], s['lat'], s['lon'])
-                        if d < min_dist:
-                            min_dist = d
-                            best_s = s['id']
+                    d = haversine(node_data['lat'], node_data['lon'], s['lat'], s['lon'])
+                    if d < min_dist:
+                        min_dist = d
+                        best_s = s['id']
+                
                 if best_s != -1:
-                    connected.add(best_s)
-                if len(connected) >= 2: break
-        
-        # Still not enough? Pick random distinct stations
-        while len(connected) < 2:
-            candidate = random.choice(all_station_ids)
-            connected.add(candidate)
+                    # Update stations_on_way if not already there
+                    if not any(s[1] == best_s for s in stations_on_way):
+                        stations_on_way.append((node_idx, best_s))
+            
+            # Sort by index to keep topology
+            stations_on_way.sort()
 
-        track_id = len(scenario['tracks'])
-        scenario['tracks'].append({
-            "id": track_id,
-            "length_km": round(length, 2),
-            "capacity": int(way.get('tags', {}).get('tracks', 1)),
-            "is_single_track": way.get('tags', {}).get('railway:traffic_mode') == 'single' or int(way.get('tags', {}).get('tracks', 1)) == 1,
-            "station_ids": list(connected)[:2]
-        })
+        # If we still don't have 2 stations, this track is a "floating" segment.
+        # In a real rail network, we might want to keep it, but for a simplified graph,
+        # we only care about connections between stations.
+        if len(stations_on_way) < 2:
+            continue
+
+        # Create tracks between consecutive stations found on this way
+        for i in range(len(stations_on_way) - 1):
+            idx1, s1_id = stations_on_way[i]
+            idx2, s2_id = stations_on_way[i+1]
+            
+            if s1_id == s2_id: continue
+            
+            # Calculate segment length
+            segment_length = 0
+            for j in range(idx1, idx2):
+                n1 = nodes.get(way_nodes[j])
+                n2 = nodes.get(way_nodes[j+1])
+                if n1 and n2:
+                    segment_length += haversine(n1['lat'], n1['lon'], n2['lat'], n2['lon'])
+            
+            if segment_length < 0.05: continue 
+            
+            track_id = len(scenario['tracks'])
+            scenario['tracks'].append({
+                "id": track_id,
+                "length_km": round(segment_length, 2),
+                "capacity": int(way.get('tags', {}).get('tracks', 1)),
+                "is_single_track": way.get('tags', {}).get('railway:traffic_mode') == 'single' or int(way.get('tags', {}).get('tracks', 1)) == 1,
+                "station_ids": [s1_id, s2_id]
+            })
         
     # 3. Inject synthetic traffic
     num_trains = min(100, len(scenario['tracks']) // 2)

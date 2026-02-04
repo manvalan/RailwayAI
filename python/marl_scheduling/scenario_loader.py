@@ -71,6 +71,6 @@ class ScenarioLoader:
                         route.append(edge_data['id'])
                     
                     train['planned_route'] = route
-                except (nx.NetworkXNoPath, StopIteration, KeyError) as e:
-                    logger.warning(f"Could not calculate route for train {train['id']}: {e}")
-                    train['planned_route'] = [train['current_track']]
+                except (nx.NetworkXNoPath, nx.NodeNotFound, StopIteration, KeyError) as e:
+                    logger.warning(f"Could not calculate route for train {train['id']} from {start_node if 'start_node' in locals() else '?'} to {end_node if 'end_node' in locals() else '?'}: {e}")
+                    train['planned_route'] = [train['current_track']] if 'current_track' in train else []

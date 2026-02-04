@@ -169,16 +169,22 @@ def process_to_scenario(osm_data: dict, out_file: str):
             })
         
     # 3. Inject synthetic traffic
+    # Only use stations that are actually connected to at least one track
+    connected_stations = set()
+    for t in scenario['tracks']:
+        connected_stations.update(t['station_ids'])
+    
+    connected_station_list = list(connected_stations)
     num_trains = min(100, len(scenario['tracks']) // 2)
     track_ids = [t['id'] for t in scenario['tracks']]
     
-    if track_ids and all_station_ids:
+    if track_ids and connected_station_list:
         for i in range(num_trains):
             scenario['trains'].append({
                 "id": i,
                 "current_track": random.choice(track_ids),
                 "position_km": 0.0,
-                "destination_station": random.choice(all_station_ids),
+                "destination_station": random.choice(connected_station_list),
                 "priority": random.randint(1, 10),
                 "velocity_kmh": random.choice([100, 120, 160, 200]),
                 "planned_route": []

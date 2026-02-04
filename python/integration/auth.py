@@ -37,54 +37,63 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    # DEBUG LOGGING
-    logger.info(f"Auth Attempt - Headers: {request.headers}")
-    logger.info(f"Auth Attempt - Token: {token is not None}, API Key: {api_key}")
-
-    # Fallback: Check header manually if dependency failed
-    if not api_key:
-        api_key = request.headers.get("X-API-Key")
-
-    # 1. Verifica API Key (Priorità alta per automazione)
+    # --- RIGOROUS KEY EXTRACTION ---
+    final_key = None
+    
+    # 1. Check X-API-Key (Dependency or Header)
     if api_key:
-        user_data = UserService.validate_api_key(api_key)
-        if user_data:
-            return user_data
+        final_key = api_key
+    else:
+        final_key = request.headers.get("X-API-Key")
         
-        logger.warning(f"Invalid API Key provided: {api_key}")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid, expired or disabled API Key"
-        )
+    # 2. Check Authorization Header (Bearer or Simple)
+    if not final_key:
+        auth_header = request.headers.get("Authorization")
+        if auth_header:
+            if auth_header.lower().startswith("bearer "):
+                final_key = auth_header[7:].strip()
+            else:
+                final_key = auth_header.strip()
+    
+    # 3. Use token from oauth2_scheme as last resort
+    if not final_key and token:
+        final_key = token
 
-    # 2. Verifica JWT Token o API Key in formato Bearer
-    if token:
-        # Se il token inizia con il prefisso delle nostre API Key, trattalo come tale
-        if token.startswith("rw-"):
-            user_data = UserService.validate_api_key(token)
-            if user_data:
-                return user_data
-            
-            logger.warning(f"Invalid API Key provided as Bearer token: {token[:12]}...")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid, expired or disabled API Key"
-            )
+    # DEBUG LOGGING (Sanitized)
+    if final_key:
+        prefix = final_key[:8] if len(final_key) > 8 else "too_short"
+        logger.info(f"Auth Attempt [{request.method} {request.url.path}] - Key found: {prefix}...")
+    else:
+        logger.warning(f"Auth Attempt [{request.method} {request.url.path}] - NO CREDENTIALS FOUND")
+        logger.debug(f"Headers received: {dict(request.headers)}")
+        raise credentials_exception
 
-        # Altrimenti procedi con la validazione JWT standard
+    # --- VALIDATION ---
+    
+    # 1. Try as API Key (most common for automation/scaling)
+    # Check both with and without prefix if necessary
+    user_data = UserService.validate_api_key(final_key)
+    if not user_data and not final_key.startswith("rw-"):
+        # Try prepending prefix just in case client omitted it
+        user_data = UserService.validate_api_key(f"rw-{final_key}")
+        
+    if user_data:
+        return user_data
+
+    # 2. Try as JWT (if it doesn't look like our API key)
+    if not final_key.startswith("rw-"):
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            payload = jwt.decode(final_key, SECRET_KEY, algorithms=[ALGORITHM])
             username: str = payload.get("sub")
-            if username is None:
-                raise credentials_exception
-            
-            user = UserService.get_user(username)
-            if not user or not user.get('is_active', True):
-                raise credentials_exception
-            return user
-        except JWTError as e:
-            logger.warning(f"JWT Validation Error: {e}")
-            raise credentials_exception
-            
-    logger.warning("No credentials provided")
-    raise credentials_exception
+            if username:
+                user = UserService.get_user(username)
+                if user and user.get('is_active', True):
+                    return user
+        except JWTError:
+            pass # Not a valid JWT, move to failure
+
+    logger.warning(f"Auth failed for key prefix: {final_key[:8]}...")
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Invalid, expired or disabled credentials"
+    )

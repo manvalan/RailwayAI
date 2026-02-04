@@ -23,8 +23,9 @@ import time
 from datetime import datetime, timedelta
 import torch
 import numpy as np
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, WebSocket, WebSocketDisconnect, Form, Query
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, WebSocket, WebSocketDisconnect, Form, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
 from python.integration.auth import get_current_user, create_access_token, api_key_header
@@ -48,6 +49,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Track background downloads: { "slug": { "status": "pending|completed|failed", "country": "...", "started": "..." } }
+active_downloads = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -86,6 +90,99 @@ app = FastAPI(
 
 # Servire file statici
 app.mount("/static", StaticFiles(directory="api/static"), name="static")
+
+# ==================== HTTPS Enforcement Middleware ====================
+
+@app.middleware("http")
+async def enforce_https_courtesy(request: Request, call_next):
+    """Enforce HTTPS and show a courtesy page for HTTP requests."""
+    # Permetti localhost senza HTTPS per sviluppo locale
+    host = request.headers.get("host", "")
+    if "localhost" in host or "127.0.0.1" in host:
+        return await call_next(request)
+
+    # Verifica il protocollo (gestisce anche proxy come Nginx/Traefik)
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    
+    if proto == "http":
+        https_url = str(request.url).replace("http://", "https://", 1)
+        return HTMLResponse(content=f"""
+        <!DOCTYPE html>
+        <html lang="it">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Protocollo Sicuro Richiesto - RailwayAI</title>
+            <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+            <style>
+                :root {{ 
+                    --bg: #0b0d11; 
+                    --primary: #6366f1; 
+                    --text: #f1f5f9; 
+                    --text-sec: #94a3b8;
+                }}
+                body {{ 
+                    background: var(--bg); 
+                    color: var(--text); 
+                    font-family: 'Outfit', sans-serif; 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
+                    height: 100vh; 
+                    margin: 0;
+                    background-image: radial-gradient(circle at center, #1e1b4b 0%, #0b0d11 100%);
+                }}
+                .card {{
+                    background: rgba(30, 41, 59, 0.4);
+                    padding: 4rem;
+                    border-radius: 32px;
+                    border: 1px solid rgba(255,255,255,0.08);
+                    backdrop-filter: blur(20px);
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                    text-align: center;
+                    max-width: 550px;
+                }}
+                h1 {{ 
+                    font-size: 2.5rem; 
+                    margin-bottom: 1.5rem; 
+                    background: linear-gradient(135deg, #fff 0%, var(--primary) 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    letter-spacing: -1px;
+                }}
+                p {{ color: var(--text-sec); font-size: 1.1rem; line-height: 1.7; margin-bottom: 2.5rem; }}
+                .btn {{
+                    background: var(--primary);
+                    color: #fff;
+                    text-decoration: none;
+                    padding: 1.25rem 2.5rem;
+                    border-radius: 16px;
+                    font-weight: 700;
+                    font-size: 1.1rem;
+                    display: inline-block;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+                }}
+                .btn:hover {{ 
+                    transform: translateY(-4px); 
+                    box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.4);
+                    filter: brightness(1.1);
+                }}
+                .icon {{ font-size: 5rem; margin-bottom: 1.5rem; }}
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="icon">🛡️</div>
+                <h1>RailwayAI Secure Hub</h1>
+                <p>Per garantire la massima sicurezza del traffico ferroviario e dei dati sensibili, è obbligatorio l'utilizzo di una sessione crittografata (SSL/TLS).</p>
+                <a href="{https_url}" class="btn">Passa a HTTPS</a>
+            </div>
+        </body>
+        </html>
+        """, status_code=200)
+    
+    return await call_next(request)
 
 # ==================== Connection Manager ====================
 
@@ -1731,26 +1828,77 @@ async def download_network_data(
     slug = country.lower().replace(" ", "_")
     output_path = f"scenarios/{slug}_osm.json"
     
-    # Trigger the script in the background
-    try:
-        # We use Popen to not block the API
-        cmd = [
-            sys.executable, "scripts/fetch_osm_rail.py",
-            "--area", country,
-            "--output", output_path
-        ]
-        
-        # Start the process
-        subprocess.Popen(cmd)
-        
-        return {
-            "message": f"Download for {country} started in background.",
-            "expected_file": output_path,
-            "status": "pending"
-        }
-    except Exception as e:
-        logger.error(f"Failed to start network download: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    # Store in tracking dict
+    active_downloads[slug] = {
+        "status": "pending",
+        "country": country,
+        "started": datetime.now().isoformat(),
+        "file": output_path
+    }
+    
+    async def run_downloader():
+        try:
+            cmd = [
+                sys.executable, "scripts/fetch_osm_rail.py",
+                "--area", country,
+                "--output", output_path
+            ]
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode == 0:
+                active_downloads[slug]["status"] = "completed"
+                logger.info(f"Download for {country} completed successfully.")
+            else:
+                active_downloads[slug]["status"] = "failed"
+                active_downloads[slug]["error"] = stderr.decode().strip()
+                logger.error(f"Download for {country} failed: {active_downloads[slug]['error']}")
+        except Exception as ex:
+            active_downloads[slug]["status"] = "failed"
+            active_downloads[slug]["error"] = str(ex)
+            logger.error(f"Fatal error in downloader for {country}: {ex}")
+
+    # Fire and forget the coroutine
+    asyncio.create_task(run_downloader())
+    
+    return {
+        "message": f"Download per {country} avviato in background.",
+        "slug": slug,
+        "status": "pending"
+    }
+
+@app.get("/api/v1/network/download-status", tags=["Network"])
+async def get_download_status(current_user: dict = Depends(get_current_user)):
+    """Check status of background network downloads"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return active_downloads
+
+@app.delete("/api/v1/network/scenario/{name}", tags=["Network"])
+async def delete_scenario(name: str, current_user: dict = Depends(get_current_user)):
+    """Delete a scenario file (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Clean name to avoid path traversal
+    safe_name = "".join(x for x in name if x.isalnum() or x in "._-")
+    path = Path(f"scenarios/{safe_name}.json")
+    
+    if path.exists():
+        try:
+            os.remove(path)
+            # Notify idle manager to refresh its list
+            if idle_manager:
+                idle_manager._refresh_scenarios()
+            return {"message": f"Scenario {name} eliminato correttamente."}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Errore eliminazione: {str(e)}")
+    else:
+        raise HTTPException(status_code=404, detail="Scenario non trovato")
 
 @app.get("/api/v1/network/export-rail", tags=["Network"])
 async def export_to_rail(scenario: str = Query(...), current_user: dict = Depends(get_current_user)):
@@ -1998,6 +2146,22 @@ async def restore_model(filename: str, current_user: dict = Depends(get_current_
         idle_manager.stop_training()
         
     return {"message": "Restore successful. Next training run will use these weights.", "restored_from": filename}
+
+@app.delete("/api/v1/ai/backup/{filename}", tags=["AI Management"])
+async def delete_backup(filename: str, current_user: dict = Depends(get_current_user)):
+    """Delete a specific model backup (Admin only)"""
+    if current_user.get('privilege') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Safe path check
+    safe_name = "".join(x for x in filename if x.isalnum() or x in "._-")
+    path = Path("backups") / safe_name
+    
+    if path.exists() and path.is_file():
+        os.remove(path)
+        return {"message": f"Backup {filename} eliminato correttamente."}
+    else:
+        raise HTTPException(status_code=404, detail="Backup non trovato")
 
 @app.get("/api/v1/ai/config", tags=["AI Management"])
 async def get_ai_config(current_user: dict = Depends(get_current_user)):

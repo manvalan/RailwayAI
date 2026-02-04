@@ -10,19 +10,20 @@ Endpoints:
 - GET /api/v1/model/info - Model information
 """
 
-import sys
 import os
 from pathlib import Path
+import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from typing import List, Optional, Dict, Any
+import json
+import logging
+import asyncio
+import time
+from datetime import datetime, timedelta
 import torch
 import numpy as np
-from datetime import datetime
-import time
-import asyncio
-import logging
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, WebSocket, WebSocketDisconnect, Form
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, WebSocket, WebSocketDisconnect, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
@@ -1819,10 +1820,6 @@ async def list_scenarios(current_user: dict = Depends(get_current_user)):
     """List available training scenarios (Admin only)"""
     if current_user.get('privilege') != 'admin':
         raise HTTPException(status_code=403, detail="Admin access required")
-    
-    import os
-    import json
-    from pathlib import Path
     
     scenarios_dir = Path("scenarios")
     scenarios = []

@@ -69,6 +69,17 @@ document.addEventListener('DOMContentLoaded', () => {
         document.execCommand('copy');
         alert('API Key copied to clipboard!');
     });
+
+    // Login button
+    document.getElementById('login-btn')?.addEventListener('click', login);
+
+    // Allow login with Enter key
+    const authFields = ['username', 'password'];
+    authFields.forEach(id => {
+        document.getElementById(id)?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+    });
 });
 
 async function checkUserRole() {

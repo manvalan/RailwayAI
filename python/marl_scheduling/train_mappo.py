@@ -207,7 +207,7 @@ def train_mappo(args):
                         
                         # Critic Loss
                         val_pred = critic(o_t)
-                        critic_loss = F.mse_loss(val_pred, ret_tensor[i].unsqueeze(0))
+                        critic_loss = F.mse_loss(val_pred, ret_tensor[i].view(1, 1))
                         
                         # Optimize
                         actor_opt.zero_grad()

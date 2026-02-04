@@ -23,6 +23,17 @@ function initAIManagement() {
         if (container) container.innerHTML = '<div style="color: #444;">[SYSTEM] Stream cleared by operator.</div>';
     });
 
+    document.getElementById('rail-upload-input')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        const display = document.getElementById('upload-filename-display');
+        if (file && display) {
+            display.textContent = `File selezionato: ${file.name}`;
+            display.style.display = 'block';
+        }
+    });
+
+    document.getElementById('rail-upload-btn')?.addEventListener('click', uploadRailFile);
+
     document.getElementById('config-threshold')?.addEventListener('input', (e) => {
         document.getElementById('config-threshold-val').textContent = e.target.value + 's';
     });
@@ -158,6 +169,57 @@ async function fetchScenarios() {
             </div>
         `).join('');
     } catch (e) { console.error('Scenarios failed', e); }
+}
+
+async function uploadRailFile() {
+    const fileInput = document.getElementById('rail-upload-input');
+    const btn = document.getElementById('rail-upload-btn');
+    const msgEl = document.getElementById('training-status-msg');
+
+    if (!fileInput.files.length) {
+        alert("Per favore, seleziona un file .rail o .json prima di caricare.");
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('filename', file.name);
+
+    btn.disabled = true;
+    btn.textContent = 'INVIO...';
+
+    try {
+        const response = await fetch('/api/v1/network/import-rail', {
+            method: 'POST',
+            headers: { 'X-API-Key': accessToken },
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            addAILog(`Scenario "${data.message}" importato.`, 'success');
+            msgEl.textContent = "✅ Importazione completata!";
+            msgEl.style.color = "var(--success)";
+
+            // Clean up
+            fileInput.value = '';
+            document.getElementById('upload-filename-display').style.display = 'none';
+
+            // Refresh scenarios list
+            await fetchScenarios();
+        } else {
+            const err = await response.json();
+            addAILog(`Errore importazione: ${err.detail}`, 'error');
+            msgEl.textContent = `❌ Errore: ${err.detail}`;
+            msgEl.style.color = "var(--accent)";
+        }
+    } catch (e) {
+        addAILog(`Errore di rete durante l'upload: ${e.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'UPLOAD';
+    }
 }
 
 async function activateScenario(name) {

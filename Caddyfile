@@ -7,11 +7,11 @@ railway-ai.michelebigi.it {
     }
     
     # WebSocket support
-    @websockets {
-        header Connection *Upgrade*
-        header Upgrade websocket
+    reverse_proxy railway-ai:8080 {
+        header_up Connection {>Connection}
+        header_up Upgrade {>Upgrade}
+        flush_interval -1
     }
-    reverse_proxy @websockets railway-ai:8080
     
     # Security headers
     header {

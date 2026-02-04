@@ -237,9 +237,16 @@ async def event_poller():
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
+        # Keep-alive loop
         while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
+            # Wait for data or timeout (heartbeat)
+            try:
+                # We expect no data from client, just keeping connection open
+                await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+            except asyncio.TimeoutError:
+                # Send a ping/ping-like message to keep proxy alive
+                await websocket.send_json({"type": "ping", "timestamp": time.time()})
+    except (WebSocketDisconnect, Exception):
         manager.disconnect(websocket)
 
 
@@ -1072,16 +1079,19 @@ async def trigger_training(
                     reward = float(match.group(2))
                     conflicts = int(match.group(3))
                     
-                    await manager.broadcast({
-                        "type": "training_update",
-                        "episode": ep,
-                        "reward": reward,
-                        "conflicts": conflicts
-                    })
+                    # Throttle updates: only broadcast every 5 episodes to avoid flooding WebSocket
+                    if ep % 5 == 0 or ep == request.episodes:
+                        await manager.broadcast({
+                            "type": "training_update",
+                            "episode": ep,
+                            "reward": reward,
+                            "conflicts": conflicts
+                        })
                 except Exception as e:
                     logger.error(f"Error parsing training update: {e}")
                     await manager.broadcast({"type": "log", "message": text, "level": "info"})
             else:
+                # Regular logs are still sent
                 await manager.broadcast({"type": "log", "message": text, "level": "info"})
 
         await process.wait()

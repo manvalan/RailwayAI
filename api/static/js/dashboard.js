@@ -498,9 +498,14 @@ function connectWebSocket() {
 }
 
 function handleWsMessage(data) {
+    if (data.type === 'ping') return; // Silence heartbeat
+
     if (data.type === 'training_update') {
         updateChart(data.episode, data.reward, data.conflicts);
-        addLog(`Episodio ${data.episode}: Ricompensa ${data.reward.toFixed(2)}, Conflitti: ${data.conflicts}`, 'success');
+        // Log every 10 episodes to UI log to keep it readable
+        if (data.episode % 10 === 0) {
+            addLog(`Episodio ${data.episode}: Ricompensa ${data.reward.toFixed(2)}, Conflitti: ${data.conflicts}`, 'success');
+        }
     } else if (data.type === 'state_update') {
         if (data.train_count !== undefined) document.getElementById('train-count').textContent = data.train_count;
         if (data.conflicts !== undefined) document.getElementById('conflict-count').textContent = data.conflicts;

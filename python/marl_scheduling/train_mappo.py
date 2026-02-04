@@ -115,7 +115,13 @@ def train_mappo(args):
             for aid in current_agent_ids:
                 o = obs.get(aid)
                 if o is None: continue
-                o_vec = np.concatenate([o['position'], [o['current_track']], o['velocity'], o['neighbor_occupancy']])
+                # NEW: Normalize observations for better NN convergence
+                norm_pos = o['position'] / 10.0 # position on current track segment (usually < 10km)
+                norm_track = [o['current_track'] / 1000.0] # scaled ID
+                norm_vel = o['velocity'] / 200.0 # max speed ~200kmh
+                norm_occ = o['neighbor_occupancy'] / 5.0 # max expected load
+                
+                o_vec = np.concatenate([norm_pos, norm_track, norm_vel, norm_occ])
                 o_tensor = torch.FloatTensor(o_vec).unsqueeze(0)
                 
                 with torch.no_grad():

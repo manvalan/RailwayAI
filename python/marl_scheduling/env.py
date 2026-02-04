@@ -112,6 +112,8 @@ class RailwayGymEnv(gym.Env):
                 ct.route_index = 0
                 ct.has_arrived = False
                 self.cpp_scheduler.add_train(ct)
+                t['last_position'] = t.get('position_km', 0.0)
+                t['last_route_index'] = 0
                 
         return self._get_obs(), {}
 
@@ -153,14 +155,24 @@ class RailwayGymEnv(gym.Env):
                 terminated[tid] = True
                 rewards[tid] += 100.0
             else:
-                rewards[tid] -= 0.1 
+                # Dense Reward: Give points for moving forward
+                progress = train['position_on_track'] - train.get('last_position', 0.0)
+                if train['route_index'] > train.get('last_route_index', 0):
+                    # Bonus for reaching a new station/track segment
+                    progress += 1.0 
+                
+                rewards[tid] += progress * 5.0 # Multiplier for progress
+                rewards[tid] -= 0.1 # Time penalty
+                
+                train['last_position'] = train['position_on_track']
+                train['last_route_index'] = train['route_index']
         
         if HAS_CPP:
             for c in conflicts:
                 t1 = str(c.train1_id)
                 t2 = str(c.train2_id)
-                if t1 in rewards: rewards[t1] -= 50.0
-                if t2 in rewards: rewards[t2] -= 50.0
+                if t1 in rewards: rewards[t1] -= 20.0 # Reduced from 50 to avoid massive negative dominance
+                if t2 in rewards: rewards[t2] -= 20.0
 
         self.current_step += 1
         truncated = self.current_step >= self.max_steps

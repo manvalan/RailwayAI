@@ -31,16 +31,22 @@ OVERPASS_MIRRORS = [
     "https://lz4.overpass-api.de/api/interpreter"
 ]
 
+COUNTRY_MAPPING = {
+    "italia": "Italy", "lazio": "Lazio", "toscana": "Tuscany", "lombardia": "Lombardy",
+    "roma": "Roma", "milano": "Milano", "firenze": "Firenze"
+}
+
 def fetch_railway_data(area_name: str):
     """
     Queries Overpass API with retry and mirror rotation.
     """
-    logger.info(f"Fetching railway data for: {area_name}")
+    normalized_area = COUNTRY_MAPPING.get(area_name.lower(), area_name)
+    logger.info(f"Fetching railway data for: {normalized_area}")
     
     # Query optimized: we only need nodes/ways with railway tags
     query = f"""
     [out:json][timeout:180];
-    area[name="{area_name}"]->.searchArea;
+    area[name="{normalized_area}"]->.searchArea;
     (
       way["railway"="rail"](area.searchArea);
       node["railway"~"station|halt|stop_position"](area.searchArea);
@@ -56,13 +62,16 @@ def fetch_railway_data(area_name: str):
             logger.info(f"Connecting to mirror: {url}")
             response = requests.post(url, data={'data': query}, timeout=190)
             response.raise_for_status()
-            return response.json()
+            resp_json = response.json()
+            if resp_json and resp_json.get('elements'):
+                return resp_json
+            logger.warning(f"Mirror {url} returned empty data.")
         except Exception as e:
             logger.warning(f"Mirror {url} failed: {e}")
             last_err = e
             continue
             
-    logger.error(f"All Overpass mirrors failed. Last error: {last_err}")
+    logger.error(f"All Overpass mirrors failed or returned empty data. Last error: {last_err}")
     return None
 
 def process_to_scenario(osm_data: dict, out_file: str):
@@ -98,8 +107,8 @@ def process_to_scenario(osm_data: dict, out_file: str):
             station_osm_to_id[node_id] = s_id
 
     if not stations:
-        logger.error("No named stations or stops found!")
-        return
+        logger.error("No named stations or stops found in OSM data!")
+        sys.exit(1)
 
     # 2. Build Adjacency List for all rail nodes
     adj = {}
@@ -188,6 +197,10 @@ def process_to_scenario(osm_data: dict, out_file: str):
                     if neighbor not in path_visited:
                         queue.append((neighbor, dist + d, w_tags if w_tags else tags, path_visited | {neighbor}))
 
+    if not tracks:
+        logger.error("No tracks or connections could be reconstructed between stations!")
+        sys.exit(1)
+
     # 5. Result
     scenario = {
         "stations": stations,
@@ -198,7 +211,7 @@ def process_to_scenario(osm_data: dict, out_file: str):
     with open(out_file, 'w') as f:
         json.dump(scenario, f, indent=2)
     
-    logger.info(f"Successfully processed scenario for area with {len(stations)} stations and {len(tracks)} tracks.")
+    logger.info(f"Successfully processed scenario with {len(stations)} stations and {len(tracks)} tracks.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -209,8 +222,8 @@ if __name__ == "__main__":
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
     
     data = fetch_railway_data(args.area)
-    if data and data.get('elements'):
+    if data:
         process_to_scenario(data, args.output)
     else:
-        logger.error(f"Failed to fetch data or no elements found for area: {args.area}")
+        logger.error(f"Failed to fetch data for area: {args.area}")
         sys.exit(1)

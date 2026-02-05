@@ -522,12 +522,20 @@ metrics = {
 # ============================================================================
 
 
+class TemporalObstacle(BaseModel):
+    """Represents a track being blocked for a specific time window"""
+    track_id: int
+    start_minute: int
+    end_minute: int
+    reason: Optional[str] = "Maintenance/Background Traffic"
+
 class OptimizationRequest(BaseModel):
     """Request for schedule optimization"""
     trains: List[Train] = Field(..., description="List of trains to optimize")
     tracks: Optional[List[Track]] = Field(None, description="Track configuration (optional)")
     stations: Optional[List[Station]] = Field(None, description="Station configuration (optional)")
     active_agent_ids: Optional[List[int]] = Field(None, description="IDs of trains to actively optimize (others are background)")
+    temporal_obstacles: Optional[List[TemporalObstacle]] = Field(None, description="Time windows where specific tracks are blocked")
     max_iterations: int = Field(100, ge=1, le=1000, description="Max simulation horizon (minutes)")
     ga_max_iterations: Optional[int] = Field(200, ge=10, le=1000, description="Max GA iterations")
     ga_population_size: Optional[int] = Field(80, ge=10, le=500, description="GA population size")
@@ -1126,31 +1134,37 @@ async def optimize_schedule(
         num_trains_raw = len(all_trains)
         max_trains = model_config.get('num_trains', 50)
         
-        # SMART FILTERING: If we have > max_trains, we must prioritize
-        if num_trains_raw > max_trains:
-            logger.info(f"Filtering {num_trains_raw} trains to model limit of {max_trains}...")
-            
-            active_ids = set(request.active_agent_ids or [])
-            
-            # 1. Critical trains (specified by user)
-            selected_trains = [t for t in all_trains if t.id in active_ids]
-            
-            # 2. Add others based on delay and priority until we hit max
+        processed_trains = []
+        active_ids = set(request.active_agent_ids or [])
+        
+        # 1. Start with Focus Trains
+        processed_trains = [t for t in all_trains if t.id in active_ids]
+        
+        # 2. Add Ghost Trains from Temporal Obstacles
+        if request.temporal_obstacles:
+            for i, obs in enumerate(request.temporal_obstacles):
+                if len(processed_trains) >= max_trains: break
+                # Create a synthetic stationary train
+                ghost_train = Train(
+                    id=999000 + i,
+                    origin_station=0, destination_station=0,
+                    scheduled_departure_time="00:00",
+                    position_km=0.1, velocity_kmh=0.0,
+                    current_track=obs.track_id,
+                    priority=10, is_delayed=True, delay_minutes=0,
+                    planned_route=[]
+                )
+                processed_trains.append(ghost_train)
+                
+        # 3. Fill remaining slots with most critical background trains
+        if len(processed_trains) < max_trains:
             others = [t for t in all_trains if t.id not in active_ids]
             others.sort(key=lambda x: (x.delay_minutes, x.priority), reverse=True)
+            needed = max_trains - len(processed_trains)
+            processed_trains.extend(others[:needed])
             
-            needed = max_trains - len(selected_trains)
-            if needed > 0:
-                selected_trains.extend(others[:needed])
-            else:
-                # If active agents already exceed limit, we must truncate them
-                selected_trains = selected_trains[:max_trains]
-                logger.warning(f"Active agents ({len(active_ids)}) exceed model limit. Truncating.")
-                
-            processed_trains = selected_trains
-        else:
-            processed_trains = all_trains
-            
+        # Truncate if still over (shouldn't happen with step 3 logic but for safety)
+        processed_trains = processed_trains[:max_trains]
         num_trains_to_process = len(processed_trains)
         
         # Encode network state (simplified - could be enhanced)

@@ -66,11 +66,26 @@ public struct Train: Codable, Identifiable {
 
 // MARK: - AI Request/Response Models
 
+public struct TemporalObstacle: Codable {
+    public let trackId: Int
+    public let startMinute: Int
+    public let endMinute: Int
+    public let reason: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case trackId = "track_id"
+        case startMinute = "start_minute"
+        case endMinute = "end_minute"
+        case reason
+    }
+}
+
 struct AIRequestPayload: Codable {
     let trains: [Train]
     let stations: [Station]
     let tracks: [Track]
-    let activeAgentIds: [Int]? // New: IDs of trains to actively optimize
+    let activeAgentIds: [Int]?
+    let temporalObstacles: [TemporalObstacle]? // New: Time-based track blockages
     let maxIterations: Int
     let gaMaxIterations: Int
     let gaPopulationSize: Int
@@ -78,6 +93,7 @@ struct AIRequestPayload: Codable {
     enum CodingKeys: String, CodingKey {
         case trains, stations, tracks
         case activeAgentIds = "active_agent_ids"
+        case temporalObstacles = "temporal_obstacles"
         case maxIterations = "max_iterations"
         case gaMaxIterations = "ga_max_iterations"
         case gaPopulationSize = "ga_population_size"
@@ -142,11 +158,13 @@ public class RailwayGraphManager {
     /// - Parameters:
     ///   - activeTrains: La lista totale dei treni nella scena (inclusi quelli di sfondo).
     ///   - focusAgentIds: Opzionale. La lista degli ID dei treni da ottimizzare attivamente.
+    ///   - obstacles: Opzionale. Lista di blocchi temporanei su specifici binari.
     ///   - maxIterations: Orizzonte di simulazione (default 100 minuti).
     /// - Returns: Una stringa JSON formattata o nil in caso di errore.
     public func generateAIRequestJSON(
         for activeTrains: [Train], 
         focusAgentIds: [Int]? = nil,
+        obstacles: [TemporalObstacle]? = nil,
         maxIterations: Int = 100
     ) -> String? {
         
@@ -156,6 +174,7 @@ public class RailwayGraphManager {
             stations: self.stations,
             tracks: self.tracks,
             activeAgentIds: focusAgentIds,
+            temporalObstacles: obstacles,
             maxIterations: maxIterations,
             gaMaxIterations: 300,  // Valori ottimizzati per reti grandi
             gaPopulationSize: 100

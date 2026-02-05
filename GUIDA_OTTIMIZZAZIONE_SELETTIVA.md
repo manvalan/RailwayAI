@@ -71,3 +71,23 @@ Se vuoi testare manualmente prima di toccare il codice Swift, invia un body cos�
 }
 ```
 *L'AI sposterà il treno 1 per evitare il treno 2, ma non cercherà di ottimizzare l'arrivo del treno 2.*
+
+## 5. Novità: Ostacoli Temporali (Novità ✨)
+Se non vuoi inviare decine di treni di sfondo, puoi ora inviare dei "blocchi temporali" su binari specifici. L'AI rispetterà questi blocchi come se ci fosse un treno fermo o un lavoro in corso.
+
+```swift
+let blocco = TemporalObstacle(
+    track_id: 45, 
+    start_minute: 10, 
+    end_minute: 25, 
+    reason: "Treno Regionale 1234"
+)
+
+if let json = RailwayGraphManager.shared.generateAIRequestJSON(
+    for: targetTrains,
+    focusAgentIds: [101],
+    obstacles: [blocco]
+) {
+    // L'AI porterà il treno 101 a destinazione evitando il binario 45 tra il minuto 10 e 25
+}
+```

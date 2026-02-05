@@ -87,9 +87,14 @@ def train_mappo(args):
     
     # 3. Load weights if checkpoint exists
     if ckpt:
-        logger.info("Loading network weights from checkpoint...")
-        actor.load_state_dict(ckpt['actor'])
-        critic.load_state_dict(ckpt['critic'])
+        try:
+            logger.info("Loading network weights from checkpoint...")
+            actor.load_state_dict(ckpt['actor'])
+            critic.load_state_dict(ckpt['critic'])
+            logger.info("✅ Resumed weights successfully.")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not load weights due to architectural mismatch: {e}")
+            logger.warning("Starting from scratch with fresh weights instead.")
     
     actor_opt = optim.Adam(actor.parameters(), lr=args.lr)
     critic_opt = optim.Adam(critic.parameters(), lr=args.lr)

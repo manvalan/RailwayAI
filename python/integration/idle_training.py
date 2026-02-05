@@ -34,12 +34,35 @@ class IdleTrainingManager:
         # Determine available scenarios
         self.available_scenarios: List[str] = []
         self._refresh_scenarios()
+        self._initialize_level()
+
 
     def _refresh_scenarios(self):
         """Refresh list of available scenarios."""
         scenarios_dir = Path("scenarios")
         if scenarios_dir.exists():
-            self.available_scenarios = sorted([str(p) for p in scenarios_dir.glob("*.json")])
+            self.available_scenarios = sorted([p.name for p in scenarios_dir.glob("*.json")])
+
+    def _initialize_level(self):
+        """Attempts to recover the last curriculum level from the models/training directory."""
+        try:
+            out_dir = Path("models/training")
+            ckpt = self._find_latest_checkpoint(out_dir)
+            if ckpt:
+                # We use a simple name-based heuristic if we don't want to load with torch
+                # mappo_curriculum_l{level}_ep{episode}.pth
+                name = ckpt.name
+                if "curriculum_l" in name:
+                    try:
+                        level_part = name.split("curriculum_l")[1]
+                        level = int(level_part.split("_")[0])
+                        self.curriculum_level = level
+                        logger.info(f"Recovered Curriculum Level from checkpoint name: {level}")
+                    except:
+                        pass
+        except Exception as e:
+            logger.warning(f"Failed to initialize level from checkpoint: {e}")
+
 
     def record_activity(self, source: str = "User Action"):
         """Notifica che c'è stata attività reale. Ignora le letture di monitoraggio."""
@@ -77,43 +100,39 @@ class IdleTrainingManager:
             
             await asyncio.sleep(self.check_interval)
 
-    def _get_next_scenario(self) -> Optional[str]:
-        """Selects the next scenario based on config or rotation."""
+    def _peek_next_scenario(self) -> Optional[str]:
+        """Returns the next scenario in the rotation without advancing the index."""
         self._refresh_scenarios()
-        
         if not self.available_scenarios:
             return None
             
-        # 1. If explicit scenario set
         if self.scenario_path:
              if self.scenario_path in self.available_scenarios:
-                 return self.scenario_path
-             # Fallback if file deleted
+                 return f"scenarios/{self.scenario_path}"
         
-        # 2. Rotation
-        if not self.available_scenarios:
-            return None
-            
-        scenario = self.available_scenarios[self.current_scenario_index % len(self.available_scenarios)]
-        # Prepare for next time
-        self.current_scenario_index = (self.current_scenario_index + 1) % len(self.available_scenarios)
-        return scenario
+        fname = self.available_scenarios[self.current_scenario_index % len(self.available_scenarios)]
+        return f"scenarios/{fname}"
 
     async def _run_training(self):
-        """Select scenario and start training."""
+        """Select scenario, advance rotation, and start training."""
         if not self.enabled or self.is_training:
             return
             
-        scenario = self._get_next_scenario()
+        scenario = self._peek_next_scenario()
         if not scenario:
             logger.warning("No scenarios found for training.")
             return
             
+        # Only advance rotation here, when we actually start
+        if not self.scenario_path:
+            self.current_scenario_index = (self.current_scenario_index + 1) % len(self.available_scenarios)
+            
         await self._run_background_training(scenario)
+
 
     async def _run_background_training(self, scenario: str):
         """Execute the training script in a non-blocking background process."""
-        if not self.enabled or self.is_training: # Added self.is_training check
+        if not self.enabled or self.is_training:
             return
             
         logger.info(f"System is idle. Starting background training on {scenario}...")
@@ -122,13 +141,26 @@ class IdleTrainingManager:
         self.last_logs = [] # Clear logs
         
         try:
+            # Ensure models/training directory exists for persistent checkpoints
+            out_dir = Path("models/training")
+            out_dir.mkdir(parents=True, exist_ok=True)
+            
             # Prepare command
             cmd = [
                 "python3", "-u", "python/marl_scheduling/train_mappo.py",
                 "--episodes", str(self.episodes_per_run),
-                "--background"
+                "--background",
+                "--out_dir", str(out_dir)
             ]
             
+            # Try to find the latest checkpoint to RESUME training
+            checkpoint = self._find_latest_checkpoint(out_dir)
+            if checkpoint:
+                cmd.extend(["--checkpoint", str(checkpoint)])
+                self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Resuming from checkpoint: {checkpoint.name}")
+            else:
+                self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] No checkpoint found. Starting from scratch.")
+
             if self.curriculum_enabled:
                 cmd.extend(["--curriculum", "--level", str(self.curriculum_level)])
             else:
@@ -138,31 +170,35 @@ class IdleTrainingManager:
             self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Initializing training process on {Path(scenario).name}...")
             self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Executing: {' '.join(cmd)}")
             
-            # Start process using asyncio for non-blocking IO
+            # Start process using asyncio
             env = os.environ.copy()
             env["PYTHONPATH"] = env.get("PYTHONPATH", "") + ":" + str(Path(__file__).parent.parent.parent)
             env["PYTHONUNBUFFERED"] = "1"
             
-            try:
-                self.training_process = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.STDOUT,
-                    env=env
-                )
-                self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Process started successfully (PID: {self.training_process.pid})")
-            except Exception as startup_err:
-                self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] CRITICAL: Could not execute python3: {startup_err}")
-                raise startup_err
+            self.training_process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                env=env
+            )
+            self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Process started (PID: {self.training_process.pid})")
             
-            # Start monitoring in a separate background task so we don't block the loop
+            # Monitoring task
             self._monitor_task = asyncio.create_task(self._monitor_process_output(scenario))
             
         except Exception as e:
-            logger.error(f"Failed to start training process: {e}")
+            logger.error(f"Failed to start training process: {e}", exc_info=True)
             self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] STARTUP ERROR: {e}")
             self.is_training = False
             self._add_history_entry(scenario, "failed", str(e))
+
+    def _find_latest_checkpoint(self, directory: Path) -> Optional[Path]:
+        """Find the most recent .pth checkpoint in the directory."""
+        if not directory.exists():
+            return None
+        checkpoints = sorted(directory.glob("*.pth"), key=os.path.getmtime, reverse=True)
+        return checkpoints[0] if checkpoints else None
+
 
     async def _monitor_process_output(self, scenario: str):
         """Read stdout from the training process without blocking the event loop."""
@@ -260,6 +296,12 @@ class IdleTrainingManager:
             self.curriculum_level = kwargs.get('level')
         logger.info(f"Config updated: {self.get_config()}")
 
+    @property
+    def current_scenario(self) -> Optional[str]:
+        """Returns the scenario that is either training or queued to train."""
+        # If we are training, use that. Otherwise peek at next.
+        return self._peek_next_scenario()
+
     def get_config(self):
         """Get config."""
         return {
@@ -274,7 +316,7 @@ class IdleTrainingManager:
     def get_status_report(self):
         """Get full status report for dashboard."""
         self._refresh_scenarios()
-        next_scenario = self._get_next_scenario() if not self.scenario_path else self.scenario_path
+        next_scenario = self._peek_next_scenario()
         
         idle_time = time.time() - self.last_activity
         remaining = max(0, self.idle_threshold - idle_time)

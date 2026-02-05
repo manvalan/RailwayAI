@@ -388,3 +388,63 @@ button:hover {
 .active-pulse {
     animation: pulse-success 2s infinite;
 }
+
+/* Topology Overlay Specifics */
+#topo-overlay {
+    backdrop-filter: blur(24px) !important;
+    background: rgba(15, 23, 42, 0.9) !important;
+    border: 1px solid rgba(99, 102, 241, 0.2) !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
+    padding: 1.5rem !important;
+    border-radius: 16px !important;
+    min-width: 220px;
+    animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+#topo-node-name {
+    font-size: 1.1rem;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+#topo-node-details {
+    line-height: 1.6;
+}
+
+/* Scrollbar refinement */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+}
+
+/* Glow animation for active scenario */
+.active-scenario-glow {
+    box-shadow: 0 0 20px var(--primary-glow);
+    border-color: var(--primary) !important;
+}

@@ -1974,41 +1974,69 @@ async def import_from_rail(
         raise HTTPException(status_code=403, detail="Admin access required")
         
     import json
+    from pathlib import Path
     try:
         content = await file.read()
         data = json.loads(content.decode('utf-8'))
         
+        # Normalize keys (case-insensitive and support synonyms)
+        normalized_data = {}
+        for k, v in data.items():
+            low_k = k.lower()
+            if low_k in ['stations', 'nodi', 'stazioni']:
+                normalized_data['stations'] = v
+            elif low_k in ['tracks', 'edges', 'binari', 'linee']:
+                normalized_data['tracks'] = v
+            elif low_k in ['trains', 'agents', 'treni']:
+                normalized_data['trains'] = v
+            else:
+                normalized_data[k] = v
+        
         # Validation
-        if "stations" not in data or "tracks" not in data:
-            raise HTTPException(status_code=400, detail="Invalid .rail format. Missing stations or tracks.")
+        if "stations" not in normalized_data or "tracks" not in normalized_data:
+            logger.error(f"Validation failed for import. Keys found: {list(normalized_data.keys())}")
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Formato .rail non valido. Mancano 'stations' o 'tracks'. Trovati: {list(data.keys())}"
+            )
             
         # Ensure 'trains' exist for the training engine
-        if "trains" not in data:
-            data["trains"] = []
+        if "trains" not in normalized_data:
+            normalized_data["trains"] = []
             
-        # Save to scenarios/
+        # Ensure scenarios directory exists
+        scenarios_dir = Path("scenarios")
+        scenarios_dir.mkdir(exist_ok=True)
+        
+        # Save as JSON scenario
         actual_filename = filename or file.filename or "new_scenario.rail"
         safe_name = "".join(x for x in actual_filename if x.isalnum() or x in "._-").replace(".rail", "").replace(".json", "")
         if not safe_name: safe_name = f"imported_{int(time.time())}"
         
-        output_path = f"scenarios/{safe_name}.json"
+        output_path = scenarios_dir / f"{safe_name}.json"
         with open(output_path, 'w') as f:
-            json.dump(data, f, indent=2)
+            json.dump(normalized_data, f, indent=2)
             
         # Refresh idle manager
         if idle_manager:
             idle_manager._refresh_scenarios()
             
+        logger.info(f"Successfully imported scenario: {safe_name} ({len(normalized_data['stations'])} stations)")
+        
         return {
             "success": True,
             "message": safe_name,
-            "stations": len(data["stations"]),
-            "tracks": len(data["tracks"]),
-            "trains": len(data["trains"])
+            "stations": len(normalized_data["stations"]),
+            "tracks": len(normalized_data["tracks"]),
+            "trains": len(normalized_data["trains"])
         }
+    except json.JSONDecodeError:
+        logger.error("Failed to decode JSON during import")
+        raise HTTPException(status_code=400, detail="Il file non è un JSON valido.")
     except Exception as e:
-        logger.error(f"Import failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
+        logger.error(f"Import failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Errore durante l'importazione: {str(e)}")
+
 
 # ==================== AI Management Endpoints ====================
 
@@ -2317,14 +2345,15 @@ async def get_network_statistics(current_user: dict = Depends(get_current_user))
         if path.exists():
             with open(path, 'r') as f:
                 data = json.load(f)
-                stations = data.get('stations', [])
-                tracks = data.get('tracks', [])
-                trains = data.get('trains', [])
+                stations = data.get('stations') or data.get('stazioni') or data.get('nodi') or []
+                tracks = data.get('tracks') or data.get('binari') or data.get('linee') or []
+                trains = data.get('trains') or data.get('treni') or data.get('agents') or []
                 
                 stats["network_name"] = path.stem.replace('_', ' ').title()
                 stats["total_stations"] = len(stations)
                 stats["total_tracks"] = len(tracks)
                 stats["active_trains"] = len(trains)
+
                 
                 # Simple complexity heuristic
                 if len(stations) > 100: stats["complexity_score"] = "Critical"
@@ -2359,9 +2388,13 @@ async def get_network_topology(current_user: dict = Depends(get_current_user)):
             with open(path, 'r') as f:
                 data = json.load(f)
                 
+                # Support synonyms
+                stations_data = data.get('stations') or data.get('stazioni') or data.get('nodi') or []
+                tracks_data = data.get('tracks') or data.get('binari') or data.get('linee') or []
+
                 # Extract nodes (stations)
                 nodes = []
-                for s in data.get('stations', []):
+                for s in stations_data:
                     pos = s.get('pos')
                     if not pos:
                         lat = s.get('lat', 0)
@@ -2370,14 +2403,14 @@ async def get_network_topology(current_user: dict = Depends(get_current_user)):
                         
                     nodes.append({
                         "id": s.get('id'),
-                        "name": s.get('name', f"Station {s.get('id')}"),
+                        "name": s.get('name', f"Stazione {s.get('id')}"),
                         "type": s.get('type', 'regular'),
                         "pos": pos
                     })
                 
                 # Extract edges (tracks)
                 edges = []
-                for t in data.get('tracks', []):
+                for t in tracks_data:
                     s_ids = t.get('station_ids', [])
                     if len(s_ids) >= 2:
                         edges.append({
@@ -2387,6 +2420,7 @@ async def get_network_topology(current_user: dict = Depends(get_current_user)):
                             "capacity": t.get('capacity', 1),
                             "is_single": t.get('is_single_track', False)
                         })
+
                 
                 return {
                     "scenario": path.stem,

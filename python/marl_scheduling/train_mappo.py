@@ -44,11 +44,29 @@ def train_mappo(args):
     from curriculum import CurriculumManager
 
     current_level = args.level
+    start_episode = 0
+    
+    # Load checkpoint if exists
+    if args.checkpoint and os.path.exists(args.checkpoint):
+        logger.info(f"Loading checkpoint from {args.checkpoint}")
+        ckpt = torch.load(args.checkpoint)
+        critic.load_state_dict(ckpt['critic'])
+        actor.load_state_dict(ckpt['actor'])
+        # Resume level and episode if available in checkpoint
+        if 'level' in ckpt and args.curriculum:
+            current_level = ckpt['level']
+            logger.info(f"Resumed Curriculum Level: {current_level}")
+        if 'episode' in ckpt:
+            start_episode = ckpt['episode']
+            logger.info(f"Resumed from Episode: {start_episode}")
     
     def setup_level(level):
         if args.curriculum:
             logger.info(f"Setting up Curriculum Level {level}...")
             scenario = CurriculumManager.get_scenario_for_level(level)
+            # Ensure scenario structure is valid
+            if "stations" not in scenario or "tracks" not in scenario:
+                 logger.error(f"Generated Level {level} scenario is missing components!")
             ScenarioLoader._inject_default_routes(scenario)
         else:
             logger.info(f"Loading static scenario: {args.scenario}")
@@ -66,22 +84,16 @@ def train_mappo(args):
     actor = ActorNetwork(obs_dim)
     critic = CriticNetwork(obs_dim)
     
-    # Load checkpoint if exists
-    if args.checkpoint and os.path.exists(args.checkpoint):
-        logger.info(f"Loading checkpoint from {args.checkpoint}")
-        ckpt = torch.load(args.checkpoint)
-        critic.load_state_dict(ckpt['critic'])
-        actor.load_state_dict(ckpt['actor'])
-    
     actor_opt = optim.Adam(actor.parameters(), lr=args.lr)
     critic_opt = optim.Adam(critic.parameters(), lr=args.lr)
     
     safety_layer = SafetyConstraintLayer(env.raw_tracks)
+
     
     os.makedirs(args.out_dir, exist_ok=True)
     
     running_reward = 0
-    window_size = 5
+    window_size = 3 # Smaller window for more frequent level-up checks in background
     
     # Buffer for PPO
     obs_buffer = []
@@ -97,7 +109,7 @@ def train_mappo(args):
     gae_lambda = 0.95
     clip_param = 0.2
     
-    for episode in range(args.episodes):
+    for episode in range(start_episode, start_episode + args.episodes):
         obs, _ = env.reset()
         episode_reward = 0
         done = False

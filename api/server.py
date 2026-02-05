@@ -41,6 +41,7 @@ from python.scheduling.fast_schedule_optimizer import FastScheduleOptimizer # Ne
 from contextlib import asynccontextmanager
 from python.scheduling.conflict_resolver import ConflictResolver
 from python.integration.idle_training import idle_manager
+from python.integration.scenario_factory import factory
 
 
 # Configure logging
@@ -916,41 +917,29 @@ async def generate_scenario(
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     async def run_generation():
-        logger.info(f"Generating scenario for {request.area} -> {output_path}")
+        logger.info(f"Generating and provisioning scenario for {request.area}...")
         await manager.broadcast({"type": "log", "message": f"Generazione scenario per {request.area}...", "level": "info"})
         
-        cmd = [
-            sys.executable, 
-            "scripts/fetch_osm_rail.py",
-            "--area", request.area,
-            "--output", output_path
-        ]
+        result = await factory.provision_region(request.area)
         
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        
-        stdout, stderr = await process.communicate()
-        if process.returncode == 0 and os.path.exists(output_path):
-            logger.info(f"Scenario generated successfully: {output_path}")
+        if result:
+            logger.info(f"Scenario provisioned successfully: {result['path']}")
             await manager.broadcast({
                 "type": "log", 
-                "message": f"Scenario '{request.area}' generato con successo: {output_name}", 
+                "message": f"Scenario '{request.area}' pronto per l'AI: {result['stations']} stazioni, {result['tracks']} binari, {result['trains']} treni di prova.", 
                 "level": "success",
-                "scenario_path": output_path
+                "scenario_path": result['path']
             })
+            # Force refresh of idle manager scenarios
+            if idle_manager:
+                idle_manager._refresh_scenarios()
         else:
-            err_msg = stderr.decode() if stderr else "Empty stderr"
-            if process.returncode == 0:
-                err_msg = "Il processo è terminato con successo ma il file di output non è stato creato."
-            
+            err_msg = "Il processo di download o elaborazione è fallito. Controlla i mirror di Overpass."
             logger.error(f"Scenario generation failed: {err_msg}")
             await manager.broadcast({"type": "log", "message": f"Errore generazione: {err_msg}", "level": "error"})
 
     background_tasks.add_task(run_generation)
-    return {"message": "Scenario generation started in background", "area": request.area, "expected_output": output_path}
+    return {"message": "Scenario provisioning started in background", "area": request.area}
 
 
 @app.post("/api/v1/user/change-password", tags=["User"])

@@ -152,17 +152,26 @@ class RailwayGymEnv(gym.Env):
         for train in self.trains:
             tid = str(train['id'])
             if train['has_arrived']:
+                # Massive bonus for successful arrival, but scaled by delay
+                arrival_bonus = 200.0
+                delay_penalty = min(100.0, train['delay_min'] * 2.0)
                 terminated[tid] = True
-                rewards[tid] += 100.0
+                rewards[tid] += (arrival_bonus - delay_penalty)
             else:
                 # Dense Reward: Give points for moving forward
                 progress = train['position_on_track'] - train.get('last_position', 0.0)
                 if train['route_index'] > train.get('last_route_index', 0):
-                    # Bonus for reaching a new station/track segment
-                    progress += 1.0 
+                    # Significant bonus for reaching a new station/branch point
+                    progress += 5.0 
                 
-                rewards[tid] += progress * 5.0 # Multiplier for progress
-                rewards[tid] -= 0.1 # Time penalty
+                rewards[tid] += progress * 10.0 # High value for forward motion
+                
+                # Quadratic delay penalty: small delays are okay, long ones are very bad
+                rewards[tid] -= (train['delay_min'] ** 1.5) * 0.05
+                
+                # Standstill penalty if not at destination
+                if progress < 0.01:
+                    rewards[tid] -= 0.5
                 
                 train['last_position'] = train['position_on_track']
                 train['last_route_index'] = train['route_index']
@@ -171,8 +180,9 @@ class RailwayGymEnv(gym.Env):
             for c in conflicts:
                 t1 = str(c.train1_id)
                 t2 = str(c.train2_id)
-                if t1 in rewards: rewards[t1] -= 20.0 # Reduced from 50 to avoid massive negative dominance
-                if t2 in rewards: rewards[t2] -= 20.0
+                # Conflict penalty must be higher than arrival bonus to ensure safety
+                if t1 in rewards: rewards[t1] -= 100.0 
+                if t2 in rewards: rewards[t2] -= 100.0
 
         self.current_step += 1
         truncated = self.current_step >= self.max_steps

@@ -202,46 +202,59 @@ def process_to_scenario(osm_data: dict, out_file: str):
                 adj[best_node].append((s['osm_id'], min_d, {}))
                 logger.info(f"Connected station '{s['name']}' to railway graph via snap (dist: {min_d:.3f}km)")
 
-    # 4. Traverse the graph to connect stations
+    # 4. Traverse the graph to connect stations using DIJKSTRA (more efficient than BFS)
+    import heapq
+    
     tracks = []
     visited_station_pairs = set()
+    station_node_ids = {s['osm_id'] for s in stations}
 
     for start_station in stations:
         start_osm = start_station['osm_id']
         if start_osm not in adj: continue
         
-        # BFS to find reachable stations
-        queue = deque([(start_osm, 0, {}, {start_osm})])
-        while queue:
-            curr_osm, dist, tags, path_visited = queue.popleft()
+        # Dijkstra: (distance, current_node, current_tags)
+        pq = [(0, start_osm, {})]
+        distances = {start_osm: 0}
+        
+        while pq:
+            dist, curr_osm, tags = heapq.heappop(pq)
             
+            if dist > distances.get(curr_osm, float('inf')):
+                continue
+
             # If current node is a station and not the source
             if curr_osm in station_osm_to_id and curr_osm != start_osm:
                 target_id = station_osm_to_id[curr_osm]
                 
-                # Check if it's actually a different station (sometimes multiple OSM nodes have same name)
-                if stations[target_id]['name'] == start_station['name']:
-                    # Continue searching PAST this node if it's the same station complex
-                    pass 
-                else:
+                # Check if it's actually a different station complex
+                if stations[target_id]['name'] != start_station['name']:
                     pair = tuple(sorted((start_station['id'], target_id)))
                     if pair not in visited_station_pairs:
                         visited_station_pairs.add(pair)
                         tracks.append({
                             "id": len(tracks),
-                            "length_km": round(dist, 2),
+                            "length_km": round(dist, 3),
                             "capacity": int(tags.get('tracks', 1)),
                             "is_single_track": tags.get('railway:traffic_mode') == 'single' or int(tags.get('tracks', '1')) == 1,
                             "station_ids": [start_station['id'], target_id]
                         })
                     continue # Stop at first real foreign station found in this direction
 
-            if dist > 35: continue # Max segment length
+            if dist > 40: continue # Max segment length (slightly increased)
             
             if curr_osm in adj:
                 for neighbor, d, w_tags in adj[curr_osm]:
-                    if neighbor not in path_visited:
-                        queue.append((neighbor, dist + d, w_tags if w_tags else tags, path_visited | {neighbor}))
+                    new_dist = dist + d
+                    if new_dist < distances.get(neighbor, float('inf')):
+                        distances[neighbor] = new_dist
+                        # Inherit tags if not specifically defined on this segment
+                        new_tags = w_tags if w_tags else tags
+                        heapq.heappush(pq, (new_dist, neighbor, new_tags))
+
+    if not tracks:
+        logger.error("No tracks or connections could be reconstructed between stations!")
+        sys.exit(1)
 
     if not tracks:
         logger.error("No tracks or connections could be reconstructed between stations!")

@@ -132,39 +132,41 @@ def train_mappo(args):
             curr_action_list = []
             curr_log_prob_list = []
             
-            for aid in current_agent_ids:
-                o = obs.get(aid)
-                if o is None: continue
-                # NEW: Normalize observations for better NN convergence
-                norm_pos = o['position'] / 10.0 # position on current track segment (usually < 10km)
-                norm_track = [o['current_track'] / 1000.0] # scaled ID
-                norm_vel = o['velocity'] / 200.0 # max speed ~200kmh
-                norm_occ = o['neighbor_occupancy'] / 5.0 # max expected load
-                
+            # NEW: Batch processing of all agents in one pass with Attention
+            all_agent_keys = list(current_agent_ids)
+            o_vec_list = []
+            for aid in all_agent_keys:
+                o = obs[aid]
+                norm_pos = o['position'] / 10.0
+                norm_track = [o['current_track'] / 1000.0]
+                norm_vel = o['velocity'] / 200.0
+                norm_occ = o['neighbor_occupancy'] / 5.0
                 o_vec = np.concatenate([norm_pos, norm_track, norm_vel, norm_occ])
-                o_tensor = torch.FloatTensor(o_vec).unsqueeze(0)
+                o_vec_list.append(o_vec)
+            
+            # (NumAgents, ObsDim)
+            batch_obs_tensor = torch.FloatTensor(np.array(o_vec_list)).unsqueeze(0) # (1, NumAgents, ObsDim)
+            
+            with torch.no_grad():
+                # Forward pass returns (1, NumAgents, NumActions)
+                all_probs = actor(batch_obs_tensor).squeeze(0) # (NumAgents, NumActions)
+                dist = torch.distributions.Categorical(all_probs)
+                batch_actions = dist.sample()
+                batch_log_probs = dist.log_prob(batch_actions)
                 
-                with torch.no_grad():
-                    probs = actor(o_tensor)
-                    dist = torch.distributions.Categorical(probs)
-                    action = dist.sample()
-                    log_prob = dist.log_prob(action)
-                
-                actions[aid] = action.item()
-                log_probs[aid] = log_prob
-                curr_obs_list.append(o_vec)
-                curr_action_list.append(action.item())
-                curr_log_prob_list.append(log_prob.item())
+                # Centralized Critic gets the same batch of observations
+                val = critic(batch_obs_tensor)
+                step_value = val.item()
+
+            for i, aid in enumerate(all_agent_keys):
+                actions[aid] = batch_actions[i].item()
+                log_probs[aid] = batch_log_probs[i]
+                curr_obs_list.append(o_vec_list[i])
+                curr_action_list.append(batch_actions[i].item())
+                curr_log_prob_list.append(batch_log_probs[i].item())
             
             if not curr_obs_list:
                 break
-
-            # Centralized Critic
-            with torch.no_grad():
-                batch_obs_tensor = torch.FloatTensor(np.array(curr_obs_list))
-                val = critic(batch_obs_tensor)
-                # We use the same central value for all agents in this step (simplified MAPPO)
-                step_value = val.item()
 
             # Constraint Layer (Safety)
             safe_actions = safety_layer.apply_constraints(actions, {"trains": env.trains})

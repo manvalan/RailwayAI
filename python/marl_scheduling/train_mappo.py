@@ -45,27 +45,28 @@ def train_mappo(args):
 
     current_level = args.level
     start_episode = 0
+    ckpt = None
     
-    # Load checkpoint if exists
+    # 1. Peek at checkpoint to recover level/episode if available
     if args.checkpoint and os.path.exists(args.checkpoint):
-        logger.info(f"Loading checkpoint from {args.checkpoint}")
-        ckpt = torch.load(args.checkpoint)
-        critic.load_state_dict(ckpt['critic'])
-        actor.load_state_dict(ckpt['actor'])
-        # Resume level and episode if available in checkpoint
-        if 'level' in ckpt and args.curriculum:
-            current_level = ckpt['level']
-            logger.info(f"Resumed Curriculum Level: {current_level}")
-        if 'episode' in ckpt:
-            start_episode = ckpt['episode']
-            logger.info(f"Resumed from Episode: {start_episode}")
-    
+        try:
+            logger.info(f"Peeking at checkpoint {args.checkpoint}...")
+            ckpt = torch.load(args.checkpoint, map_location='cpu')
+            if 'level' in ckpt and args.curriculum:
+                current_level = ckpt['level']
+                logger.info(f"Resuming from Curriculum Level: {current_level}")
+            if 'episode' in ckpt:
+                start_episode = ckpt['episode']
+                logger.info(f"Resuming from Episode: {start_episode}")
+        except Exception as e:
+            logger.warning(f"Could not peek at checkpoint: {e}")
+
     def setup_level(level):
         if args.curriculum:
             logger.info(f"Setting up Curriculum Level {level}...")
             scenario = CurriculumManager.get_scenario_for_level(level)
             # Ensure scenario structure is valid
-            if "stations" not in scenario or "tracks" not in scenario:
+            if not scenario or "stations" not in scenario or "tracks" not in scenario:
                  logger.error(f"Generated Level {level} scenario is missing components!")
             ScenarioLoader._inject_default_routes(scenario)
         else:
@@ -80,14 +81,21 @@ def train_mappo(args):
     agent_ids = env.agent_ids
     obs_dim = 8  # 1 (pos) + 1 (track) + 1 (vel) + 5 (neighbors)
     
-    # Universal Policy (Shared Weights)
+    # 2. Universal Policy (Shared Weights)
     actor = ActorNetwork(obs_dim)
     critic = CriticNetwork(obs_dim)
+    
+    # 3. Load weights if checkpoint exists
+    if ckpt:
+        logger.info("Loading network weights from checkpoint...")
+        actor.load_state_dict(ckpt['actor'])
+        critic.load_state_dict(ckpt['critic'])
     
     actor_opt = optim.Adam(actor.parameters(), lr=args.lr)
     critic_opt = optim.Adam(critic.parameters(), lr=args.lr)
     
     safety_layer = SafetyConstraintLayer(env.raw_tracks)
+
 
     
     os.makedirs(args.out_dir, exist_ok=True)

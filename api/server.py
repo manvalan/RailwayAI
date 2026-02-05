@@ -1979,15 +1979,24 @@ async def import_from_rail(
         content = await file.read()
         data = json.loads(content.decode('utf-8'))
         
+        # Check for nested structure (e.g. data inside 'network' key)
+        if "network" in data and isinstance(data["network"], dict):
+            logger.info("Detected nested 'network' structure, extracting data...")
+            # Merge nested network data into root for normalization
+            nested = data.pop("network")
+            for k, v in nested.items():
+                if k not in data: # don't overwrite root metadata if exists
+                    data[k] = v
+
         # Normalize keys (case-insensitive and support synonyms)
         normalized_data = {}
         for k, v in data.items():
             low_k = k.lower()
-            if low_k in ['stations', 'nodi', 'stazioni']:
+            if low_k in ['stations', 'nodi', 'stazioni', 'nodes', 'punti']:
                 normalized_data['stations'] = v
-            elif low_k in ['tracks', 'edges', 'binari', 'linee']:
+            elif low_k in ['tracks', 'edges', 'binari', 'linee', 'links', 'segmenti']:
                 normalized_data['tracks'] = v
-            elif low_k in ['trains', 'agents', 'treni']:
+            elif low_k in ['trains', 'agents', 'treni', 'vehicles']:
                 normalized_data['trains'] = v
             else:
                 normalized_data[k] = v

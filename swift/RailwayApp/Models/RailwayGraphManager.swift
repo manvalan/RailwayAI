@@ -70,12 +70,14 @@ struct AIRequestPayload: Codable {
     let trains: [Train]
     let stations: [Station]
     let tracks: [Track]
+    let activeAgentIds: [Int]? // New: IDs of trains to actively optimize
     let maxIterations: Int
     let gaMaxIterations: Int
     let gaPopulationSize: Int
     
     enum CodingKeys: String, CodingKey {
         case trains, stations, tracks
+        case activeAgentIds = "active_agent_ids"
         case maxIterations = "max_iterations"
         case gaMaxIterations = "ga_max_iterations"
         case gaPopulationSize = "ga_population_size"
@@ -138,16 +140,22 @@ public class RailwayGraphManager {
     
     /// Genera il JSON Payload pronto per essere inviato all'endpoint AI `/api/v1/optimize`.
     /// - Parameters:
-    ///   - activeTrains: La lista dei treni attualmente attivi simulati dalla App.
+    ///   - activeTrains: La lista totale dei treni nella scena (inclusi quelli di sfondo).
+    ///   - focusAgentIds: Opzionale. La lista degli ID dei treni da ottimizzare attivamente.
     ///   - maxIterations: Orizzonte di simulazione (default 100 minuti).
     /// - Returns: Una stringa JSON formattata o nil in caso di errore.
-    public func generateAIRequestJSON(for activeTrains: [Train], maxIterations: Int = 100) -> String? {
+    public func generateAIRequestJSON(
+        for activeTrains: [Train], 
+        focusAgentIds: [Int]? = nil,
+        maxIterations: Int = 100
+    ) -> String? {
         
         // Costruiamo il payload completo come richiesto dal server Python
         let payload = AIRequestPayload(
             trains: activeTrains,
             stations: self.stations,
             tracks: self.tracks,
+            activeAgentIds: focusAgentIds,
             maxIterations: maxIterations,
             gaMaxIterations: 300,  // Valori ottimizzati per reti grandi
             gaPopulationSize: 100

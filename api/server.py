@@ -1105,6 +1105,8 @@ async def optimize_schedule(
     background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user)
 ):
+    if idle_manager:
+        idle_manager.record_activity("Direct Optimization API")
     """
     Optimize train schedule using ML model
     
@@ -1120,13 +1122,36 @@ async def optimize_schedule(
     
     try:
         # Prepare input tensors
-        num_trains = len(request.trains)
+        all_trains = request.trains
+        num_trains_raw = len(all_trains)
+        max_trains = model_config.get('num_trains', 50)
         
-        if num_trains > model_config['num_trains']:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Too many trains ({num_trains}), max is {model_config['num_trains']}"
-            )
+        # SMART FILTERING: If we have > max_trains, we must prioritize
+        if num_trains_raw > max_trains:
+            logger.info(f"Filtering {num_trains_raw} trains to model limit of {max_trains}...")
+            
+            active_ids = set(request.active_agent_ids or [])
+            
+            # 1. Critical trains (specified by user)
+            selected_trains = [t for t in all_trains if t.id in active_ids]
+            
+            # 2. Add others based on delay and priority until we hit max
+            others = [t for t in all_trains if t.id not in active_ids]
+            others.sort(key=lambda x: (x.delay_minutes, x.priority), reverse=True)
+            
+            needed = max_trains - len(selected_trains)
+            if needed > 0:
+                selected_trains.extend(others[:needed])
+            else:
+                # If active agents already exceed limit, we must truncate them
+                selected_trains = selected_trains[:max_trains]
+                logger.warning(f"Active agents ({len(active_ids)}) exceed model limit. Truncating.")
+                
+            processed_trains = selected_trains
+        else:
+            processed_trains = all_trains
+            
+        num_trains_to_process = len(processed_trains)
         
         # Encode network state (simplified - could be enhanced)
         network_state = np.zeros(80)
@@ -1134,11 +1159,11 @@ async def optimize_schedule(
             network_state[0] = len(request.tracks)
         if request.stations:
             network_state[1] = len(request.stations)
-        network_state[2] = num_trains
+        network_state[2] = num_trains_to_process # Use the actual number we send to model
         
         # Encode train states
-        train_states = np.zeros((model_config['num_trains'], 8))
-        for i, train in enumerate(request.trains):
+        train_states = np.zeros((max_trains, 8))
+        for i, train in enumerate(processed_trains):
             train_states[i] = [
                 train.position_km / 100.0,
                 train.velocity_kmh / 200.0,
@@ -1167,8 +1192,8 @@ async def optimize_schedule(
         resolutions = []
         total_delay = 0.0
         
-        for i in range(num_trains):
-            train = request.trains[i]
+        for i in range(num_trains_to_process):
+            train = processed_trains[i]
             
             time_adj = float(time_adjustments[i])
             track_probs = track_assignments[i]

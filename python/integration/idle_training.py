@@ -24,6 +24,7 @@ class IdleTrainingManager:
         self.episodes_per_run = 100
         self.curriculum_enabled = False  # New: Curriculum mode
         self.curriculum_level = 1
+        self.active_agent_ids: Optional[str] = None # Comma-separated IDs for selective training
         self._task = None
         
         # New: History and Rotation
@@ -166,6 +167,9 @@ class IdleTrainingManager:
             else:
                 cmd.extend(["--scenario", scenario])
             
+            if self.active_agent_ids:
+                cmd.extend(["--active_agents", self.active_agent_ids])
+            
             # Immediate feedback
             self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Initializing training process on {Path(scenario).name}...")
             self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Executing: {' '.join(cmd)}")
@@ -294,6 +298,8 @@ class IdleTrainingManager:
             self.curriculum_enabled = kwargs.get('curriculum')
         if kwargs.get('level') is not None:
             self.curriculum_level = kwargs.get('level')
+        if kwargs.get('active_agents') is not None:
+            self.active_agent_ids = kwargs.get('active_agents')
         logger.info(f"Config updated: {self.get_config()}")
 
     @property
@@ -310,7 +316,8 @@ class IdleTrainingManager:
             "scenario_path": self.scenario_path,
             "episodes_per_run": self.episodes_per_run,
             "curriculum_enabled": self.curriculum_enabled,
-            "curriculum_level": self.curriculum_level
+            "curriculum_level": self.curriculum_level,
+            "active_agent_ids": self.active_agent_ids
         }
 
     def get_status_report(self):
@@ -331,7 +338,8 @@ class IdleTrainingManager:
             "logs_preview": self.last_logs[-20:] if self.last_logs else ["No recent logs"],
             "seconds_until_next_run": round(remaining),
             "curriculum_level": self.curriculum_level,
-            "curriculum_enabled": self.curriculum_enabled
+            "curriculum_enabled": self.curriculum_enabled,
+            "active_agent_ids": self.active_agent_ids
         }
         
     def stop(self):

@@ -24,18 +24,22 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     return R * c
 
-OVERPASS_URL = "http://overpass-api.de/api/interpreter"
+OVERPASS_MIRRORS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.nchc.org.tw/api/interpreter",
+    "https://lz4.overpass-api.de/api/interpreter"
+]
 
 def fetch_railway_data(area_name: str):
     """
-    Queries Overpass API for railway infrastructure in a specific area.
+    Queries Overpass API with retry and mirror rotation.
     """
     logger.info(f"Fetching railway data for: {area_name}")
     
-    # query includes way[railway=rail] and nodes for stations, stops and positions
-    # we take all railway=rail to ensure connectivity
+    # Query optimized: we only need nodes/ways with railway tags
     query = f"""
-    [out:json][timeout:300];
+    [out:json][timeout:180];
     area[name="{area_name}"]->.searchArea;
     (
       way["railway"="rail"](area.searchArea);
@@ -46,13 +50,20 @@ def fetch_railway_data(area_name: str):
     out skel qt;
     """
     
-    try:
-        response = requests.post(OVERPASS_URL, data={'data': query})
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        logger.error(f"Error fetching data: {e}")
-        return None
+    last_err = None
+    for url in OVERPASS_MIRRORS:
+        try:
+            logger.info(f"Connecting to mirror: {url}")
+            response = requests.post(url, data={'data': query}, timeout=190)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.warning(f"Mirror {url} failed: {e}")
+            last_err = e
+            continue
+            
+    logger.error(f"All Overpass mirrors failed. Last error: {last_err}")
+    return None
 
 def process_to_scenario(osm_data: dict, out_file: str):
     """

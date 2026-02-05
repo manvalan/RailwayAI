@@ -527,6 +527,7 @@ class OptimizationRequest(BaseModel):
     trains: List[Train] = Field(..., description="List of trains to optimize")
     tracks: Optional[List[Track]] = Field(None, description="Track configuration (optional)")
     stations: Optional[List[Station]] = Field(None, description="Station configuration (optional)")
+    active_agent_ids: Optional[List[int]] = Field(None, description="IDs of trains to actively optimize (others are background)")
     max_iterations: int = Field(100, ge=1, le=1000, description="Max simulation horizon (minutes)")
     ga_max_iterations: Optional[int] = Field(200, ge=10, le=1000, description="Max GA iterations")
     ga_population_size: Optional[int] = Field(80, ge=10, le=500, description="GA population size")

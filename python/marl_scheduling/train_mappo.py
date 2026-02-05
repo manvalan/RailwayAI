@@ -65,7 +65,6 @@ def train_mappo(args):
         if args.curriculum:
             logger.info(f"Setting up Curriculum Level {level}...")
             scenario = CurriculumManager.get_scenario_for_level(level)
-            # Ensure scenario structure is valid
             if not scenario or "stations" not in scenario or "tracks" not in scenario:
                  logger.error(f"Generated Level {level} scenario is missing components!")
             ScenarioLoader._inject_default_routes(scenario)
@@ -73,12 +72,28 @@ def train_mappo(args):
             logger.info(f"Loading static scenario: {args.scenario}")
             scenario = ScenarioLoader.load_scenario(args.scenario)
         
-        env = RailwayGymEnv(scenario['tracks'], scenario['stations'], scenario['trains'])
+        active_ids = None
+        if args.active_agents:
+            active_ids = [int(x) for x in args.active_agents.split(",")]
+            logger.info(f"Isolating optimization to agents: {active_ids}")
+            
+        env = RailwayGymEnv(
+            scenario['tracks'], 
+            scenario['stations'], 
+            scenario['trains'], 
+            active_agent_ids=active_ids
+        )
         return env, scenario
 
     env, scenario = setup_level(current_level)
     
     agent_ids = env.agent_ids
+    if not agent_ids:
+        logger.error("❌ No active agents found in scenario! Training cannot proceed without trains.")
+        logger.error("Tip: Ensure 'trains' list is not empty or use scripts/fetch_osm_rail.py --generate-trains (if available).")
+        return
+
+    logger.info(f"Initialized environment with {len(agent_ids)} active agents.")
     obs_dim = 8  # 1 (pos) + 1 (track) + 1 (vel) + 5 (neighbors)
     
     # 2. Universal Policy (Shared Weights)
@@ -290,6 +305,7 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint", type=str, default=None)
     parser.add_argument("--out_dir", type=str, default="checkpoints")
     parser.add_argument("--background", action="store_true", help="Running in background mode")
+    parser.add_argument("--active_agents", type=str, default=None, help="Comma-separated IDs of agents to train (others will be background)")
     
     args = parser.parse_args()
     train_mappo(args)

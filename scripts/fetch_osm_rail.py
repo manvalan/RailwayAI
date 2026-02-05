@@ -90,7 +90,7 @@ def fetch_railway_data(area_name: str):
     logger.error(f"All attempts failed for {area_name}. Mirrors either failed or returned no tracks.")
     return None
 
-def process_to_scenario(osm_data: dict, out_file: str):
+def process_to_scenario(osm_data: dict, out_file: str, args=None):
     """
     Advanced Scenario Conversion:
     1. Builds a global graph of all rail nodes.
@@ -256,33 +256,52 @@ def process_to_scenario(osm_data: dict, out_file: str):
         logger.error("No tracks or connections could be reconstructed between stations!")
         sys.exit(1)
 
-    if not tracks:
-        logger.error("No tracks or connections could be reconstructed between stations!")
-        sys.exit(1)
+    # 5. Optional: Generate random trains
+    train_list = []
+    if getattr(args, 'num_trains', 0) > 0:
+        import random
+        random.seed(args.random_seed)
+        logger.info(f"Generating {args.num_trains} random trains...")
+        for i in range(args.num_trains):
+            s_start, s_end = random.sample(stations, 2)
+            start_tracks = [t['id'] for t in tracks if s_start['id'] in t['station_ids']]
+            if not start_tracks: continue
+            
+            train_list.append({
+                "id": i + 1,
+                "position_km": 0.0,
+                "velocity_kmh": 120.0,
+                "current_track": random.choice(start_tracks),
+                "destination_station": s_end['id'],
+                "priority": random.randint(1, 10),
+                "planned_route": []
+            })
 
-    # 5. Result
+    # 6. Result
     scenario = {
         "stations": stations,
         "tracks": tracks,
-        "trains": [] # trains are added by the idle trainer or manually
+        "trains": train_list
     }
 
     with open(out_file, 'w') as f:
         json.dump(scenario, f, indent=2)
     
-    logger.info(f"Successfully processed scenario with {len(stations)} stations and {len(tracks)} tracks.")
+    logger.info(f"Successfully processed scenario with {len(stations)} stations, {len(tracks)} tracks and {len(train_list)} trains.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--area", type=str, default="Roma", help="OSM Area name")
-    parser.add_argument("--output", type=str, default="scenarios/roma_network.json")
+    parser.add_argument("--output", type=str, default="scenarios/roma.json")
+    parser.add_argument("--num-trains", type=int, default=0, help="Generate N random trains")
+    parser.add_argument("--random-seed", type=int, default=42, help="Seed for random generation")
     
     args = parser.parse_args()
-    os.makedirs(os.path.dirname(args.output), exist_ok=True)
+    os.makedirs(os.path.dirname(args.output) or '.', exist_ok=True)
     
     data = fetch_railway_data(args.area)
     if data:
-        process_to_scenario(data, args.output)
+        process_to_scenario(data, args.output, args)
     else:
         logger.error(f"Failed to fetch data for area: {args.area}")
         sys.exit(1)

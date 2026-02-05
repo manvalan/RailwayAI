@@ -33,55 +33,61 @@ OVERPASS_MIRRORS = [
 
 COUNTRY_MAPPING = {
     "italia": "Italy", "lazio": "Lazio", "toscana": "Tuscany", "lombardia": "Lombardy",
-    "roma": "Città metropolitana di Roma Capitale", "milano": "Milano", "firenze": "Firenze"
+    "roma": "Roma", "milano": "Milano", "firenze": "Firenze"
 }
 
 def fetch_railway_data(area_name: str):
     """
     Queries Overpass API with retry and mirror rotation.
+    Tries primary mapped name, then falls back to original name if needed.
     """
     normalized_area = COUNTRY_MAPPING.get(area_name.lower(), area_name)
-    logger.info(f"Fetching railway data for: {normalized_area} (original: {area_name})")
     
-    # Query optimized: we search for nodes, ways and relations for stations
-    # but only ways for the tracks themselves.
-    query = f"""
-    [out:json][timeout:180];
-    area[name="{normalized_area}"]->.searchArea;
-    (
-      way["railway"="rail"](area.searchArea);
-      node["railway"~"station|halt|stop_position"](area.searchArea);
-      way["railway"~"station|halt"](area.searchArea);
-      relation["railway"~"station|halt"](area.searchArea);
-    );
-    out body;
-    >;
-    out skel qt;
-    """
+    # We will try both the normalized name and the original name
+    areas_to_try = [normalized_area]
+    if normalized_area != area_name:
+        areas_to_try.append(area_name)
+        
+    for area in areas_to_try:
+        logger.info(f"Targeting area: {area}")
+        
+        # Query optimized: we search for nodes, ways and relations for stations
+        query = f"""
+        [out:json][timeout:180];
+        area[name="{area}"]->.searchArea;
+        (
+          way["railway"="rail"](area.searchArea);
+          node["railway"~"station|halt|stop_position"](area.searchArea);
+          way["railway"~"station|halt"](area.searchArea);
+          relation["railway"~"station|halt"](area.searchArea);
+        );
+        out body;
+        >;
+        out skel qt;
+        """
+        
+        last_err = None
+        for url in OVERPASS_MIRRORS:
+            try:
+                logger.info(f"Connecting to mirror: {url} ...")
+                response = requests.post(url, data={'data': query}, timeout=190)
+                response.raise_for_status()
+                resp_json = response.json()
+                
+                elements = resp_json.get('elements', [])
+                ways_count = len([e for e in elements if e['type'] == 'way'])
+                
+                if elements and ways_count > 0:
+                    logger.info(f"Success! Found {len(elements)} elements for {area}.")
+                    return resp_json
+                
+                logger.warning(f"Mirror {url} returned no tracks for {area}.")
+            except Exception as e:
+                logger.warning(f"Mirror {url} failed: {e}")
+                last_err = e
+                continue
     
-    last_err = None
-    for url in OVERPASS_MIRRORS:
-        try:
-            logger.info(f"Connecting to mirror: {url} ...")
-            response = requests.post(url, data={'data': query}, timeout=190)
-            response.raise_for_status()
-            resp_json = response.json()
-            
-            elements = resp_json.get('elements', [])
-            ways_count = len([e for e in elements if e['type'] == 'way'])
-            nodes_count = len([e for e in elements if e['type'] == 'node'])
-            
-            if elements and ways_count > 0:
-                logger.info(f"Success! Found {len(elements)} elements ({ways_count} ways, {nodes_count} nodes).")
-                return resp_json
-            
-            logger.warning(f"Mirror {url} returned insufficient data (ways: {ways_count}).")
-        except Exception as e:
-            logger.warning(f"Mirror {url} failed: {e}")
-            last_err = e
-            continue
-            
-    logger.error(f"All Overpass mirrors failed or returned no tracks. Potential area name mismatch: {normalized_area}")
+    logger.error(f"All attempts failed for {area_name}. Mirrors either failed or returned no tracks.")
     return None
 
 def process_to_scenario(osm_data: dict, out_file: str):

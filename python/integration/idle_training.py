@@ -70,8 +70,8 @@ class IdleTrainingManager:
         """Notifica che c'è stata attività reale. Ignora le letture di monitoraggio."""
         # Logghiamo per debug capire CHI interrompe
         if self.is_training:
-            logger.info(f"Activity detected: {source}. Suspending training to prioritize user.")
-            self.stop_training()
+            logger.info(f"Activity detected: {source}. IGNORING STOP SIGNAL to force training.")
+            # self.stop_training() # TEMPORARILY DISABLED FOR INTENSIVE TRAINING
         self.last_activity = time.time()
 
     async def start(self):

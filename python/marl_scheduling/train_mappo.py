@@ -138,7 +138,7 @@ def train_mappo(args):
     mask_buffer = []
     
     ppo_epochs = 4
-    mini_batch_size = 64
+    mini_batch_size = 32  # Reduced to 32 to prevent OOM kills on small servers
     gamma = 0.99
     gae_lambda = 0.95
     clip_param = 0.2

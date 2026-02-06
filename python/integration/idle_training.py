@@ -63,6 +63,8 @@ class IdleTrainingManager:
                         pass
         except Exception as e:
             logger.warning(f"Failed to initialize level from checkpoint: {e}")
+        
+        logger.info(f"AI Curriculum Mode: {'ENABLED' if self.curriculum_enabled else 'DISABLED'} | Current Level: {self.curriculum_level}")
 
 
     def record_activity(self, source: str = "User Action"):

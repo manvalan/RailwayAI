@@ -5,7 +5,7 @@ Resolves train conflicts by finding optimal departure time adjustments
 that minimize total delay while avoiding cascading conflicts.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 import random
 import logging
 from copy import deepcopy

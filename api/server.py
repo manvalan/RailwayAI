@@ -1241,11 +1241,11 @@ async def optimize_schedule(
         conflicts_detected = sum(1 for t in request.trains if t.is_delayed)
         conflicts_resolved = len(resolutions)
         
-        logger.info(f"Optimization completed: {num_trains} trains, "
+        logger.info(f"Optimization completed: {len(all_trains)} trains, "
                    f"{len(resolutions)} resolutions, {inference_time:.2f}ms")
         
         # Update global metrics for real-time monitoring
-        metrics['last_train_count'] = num_trains
+        metrics['last_train_count'] = len(all_trains)
         metrics['last_conflicts_detected'] = conflicts_detected
         
         return OptimizationResponse(
@@ -1331,25 +1331,33 @@ async def optimize_scheduled_trains(
         for train in active_trains:
             train_dict = train.dict()
             
-            # Auto-plan route if origin and destination provided but no planned_route
-            if train.planned_route is None and train.origin_station is not None:
-                logger.info(f"Planning route for train {train.id} from station {train.origin_station} "
-                           f"to {train.destination_station}")
+            # Auto-plan route if no planned_route is provided
+            if not train.planned_route:
+                # Use explicit origin_station if available
+                start_station = train.origin_station
                 
-                route_plan = route_planner.plan_route(
-                    train.origin_station,
-                    train.destination_station,
-                    avg_speed_kmh=train.velocity_kmh if train.velocity_kmh > 0 else 120.0
-                )
+                # Fallback: Derive origin from current track if not provided
+                if start_station is None and request.tracks:
+                    current_track_obj = next((t for t in request.tracks if t.id == train.current_track), None)
+                    if current_track_obj and current_track_obj.station_ids:
+                        # Use the first station of the track as a proxy for origin
+                        start_station = current_track_obj.station_ids[0]
                 
-                if route_plan:
-                    train_dict['planned_route'] = route_plan['track_ids']
-                    logger.info(f"Route planned for train {train.id}: {len(route_plan['track_ids'])} tracks, "
-                               f"{route_plan['total_distance_km']:.1f} km, "
-                               f"{route_plan['total_time_minutes']:.1f} min")
-                else:
-                    logger.warning(f"Could not plan route for train {train.id} from {train.origin_station} "
-                                 f"to {train.destination_station}")
+                if start_station is not None:
+                    logger.info(f"Planning route for train {train.id} from station {start_station} "
+                               f"to {train.destination_station}")
+                    
+                    route_plan = route_planner.plan_route(
+                        start_station,
+                        train.destination_station,
+                        avg_speed_kmh=train.velocity_kmh if train.velocity_kmh > 0 else 120.0
+                    )
+                    
+                    if route_plan:
+                        train_dict['planned_route'] = route_plan['track_ids']
+                        logger.info(f"Route planned for train {train.id}: {len(route_plan['track_ids'])} tracks")
+                    else:
+                        logger.warning(f"Could not plan route for train {train.id} from {start_station} to {train.destination_station}")
             
             trains_with_routes.append(train_dict)
         
@@ -1357,10 +1365,14 @@ async def optimize_scheduled_trains(
         time_horizon = request.max_iterations  # Use max_iterations as time horizon in minutes
         logger.info(f"Detecting future conflicts over {time_horizon} minute horizon")
         
+        # Convert request obstacles to dicts for the simulator
+        obstacles_dicts = [obs.dict() for obs in request.temporal_obstacles] if request.temporal_obstacles else []
+        
         future_conflicts = temporal_simulator.detect_future_conflicts(
             trains_with_routes,
             time_horizon_minutes=float(time_horizon),
-            time_step_minutes=1.0
+            time_step_minutes=1.0,
+            obstacles=obstacles_dicts
         )
         
         
@@ -1378,7 +1390,8 @@ async def optimize_scheduled_trains(
                 trains_with_routes,
                 time_horizon_minutes=time_horizon,
                 max_iterations=getattr(request, 'ga_max_iterations', None) or 200,
-                population_size=getattr(request, 'ga_population_size', None) or 80
+                population_size=getattr(request, 'ga_population_size', None) or 80,
+                obstacles=obstacles_dicts
             )
             
             resolutions = []

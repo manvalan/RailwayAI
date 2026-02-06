@@ -31,7 +31,8 @@ class ConflictResolver:
                          trains: List[Dict],
                          time_horizon_minutes: float = 120.0,
                          max_iterations: int = 300,
-                         population_size: int = 100) -> Dict:
+                         population_size: int = 100,
+                         obstacles: Optional[List[Dict]] = None) -> Dict:
         """
         Resolve conflicts using genetic algorithm.
         
@@ -40,18 +41,20 @@ class ConflictResolver:
             time_horizon_minutes: Time horizon for conflict detection
             max_iterations: Maximum GA iterations
             population_size: GA population size
+            obstacles: List of temporal track blockages
         
         Returns:
             Dict with resolutions and metrics
         """
-        logger.info(f"Starting conflict resolution for {len(trains)} trains")
+        logger.info(f"Starting conflict resolution for {len(trains)} trains and {len(obstacles or [])} obstacles")
         
         # Detect initial conflicts
         initial_conflicts = self.temporal_simulator.detect_future_conflicts(
             trains,
             time_horizon_minutes=time_horizon_minutes,
             time_step_minutes=0.5,
-            safety_buffer_min=2.0
+            safety_buffer_min=2.0,
+            obstacles=obstacles
         )
         
         if not initial_conflicts:
@@ -87,7 +90,7 @@ class ConflictResolver:
             # Evaluate fitness
             fitness_scores = []
             for solution in population:
-                fitness = self._evaluate_fitness(solution, trains, time_horizon_minutes, baseline=baseline)
+                fitness = self._evaluate_fitness(solution, trains, time_horizon_minutes, baseline=baseline, obstacles=obstacles)
                 fitness_scores.append(fitness)
                 
                 if fitness > best_fitness:
@@ -119,7 +122,7 @@ class ConflictResolver:
         
         # Final log
         logger.info(f"GA Completed after {iteration+1} iterations. Final Best Fitness = {best_fitness:.2f}")
-        return self._format_result(best_solution, trains, iteration, best_fitness, time_horizon_minutes, baseline=baseline)
+        return self._format_result(best_solution, trains, iteration, best_fitness, time_horizon_minutes, baseline=baseline, obstacles=obstacles)
     
     def _initialize_population(self, trains: List[Dict], conflicts: List[Dict], size: int) -> List[Dict]:
         """
@@ -188,7 +191,7 @@ class ConflictResolver:
             adjusted_trains.append(train_copy)
         return adjusted_trains
 
-    def _evaluate_fitness(self, solution: Dict, trains: List[Dict], time_horizon: float, baseline: float = 0.0) -> float:
+    def _evaluate_fitness(self, solution: Dict, trains: List[Dict], time_horizon: float, baseline: float = 0.0, obstacles: Optional[List[Dict]] = None) -> float:
         """Evaluate fitness of a multi-parameter solution."""
         # Use helper for consistent adjustments
         adjusted_trains = self._apply_solution_to_trains(solution, trains)
@@ -200,7 +203,8 @@ class ConflictResolver:
                 time_horizon_minutes=time_horizon,
                 time_step_minutes=0.5,
                 baseline_minutes=baseline,
-                safety_buffer_min=2.0
+                safety_buffer_min=2.0,
+                obstacles=obstacles
             )
         except Exception as e:
             logger.warning(f"Error in conflict detection: {e}")
@@ -289,7 +293,7 @@ class ConflictResolver:
         
         return offspring
     
-    def _format_result(self, solution: Dict, trains: List[Dict], iterations: int, fitness: float, time_horizon: float, baseline: float = 0.0) -> Dict:
+    def _format_result(self, solution: Dict, trains: List[Dict], iterations: int, fitness: float, time_horizon: float, baseline: float = 0.0, obstacles: Optional[List[Dict]] = None) -> Dict:
         """Format the result including dwell delay details."""
         resolutions = []
         
@@ -309,7 +313,7 @@ class ConflictResolver:
         total_delay = sum(s['departure_delay'] + sum(s['dwell_delays']) for s in solution.values())
         
         initial_conflicts_count = len(self.temporal_simulator.detect_future_conflicts(
-            trains, time_horizon_minutes=time_horizon, time_step_minutes=0.5, baseline_minutes=baseline, safety_buffer_min=2.0))
+            trains, time_horizon_minutes=time_horizon, time_step_minutes=0.5, baseline_minutes=baseline, safety_buffer_min=2.0, obstacles=obstacles))
         
         # Calculate final conflicts accurately by simulating the best solution
         final_conflicts_count = initial_conflicts_count
@@ -318,7 +322,7 @@ class ConflictResolver:
             adjusted_trains = self._apply_solution_to_trains(solution, trains)
             
             final_conflicts = self.temporal_simulator.detect_future_conflicts(
-                adjusted_trains, time_horizon_minutes=time_horizon, time_step_minutes=0.5, baseline_minutes=baseline, safety_buffer_min=2.0)
+                adjusted_trains, time_horizon_minutes=time_horizon, time_step_minutes=0.5, baseline_minutes=baseline, safety_buffer_min=2.0, obstacles=obstacles)
             final_conflicts_count = len(final_conflicts)
             
         resolved_count = max(0, initial_conflicts_count - final_conflicts_count)

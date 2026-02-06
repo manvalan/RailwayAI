@@ -175,7 +175,8 @@ class TemporalSimulator:
                                 time_horizon_minutes: float = 60.0,
                                 time_step_minutes: float = 0.5,
                                 baseline_minutes: Optional[float] = None,
-                                safety_buffer_min: float = 2.0) -> List[Dict]:
+                                safety_buffer_min: float = 2.0,
+                                obstacles: Optional[List[Dict]] = None) -> List[Dict]:
         """
         Detect conflicts over a time horizon by simulating train positions.
         
@@ -185,23 +186,18 @@ class TemporalSimulator:
             time_step_minutes: Time resolution for simulation (default: 1 min)
             baseline_minutes: Optional absolute baseline (minutes since midnight). 
                              If None, it's calculated from the earliest train departure.
+            obstacles: List of track blockages with start_minute, end_minute, track_id.
         
         Returns:
-            List of conflict dicts with:
-                - time_offset_minutes: When the conflict occurs
-                - track_id: Which track
-                - train1_id, train2_id: Conflicting trains
-                - train1_position_km, train2_position_km: Positions
-                - distance_km: Distance between trains
-                - conflict_type: 'single_track', 'too_close', or 'same_position'
-                - severity: 1-10 rating
+            List of conflict dicts
         """
         conflicts = []
         conflict_set = set()  # To avoid duplicate conflicts
+        obstacles = obstacles or []
         
         num_steps = int(time_horizon_minutes / time_step_minutes)
         
-        logger.info(f"Simulating {len(trains)} trains over {time_horizon_minutes} minutes "
+        logger.info(f"Simulating {len(trains)} trains and {len(obstacles)} obstacles over {time_horizon_minutes} minutes "
                    f"with {time_step_minutes} min steps ({num_steps} steps)")
         
         # Find the common baseline (earliest departure)
@@ -217,6 +213,22 @@ class TemporalSimulator:
                 except: pass
             start_minutes = min(all_deps) if all_deps else 0.0
         
+        # Pre-process obstacles for midnight wrap
+        processed_obstacles = []
+        for obs in obstacles:
+            s = obs.get('start_minute', 0)
+            e = obs.get('end_minute', 0)
+            # If e < s, it crosses midnight. We simulate it as spanning into next 1440 range.
+            if e < s:
+                processed_obstacles.append({'track_id': obs['track_id'], 's': s, 'e': e + 1440, 'reason': obs.get('reason')})
+                # Also add the wrap around for the current day if start_minutes is near 0
+                processed_obstacles.append({'track_id': obs['track_id'], 's': s - 1440, 'e': e, 'reason': obs.get('reason')})
+            else:
+                processed_obstacles.append({'track_id': obs['track_id'], 's': s, 'e': e, 'reason': obs.get('reason')})
+                # Add for both days to be safe in comparisons
+                processed_obstacles.append({'track_id': obs['track_id'], 's': s + 1440, 'e': e + 1440, 'reason': obs.get('reason')})
+                processed_obstacles.append({'track_id': obs['track_id'], 's': s - 1440, 'e': e - 1440, 'reason': obs.get('reason')})
+
         # Simulate at each time step
         for step in range(num_steps + 1):
             t_relative = step * time_step_minutes
@@ -225,6 +237,22 @@ class TemporalSimulator:
             # Get all train positions at this absolute time
             positions_by_track = {}
             
+            # 1. Add obstacles as "Static Occupancy"
+            for obs in processed_obstacles:
+                if obs['s'] <= t_absolute <= obs['e']:
+                    tid = obs['track_id']
+                    if tid not in positions_by_track:
+                        positions_by_track[tid] = []
+                    
+                    # Create a pseudo-position representing the obstacle
+                    positions_by_track[tid].append({
+                        'train_id': -999, # Special ID for background traffic
+                        'current_track': tid,
+                        'position_km': 0.0,
+                        'velocity_kmh': 0.0,
+                        'reason': obs['reason']
+                    })
+
             for train in trains:
                 # Convert this train's scheduled_departure_time to minutes since midnight
                 dep_time = train.get('scheduled_departure_time', "00:00:00")

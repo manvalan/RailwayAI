@@ -12,7 +12,7 @@ import os
 logger = logging.getLogger(__name__)
 
 class IdleTrainingManager:
-    def __init__(self, idle_threshold_seconds: int = 300):
+    def __init__(self, idle_threshold_seconds: int = 120):
         self.idle_threshold = idle_threshold_seconds
         self.last_activity = time.time()
         self.last_training_time: Optional[datetime] = None
@@ -66,15 +66,13 @@ class IdleTrainingManager:
         
         logger.info(f"AI Curriculum Mode: {'ENABLED' if self.curriculum_enabled else 'DISABLED'} | Current Level: {self.curriculum_level}")
 
-
     def record_activity(self, source: str = "User Action"):
         """Notifica che c'è stata attività reale. Ignora le letture di monitoraggio."""
-        # Se la sorgente è una di quelle che vogliamo ignorare (facoltativo, 
-        # ma qui lo rendiamo esplicito via chiamate nel server.py)
-        self.last_activity = time.time()
+        # Logghiamo per debug capire CHI interrompe
         if self.is_training:
             logger.info(f"Activity detected: {source}. Suspending training to prioritize user.")
             self.stop_training()
+        self.last_activity = time.time()
 
     async def start(self):
         """Avvia il loop di monitoraggio."""

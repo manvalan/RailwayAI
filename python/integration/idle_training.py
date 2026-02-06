@@ -57,8 +57,8 @@ class IdleTrainingManager:
                     try:
                         level_part = name.split("curriculum_l")[1]
                         level = int(level_part.split("_")[0])
-                        self.curriculum_level = level
-                        logger.info(f"Recovered Curriculum Level from checkpoint name: {level}")
+                        self.curriculum_level = max(self.curriculum_level, level)
+                        logger.info(f"Recovered Curriculum Level: {level} (Current: {self.curriculum_level})")
                     except:
                         pass
         except Exception as e:

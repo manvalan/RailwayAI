@@ -53,8 +53,14 @@ def train_mappo(args):
             logger.info(f"Peeking at checkpoint {args.checkpoint}...")
             ckpt = torch.load(args.checkpoint, map_location='cpu')
             if 'level' in ckpt and args.curriculum:
-                current_level = ckpt['level']
-                logger.info(f"Resuming from Curriculum Level: {current_level}")
+                # Force upgrade if the checkpoint level is lower than the requested level
+                resumed_level = ckpt['level']
+                if resumed_level < args.level:
+                    logger.info(f"Checkpoint level ({resumed_level}) is lower than requested level ({args.level}). FORCING UPGRADE to {args.level}!")
+                    current_level = args.level
+                else:
+                    current_level = resumed_level
+                    logger.info(f"Resuming from Curriculum Level: {current_level}")
             if 'episode' in ckpt:
                 start_episode = ckpt['episode']
                 logger.info(f"Resuming from Episode: {start_episode}")

@@ -20,7 +20,7 @@ class IdleTrainingManager:
         self.enabled = True
         self.training_process: Optional[subprocess.Popen] = None
         self.check_interval = 30
-        self.scenario_path: Optional[str] = None
+        self.scenario_path: Optional[str] = "scenarios/fdc_scenario.json"
         self.episodes_per_run = 100
         self.curriculum_enabled = True  # New: Curriculum mode
         self.curriculum_level = 2

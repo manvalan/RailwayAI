@@ -255,16 +255,26 @@ def train_mappo(args):
                         
                         # Actor Loss
                         probs = actor(o_t)
+                        
+                        # NOISE INJECTION: If the policy is collapsing (entropy near 0),
+                        # add a small uniform perturbation to restart exploration.
                         dist = torch.distributions.Categorical(probs)
-                        new_lp = dist.log_prob(a_t)
                         entropy = dist.entropy().mean()
                         
+                        if entropy < 0.1:
+                            # Add 10% random noise to the raw probabilities
+                            noise = torch.ones_like(probs) / probs.size(-1)
+                            probs = 0.9 * probs + 0.1 * noise
+                            dist = torch.distributions.Categorical(probs)
+                            entropy = dist.entropy().mean()
+
+                        new_lp = dist.log_prob(a_t)
                         ratio = torch.exp(new_lp - old_lp)
                         surr1 = ratio * adv_tensor[i]
                         surr2 = torch.clamp(ratio, 1.0 - clip_param, 1.0 + clip_param) * adv_tensor[i]
                         
-                        # Increased entropy weight from 0.01 to 0.05 to break plateaus
-                        actor_loss = -torch.min(surr1, surr2).mean() - 0.05 * entropy
+                        # Aggressive entropy weight to jump out of local minima
+                        actor_loss = -torch.min(surr1, surr2).mean() - 0.08 * entropy
                         
                         # Critic Loss
                         val_pred = critic(o_t)

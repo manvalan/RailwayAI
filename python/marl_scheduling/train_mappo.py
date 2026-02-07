@@ -232,8 +232,13 @@ def train_mappo(args):
             adv_tensor = torch.FloatTensor(advantages)
             ret_tensor = torch.FloatTensor(returns)
             
-            # PPO Update
+            # PPO Update - Advantage Normalization
             adv_tensor = (adv_tensor - adv_tensor.mean()) / (adv_tensor.std() + 1e-8)
+            
+            # Diagnostic variables
+            total_actor_loss = 0
+            total_critic_loss = 0
+            total_entropy = 0
             
             for _ in range(ppo_epochs):
                 indices = np.arange(len(obs_buffer))
@@ -257,7 +262,9 @@ def train_mappo(args):
                         ratio = torch.exp(new_lp - old_lp)
                         surr1 = ratio * adv_tensor[i]
                         surr2 = torch.clamp(ratio, 1.0 - clip_param, 1.0 + clip_param) * adv_tensor[i]
-                        actor_loss = -torch.min(surr1, surr2).mean() - 0.01 * entropy
+                        
+                        # Increased entropy weight from 0.01 to 0.05 to break plateaus
+                        actor_loss = -torch.min(surr1, surr2).mean() - 0.05 * entropy
                         
                         # Critic Loss
                         val_pred = critic(o_t)
@@ -271,6 +278,15 @@ def train_mappo(args):
                         critic_opt.zero_grad()
                         critic_loss.backward()
                         critic_opt.step()
+                        
+                        total_actor_loss += actor_loss.item()
+                        total_critic_loss += critic_loss.item()
+                        total_entropy += entropy.item()
+            
+            # Diagnostic log (every 10 episodes to avoid clutter)
+            if episode % 10 == 0:
+                avg_ent = total_entropy / (ppo_epochs * len(obs_buffer))
+                logger.info(f"PPO Update - Entropy: {avg_ent:.4f}, Actor Loss: {total_actor_loss:.4f}")
             
             # Clear buffers
             obs_buffer, action_buffer, log_prob_buffer, reward_buffer, value_buffer, mask_buffer = [], [], [], [], [], []

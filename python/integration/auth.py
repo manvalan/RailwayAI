@@ -59,18 +59,21 @@ async def get_current_user(
     if not final_key and token:
         final_key = token
         
-    # Record activity to stay synchronized with idle manager
+    # RECORD ACTIVITY
     # EXCLUSION: Don't count background polling/monitoring as "activity" 
     # otherwise training will be killed by the dashboard just for being open.
-    ignore_paths = ["/api/v1/ai/status", "/api/v1/metrics", "/api/v1/ai/scenarios", "/api/v1/ai/backups", "/api/v1/users/me", "/api/v1/network/topology"]
-    if request.method != "GET" or request.url.path not in ignore_paths:
+    ignore_paths = ["/api/v1/ai/status", "/api/v1/metrics", "/api/v1/ai/scenarios", "/api/v1/ai/backups", "/api/v1/users/me", "/api/v1/network/topology", "/ws/monitoring"]
+    is_boring_get = request.method == "GET" and (request.url.path in ignore_paths or request.url.path.startswith("/api/v1/ai/status"))
+
+    if not is_boring_get:
         from python.integration.idle_training import idle_manager
         idle_manager.record_activity(f"API: {request.method} {request.url.path}")
 
-    # DEBUG LOGGING (Sanitized)
+    # DEBUG LOGGING (Sanitized) - Silent for background polling to reduce log noise
     if final_key:
-        prefix = final_key[:8] if len(final_key) > 8 else "too_short"
-        logger.info(f"Auth Attempt [{request.method} {request.url.path}] - Key found: {prefix}...")
+        if not is_boring_get:
+            prefix = final_key[:8] if len(final_key) > 8 else "too_short"
+            logger.info(f"Auth Attempt [{request.method} {request.url.path}] - Key found: {prefix}...")
     else:
         logger.warning(f"Auth Attempt [{request.method} {request.url.path}] - NO CREDENTIALS FOUND")
         logger.debug(f"Headers received: {dict(request.headers)}")

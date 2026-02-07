@@ -256,15 +256,16 @@ def train_mappo(args):
                         # Actor Loss
                         probs = actor(o_t)
                         
-                        # NOISE INJECTION: If the policy is collapsing (entropy near 0),
-                        # add a small uniform perturbation to restart exploration.
+                        # NOISE INJECTION: More aggressive threshold (0.5 instead of 0.1)
+                        # An entropy of 0.29 is still too "stuck" for a multi-agent network.
                         dist = torch.distributions.Categorical(probs)
                         entropy = dist.entropy().mean()
                         
-                        if entropy < 0.1:
-                            # Add 10% random noise to the raw probabilities
+                        if entropy < 0.5:
+                            # Add random noise to kick the policy out of the local minimum
                             noise = torch.ones_like(probs) / probs.size(-1)
-                            probs = 0.9 * probs + 0.1 * noise
+                            # Increase randomness: 15% noise if stuck
+                            probs = 0.85 * probs + 0.15 * noise
                             dist = torch.distributions.Categorical(probs)
                             entropy = dist.entropy().mean()
 
@@ -273,8 +274,8 @@ def train_mappo(args):
                         surr1 = ratio * adv_tensor[i]
                         surr2 = torch.clamp(ratio, 1.0 - clip_param, 1.0 + clip_param) * adv_tensor[i]
                         
-                        # Aggressive entropy weight to jump out of local minima
-                        actor_loss = -torch.min(surr1, surr2).mean() - 0.08 * entropy
+                        # High entropy weight to force variety
+                        actor_loss = -torch.min(surr1, surr2).mean() - 0.1 * entropy
                         
                         # Critic Loss
                         val_pred = critic(o_t)

@@ -173,14 +173,30 @@ def train_mappo(args):
             # (NumAgents, ObsDim)
             batch_obs_tensor = torch.FloatTensor(np.array(o_vec_list)).unsqueeze(0) # (1, NumAgents, ObsDim)
             
+            # Temperature scaling to flatten probabilities (more exploration)
+            temperature = 1.2 # > 1.0 means more curiosity
+            
             with torch.no_grad():
                 # Forward pass returns (1, NumAgents, NumActions)
-                all_probs = actor(batch_obs_tensor).squeeze(0) # (NumAgents, NumActions)
-                dist = torch.distributions.Categorical(all_probs)
+                raw_probs = actor(batch_obs_tensor).squeeze(0) # (NumAgents, NumActions)
+                
+                # Apply temperature and noise injection during SAMPLING
+                # This ensures the AI actually TRIES new things in the environment
+                scaled_probs = torch.pow(raw_probs, 1.0 / temperature)
+                scaled_probs = scaled_probs / scaled_probs.sum(dim=-1, keepdim=True)
+                
+                # Epsilon-greedy: 10% chance of pure random action for each agent
+                epsilon = 0.10
+                dist = torch.distributions.Categorical(scaled_probs)
                 batch_actions = dist.sample()
+                
+                for k in range(len(all_agent_keys)):
+                    if np.random.random() < epsilon:
+                        batch_actions[k] = torch.randint(0, scaled_probs.size(-1), (1,))
+                
                 batch_log_probs = dist.log_prob(batch_actions)
                 
-                # Centralized Critic gets the same batch of observations
+                # Centralized Critic
                 val = critic(batch_obs_tensor)
                 step_value = val.item()
 

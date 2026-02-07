@@ -162,23 +162,26 @@ class IdleTrainingManager:
             
             # Try to find the latest checkpoint to RESUME training
             checkpoint = self._find_latest_checkpoint(out_dir)
+            self.last_logs.append(f"═════════════════════════════════════════════════════════════")
+            self.last_logs.append(f"🤖 AI AGENT DEPLOYMENT | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            self.last_logs.append(f"═════════════════════════════════════════════════════════════")
+            
             if checkpoint:
                 cmd.extend(["--checkpoint", str(checkpoint)])
-                self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Resuming from checkpoint: {checkpoint.name}")
+                self.last_logs.append(f"📦 Resuming from: {checkpoint.name}")
             else:
-                self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] No checkpoint found. Starting from scratch.")
+                self.last_logs.append(f"🆕 Starting fresh training (no checkpoint found)")
 
             if self.curriculum_enabled:
-                cmd.extend(["--curriculum", "--level", str(self.curriculum_level)])
+                 cmd.extend(["--curriculum", "--level", str(self.curriculum_level)])
+                 self.last_logs.append(f"🎓 Curriculum Level: {self.curriculum_level}")
             else:
                 cmd.extend(["--scenario", scenario])
             
             if self.active_agent_ids:
                 cmd.extend(["--active_agents", self.active_agent_ids])
             
-            # Immediate feedback
-            self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Initializing training process on {Path(scenario).name}...")
-            self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Executing: {' '.join(cmd)}")
+            self.last_logs.append(f"🌍 Scenario: {Path(scenario).name}")
             
             # Start process using asyncio
             env = os.environ.copy()
@@ -191,7 +194,8 @@ class IdleTrainingManager:
                 stderr=asyncio.subprocess.STDOUT,
                 env=env
             )
-            self.last_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Process started (PID: {self.training_process.pid})")
+            self.last_logs.append(f"🚀 Process started (PID: {self.training_process.pid})")
+            self.last_logs.append(f"─────────────────────────────────────────────────────────────")
             
             # Monitoring task
             self._monitor_task = asyncio.create_task(self._monitor_process_output(scenario))

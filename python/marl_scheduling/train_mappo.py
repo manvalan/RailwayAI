@@ -304,8 +304,22 @@ def train_mappo(args):
         # Curriculum update logic
         running_reward = 0.9 * running_reward + 0.1 * episode_reward if episode > 0 else episode_reward
         
-        if episode % 1 == 0:
-            logger.info(f"Episode {episode} (L{current_level}): Reward = {episode_reward:.2f}, Conflicts = {info.get('conflicts', 0)}")
+        if episode == start_episode:
+            last_reward = episode_reward
+            last_conflicts = info.get('conflicts', 0)
+            logger.info(f"🚀 Training Session Started | Level: {current_level} | Baseline Reward: {episode_reward:.2f}")
+
+        # PULISCI FLUSSO: Only log change or every 5th episode
+        current_conflicts = info.get('conflicts', 0)
+        has_changed = (abs(episode_reward - last_reward) > 0.1) or (current_conflicts != last_conflicts)
+        
+        if has_changed:
+            change_str = "📈 Improvement!" if episode_reward > last_reward else "📉 Variance"
+            logger.info(f"✨ Episode {episode} (L{current_level}) | Reward: {episode_reward:.2f} | Conflicts: {current_conflicts} | {change_str}")
+            last_reward = episode_reward
+            last_conflicts = current_conflicts
+        elif episode % 5 == 0:
+            logger.info(f"⏳ Episode {episode} (L{current_level}) | Reward: {episode_reward:.2f} (stable) | Conflicts: {current_conflicts}")
             
         if args.curriculum and episode > 0 and episode % window_size == 0:
             new_level = CurriculumManager.determine_level(running_reward, current_level, threshold=-10.0 * current_level)

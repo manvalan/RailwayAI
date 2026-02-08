@@ -173,20 +173,26 @@ def train_mappo(args):
             # (NumAgents, ObsDim)
             batch_obs_tensor = torch.FloatTensor(np.array(o_vec_list)).unsqueeze(0) # (1, NumAgents, ObsDim)
             
-            # Temperature scaling to flatten probabilities (more exploration)
-            temperature = 1.2 # > 1.0 means more curiosity
+            # Temperature scaling - reduced from 1.2 to 1.1 to start consolidating gains
+            temperature = 1.1 
             
             with torch.no_grad():
                 # Forward pass returns (1, NumAgents, NumActions)
                 raw_probs = actor(batch_obs_tensor).squeeze(0) # (NumAgents, NumActions)
                 
                 # Apply temperature and noise injection during SAMPLING
-                # This ensures the AI actually TRIES new things in the environment
                 scaled_probs = torch.pow(raw_probs, 1.0 / temperature)
                 scaled_probs = scaled_probs / scaled_probs.sum(dim=-1, keepdim=True)
                 
-                # Epsilon-greedy: 10% chance of pure random action for each agent
-                epsilon = 0.10
+                # EPSILON DECAY: Start at 0.10 and decay to 0.05 to refine the strategy
+                # We want less chaos now that we've found the 1-conflict solution multiple times
+                epsilon_start = 0.10
+                epsilon_end = 0.05
+                decay_steps = 10000 
+                
+                # Calculate current epsilon based on global episode progression
+                epsilon = max(epsilon_end, epsilon_start - (episode / decay_steps) * (epsilon_start - epsilon_end))
+                
                 dist = torch.distributions.Categorical(scaled_probs)
                 batch_actions = dist.sample()
                 

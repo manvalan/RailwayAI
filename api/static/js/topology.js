@@ -44,6 +44,17 @@ class TopologyVisualizer {
                 const mx = e.clientX - rect.left;
                 const my = e.clientY - rect.top;
                 this.selectedNode = this.findNodeAt(mx, my);
+
+                // Force update UI for selection
+                if (this.selectedNode) {
+                    this.hoveredNode = this.selectedNode; // Treat as hovered for visual consistency
+                    this.handleHover();
+                } else {
+                    // Deselect if clicking on empty space
+                    this.hoveredNode = null;
+                    this.handleHover();
+                }
+
                 this.draw();
             }
         });
@@ -62,6 +73,9 @@ class TopologyVisualizer {
                 this.lastMouseY = e.clientY;
                 this.draw();
             } else {
+                // If a node is selected, DO NOT update hover to allow interaction with the fixed details panel
+                if (this.selectedNode) return;
+
                 const prevHover = this.hoveredNode;
                 this.hoveredNode = this.findNodeAt(mx, my);
                 if (prevHover !== this.hoveredNode) {

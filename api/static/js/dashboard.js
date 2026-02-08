@@ -564,9 +564,13 @@ async function fetchUsers() {
                 tr.innerHTML = `
                     <td style="padding: 0.75rem;">${u.username}</td>
                     <td style="padding: 0.75rem;">
-                        <span style="color: ${u.is_active ? 'var(--success)' : 'var(--accent)'};">
-                            ${u.is_active ? 'Active' : 'Inactive'}
+                        <span style="color: ${u.is_active ? 'var(--success)' : 'var(--accent)'}; font-weight: 600;">
+                            ${u.is_active ? 'Active' : 'Locked'}
                         </span>
+                        <button onclick="changeUserStatus('${u.username}', ${!u.is_active})" 
+                                style="background: rgba(255,255,255,0.05); padding: 0.2rem 0.6rem; font-size: 0.7rem; margin-left: 0.5rem; ${u.username === 'admin' ? 'display:none' : ''}">
+                            ${u.is_active ? 'Lock' : 'Unlock'}
+                        </button>
                     </td>
                     <td style="padding: 0.75rem; text-align: right;">
                         <button onclick="deleteUser('${u.username}')" 
@@ -580,6 +584,31 @@ async function fetchUsers() {
         }
     } catch (err) {
         console.error("Failed to fetch users:", err);
+    }
+}
+
+async function changeUserStatus(username, newStatus) {
+    if (!confirm(`Change status of ${username} to ${newStatus ? 'Active' : 'Locked'}?`)) return;
+
+    try {
+        const response = await fetch(`/api/v1/admin/users/${username}/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': accessToken
+            },
+            body: JSON.stringify({ is_active: newStatus })
+        });
+
+        if (response.ok) {
+            fetchUsers();
+            addLog(`User ${username} ${newStatus ? 'activated' : 'suspended'}.`, 'info');
+        } else {
+            const err = await response.json();
+            alert(`Error: ${err.detail}`);
+        }
+    } catch (err) {
+        alert("Connection failure.");
     }
 }
 

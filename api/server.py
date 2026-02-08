@@ -636,6 +636,29 @@ async def register_user(
         
     return {"message": f"User {request.username} created successfully"}
 
+class UserStatusUpdate(BaseModel):
+    is_active: bool
+
+@app.post("/api/v1/admin/users/{username}/status", tags=["Admin"])
+async def update_user_status(
+    username: str,
+    status_update: UserStatusUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Admin-only: Enable/Disable a user account."""
+    if current_user.get("privilege") != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can change user status")
+    
+    if username == "admin":
+        raise HTTPException(status_code=400, detail="Cannot disable root admin account")
+
+    success = UserService.update_user_status(username, status_update.is_active)
+    if not success:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    action = "activated" if status_update.is_active else "suspended"
+    return {"message": f"User {username} {action}"}
+
 @app.delete("/api/v1/admin/users/{username}", tags=["Admin"])
 async def delete_user(
     username: str,

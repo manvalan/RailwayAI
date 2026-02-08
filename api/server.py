@@ -42,6 +42,7 @@ from contextlib import asynccontextmanager
 from python.scheduling.conflict_resolver import ConflictResolver
 from python.integration.idle_training import idle_manager
 from python.integration.scenario_factory import factory
+from python.marl_scheduling.models import ActorNetwork
 
 
 # Configure logging
@@ -798,7 +799,17 @@ def load_model(checkpoint_path: Optional[str] = None):
             checkpoint_path = env_path
             logger.info(f"Using MODEL_PATH from environment: {checkpoint_path}")
         
-        # Priorità 2: Fallback ai percorsi predefiniti se non specificato
+        # PRIORITÀ 0: Checkpoint MAPPO in addestramento (Il nostro cervello attuale)
+        mappo_dir = Path("models/training")
+        if mappo_dir.exists():
+            checkpoints = list(mappo_dir.glob("mappo_curriculum_*.pth"))
+            if checkpoints:
+                # Prendi il più recente (quello con episodio più alto)
+                latest_ckpt = max(checkpoints, key=lambda p: int(p.name.split('ep')[-1].split('.')[0]) if 'ep' in p.name else 0)
+                logger.info(f"✨ LATEST BRAIN DETECTED: {latest_ckpt.name}. Promoting to API service.")
+                checkpoint_path = str(latest_ckpt)
+        
+        # Fallback a percorsi predefiniti se non specificato
         if not checkpoint_path:
             # Prova prima il nuovo path in api/models/
             checkpoint_path = 'api/models/scheduler_supervised_best.pth'
@@ -807,20 +818,24 @@ def load_model(checkpoint_path: Optional[str] = None):
                 checkpoint_path = 'models/scheduler_real_world.pth'
             
         logger.info(f"Loading model from {checkpoint_path}")
+        
+        # Controllo se è un checkpoint MAPPO (Actor/Critic) o un modello classico
         try:
-            # Tenta di caricare come TorchScript prima
-            model = torch.jit.load(checkpoint_path, map_location='cpu')
-            logger.info("Detected TorchScript model.")
-            # Default config for JIT models
-            model_config = {
-                'input_dim': 256, 'hidden_dim': 512, 
-                'num_trains': 50, 'num_tracks': 50, 'num_stations': 30
-            }
-        except Exception:
-            # Fallback a caricamento state_dict (checkpoint classico)
-            checkpoint = torch.load(checkpoint_path, map_location='cpu')
-            if 'model_state_dict' in checkpoint:
-                model_config = checkpoint['config']
+            checkpoint_data = torch.load(checkpoint_path, map_location='cpu')
+            if 'actor' in checkpoint_data:
+                logger.info("⚡ MAPPO Multi-Agent Model detected.")
+                # L'osservazione del nostro MARL è di 15 dimensioni (come definito in train_mappo)
+                # Position (1) + Track (1) + Velocity (1) + Occupancy (12)
+                model = ActorNetwork(obs_dim=15, num_actions=3)
+                model.load_state_dict(checkpoint_data['actor'])
+                model_config = {
+                    'type': 'mappo',
+                    'level': checkpoint_data.get('level', 2),
+                    'episode': checkpoint_data.get('episode', 0)
+                }
+            elif 'model_state_dict' in checkpoint_data:
+                # Modello Supervisionato classico
+                model_config = checkpoint_data['config']
                 model = SchedulerNetwork(
                     input_dim=model_config['input_dim'],
                     hidden_dim=model_config['hidden_dim'],
@@ -828,9 +843,16 @@ def load_model(checkpoint_path: Optional[str] = None):
                     num_tracks=model_config['num_tracks'],
                     num_stations=model_config['num_stations']
                 )
-                model.load_state_dict(checkpoint['model_state_dict'])
+                model.load_state_dict(checkpoint_data['model_state_dict'])
             else:
-                raise ValueError("Unsupported model format")
+                # TorchScript fallback (se fallisce torch.load)
+                model = torch.jit.load(checkpoint_path, map_location='cpu')
+                logger.info("Detected TorchScript model.")
+                model_config = {'type': 'jit'}
+        except Exception as e:
+            logger.warning(f"Classic load failed, trying JIT: {e}")
+            model = torch.jit.load(checkpoint_path, map_location='cpu')
+            model_config = {'type': 'jit'}
         
         model.eval()
         metrics['model_loaded_at'] = datetime.now().isoformat()
@@ -1167,61 +1189,113 @@ async def optimize_schedule(
         processed_trains = processed_trains[:max_trains]
         num_trains_to_process = len(processed_trains)
         
-        # Encode network state (simplified - could be enhanced)
-        network_state = np.zeros(80)
-        if request.tracks:
-            network_state[0] = len(request.tracks)
-        if request.stations:
-            network_state[1] = len(request.stations)
-        network_state[2] = num_trains_to_process # Use the actual number we send to model
-        
-        # Encode train states
-        train_states = np.zeros((max_trains, 8))
-        for i, train in enumerate(processed_trains):
-            train_states[i] = [
-                train.position_km / 100.0,
-                train.velocity_kmh / 200.0,
-                train.delay_minutes / 60.0,
-                train.priority / 10.0,
-                train.current_track / 20.0,
-                train.destination_station / 10.0,
-                0.0,
-                1.0 if train.is_delayed else 0.0
-            ]
-        
-        # Convert to tensors
-        network_tensor = torch.FloatTensor(network_state).unsqueeze(0)
-        train_tensor = torch.FloatTensor(train_states).unsqueeze(0)
-        
-        # Run inference
-        with torch.no_grad():
-            outputs = model(network_tensor, train_tensor)
-        
-        # Extract predictions
-        time_adjustments = outputs['time_adjustments'][0].numpy()
-        track_assignments = outputs['track_assignments'][0].numpy()
-        conflict_priorities = outputs['conflict_priorities'][0].numpy()
-        
-        # Build resolutions
-        resolutions = []
-        total_delay = 0.0
-        
-        for i in range(num_trains_to_process):
-            train = processed_trains[i]
+        # MAPPO INFERENCE Logic (If using the new MARL model)
+        if model_config.get('type') == 'mappo':
+            logger.info(f"Using MAPPO Inference for {num_trains_to_process} trains")
             
-            time_adj = float(time_adjustments[i])
-            track_probs = track_assignments[i]
-            track_idx = int(np.argmax(track_probs))
-            confidence = float(np.max(conflict_priorities[i]))
+            # Per MAPPO, dobbiamo processare ogni treno individualmente come un agente
+            # Generiamo le osservazioni esattamente come in train_mappo.py
+            all_resolutions = []
             
-            # Only include significant adjustments
-            if abs(time_adj) > 0.5 or track_idx != train.current_track:
-                resolutions.append(Resolution(
-                    train_id=train.id,
-                    time_adjustment_min=time_adj,
-                    track_assignment=track_idx,
-                    confidence=min(confidence, 1.0)
-                ))
+            # Simuliamo la finestra di 'vicinato' per l'occupancy (12 campioni)
+            # Iniziamo con un'approssimazione rapida per l'API
+            for i, train in enumerate(processed_trains):
+                # 1. Costruiamo il vettore di osservazione (15 dim)
+                norm_pos = train.position_km / 10.0
+                norm_track = train.current_track / 1000.0
+                norm_vel = train.velocity_kmh / 200.0
+                
+                # Occupancy (semplificata: se altri treni sono sullo stesso binario avanti a noi)
+                norm_occ = np.zeros(12)
+                for other in all_trains:
+                    if other.id != train.id and other.current_track == train.current_track:
+                        rel_pos = other.position_km - train.position_km
+                        if 0 < rel_pos < 5.0:
+                            idx = int(rel_pos / 0.5) # campionamento ogni 500m
+                            if idx < 12: norm_occ[idx] = 1.0
+                
+                obs_vec = np.concatenate([[norm_pos, norm_track, norm_vel], norm_occ])
+                obs_tensor = torch.FloatTensor(obs_vec).unsqueeze(0).unsqueeze(0) # (1, 1, 15)
+                
+                with torch.no_grad():
+                    probs = model(obs_tensor).squeeze() # (3,)
+                
+                action = int(torch.argmax(probs))
+                confidence = float(torch.max(probs))
+                
+                # Traduciamo l'azione MARL in tempo (0=Niente, 1=Wait 2m, 2=Wait 5m)
+                # NOTA: Questa è la mappatura definita nell'environment Gym
+                time_adj = 0.0
+                if action == 1: time_adj = 2.0
+                elif action == 2: time_adj = 5.0
+                
+                if time_adj > 0:
+                    all_resolutions.append(Resolution(
+                        train_id=train.id,
+                        time_adjustment_min=time_adj,
+                        track_assignment=train.current_track,
+                        confidence=confidence
+                    ))
+            
+            resolutions = all_resolutions
+            
+        else:
+            # CLASSIC INFERENCE Logic (Supervised)
+            # Encode network state (simplified - could be enhanced)
+            network_state = np.zeros(80)
+            if request.tracks:
+                network_state[0] = len(request.tracks)
+            if request.stations:
+                network_state[1] = len(request.stations)
+            network_state[2] = num_trains_to_process # Use the actual number we send to model
+            
+            # Encode train states
+            train_states = np.zeros((max_trains, 8))
+            for i, train in enumerate(processed_trains):
+                train_states[i] = [
+                    train.position_km / 100.0,
+                    train.velocity_kmh / 200.0,
+                    train.delay_minutes / 60.0,
+                    train.priority / 10.0,
+                    train.current_track / 20.0,
+                    train.destination_station / 10.0,
+                    0.0,
+                    1.0 if train.is_delayed else 0.0
+                ]
+            
+            # Convert to tensors
+            network_tensor = torch.FloatTensor(network_state).unsqueeze(0)
+            train_tensor = torch.FloatTensor(train_states).unsqueeze(0)
+            
+            # Run inference
+            with torch.no_grad():
+                outputs = model(network_tensor, train_tensor)
+            
+            # Extract predictions
+            time_adjustments = outputs['time_adjustments'][0].numpy()
+            track_assignments = outputs['track_assignments'][0].numpy()
+            conflict_priorities = outputs['conflict_priorities'][0].numpy()
+            
+            # Build resolutions
+            resolutions = []
+            total_delay = 0.0
+            
+            for i in range(num_trains_to_process):
+                train = processed_trains[i]
+                
+                time_adj = float(time_adjustments[i])
+                track_probs = track_assignments[i]
+                track_idx = int(np.argmax(track_probs))
+                confidence = float(np.max(conflict_priorities[i]))
+                
+                # Only include significant adjustments
+                if abs(time_adj) > 0.5 or track_idx != train.current_track:
+                    resolutions.append(Resolution(
+                        train_id=train.id,
+                        time_adjustment_min=time_adj,
+                        track_assignment=track_idx,
+                        confidence=min(confidence, 1.0)
+                    ))
             
             # Calculate adjusted delay
             adjusted_delay = train.delay_minutes + time_adj

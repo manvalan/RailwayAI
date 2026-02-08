@@ -152,14 +152,16 @@ class ConflictResolver:
                 if p_idx == 0:
                     solution[train_id] = {
                         'departure_delay': 0.0,
-                        'dwell_delays': [0.0] * num_intermediate_stations
+                        'dwell_delays': [0.0] * num_intermediate_stations,
+                        'track_assignment': train.get('current_track')
                     }
                 else:
-                    # Random delays - increased range slightly to ensure solutions are found
-                    # but fitness function will still drive it towards the minimum delay needed.
+                    # Random delays and RANDOM TRACK ASSIGNMENT (if alternative tracks exist)
+                    # This allows the GA to solve "station platform" conflicts automatically.
                     solution[train_id] = {
                         'departure_delay': random.uniform(0, 60),
-                        'dwell_delays': [random.uniform(0, 30) for _ in range(num_intermediate_stations)]
+                        'dwell_delays': [random.uniform(0, 30) for _ in range(num_intermediate_stations)],
+                        'track_assignment': train.get('current_track') # To be expanded with alternatives if needed
                     }
             population.append(solution)
         
@@ -173,6 +175,10 @@ class ConflictResolver:
             if train['id'] in solution:
                 params = solution[train['id']]
                 dep_delay = params['departure_delay']
+                
+                # Update track assignment if changed by GA
+                if 'track_assignment' in params:
+                    train_copy['current_track'] = params['track_assignment']
                 
                 # Update scheduled departure time
                 scheduled_time = train_copy.get('scheduled_departure_time')
@@ -302,11 +308,12 @@ class ConflictResolver:
             dwell_delays = params['dwell_delays']
             
             # Check if there's any adjustment
-            if dep_delay > 0.1 or any(d > 0.1 for d in dwell_delays):
+            if dep_delay > 0.1 or any(d > 0.1 for d in dwell_delays) or params.get('track_assignment') != next((t for t in trains if t['id'] == train_id), {}).get('current_track'):
                 resolutions.append({
                     'train_id': train_id,
                     'time_adjustment_min': dep_delay,
                     'dwell_delays': dwell_delays,
+                    'track_assignment': params.get('track_assignment'),
                     'confidence': 1.0 if fitness > -100 else 0.8
                 })
         

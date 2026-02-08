@@ -800,14 +800,24 @@ def load_model(checkpoint_path: Optional[str] = None):
             logger.info(f"Using MODEL_PATH from environment: {checkpoint_path}")
         
         # PRIORITÀ 0: Checkpoint MAPPO in addestramento (Il nostro cervello attuale)
-        mappo_dir = Path("models/training")
-        if mappo_dir.exists():
-            checkpoints = list(mappo_dir.glob("mappo_curriculum_*.pth"))
-            if checkpoints:
-                # Prendi il più recente (quello con episodio più alto)
-                latest_ckpt = max(checkpoints, key=lambda p: int(p.name.split('ep')[-1].split('.')[0]) if 'ep' in p.name else 0)
-                logger.info(f"✨ LATEST BRAIN DETECTED: {latest_ckpt.name}. Promoting to API service.")
-                checkpoint_path = str(latest_ckpt)
+        search_dirs = [Path("models/training"), Path("python/marl_scheduling/checkpoints")]
+        latest_ckpt = None
+        
+        for d in search_dirs:
+            if d.exists():
+                found = list(d.glob("*.pth")) # Cerca qualsiasi .pth, non solo mappo_curriculum
+                if found:
+                    # Filtra quelli che sembrano checkpoint validi
+                    valid = [p for p in found if 'ep' in p.name or 'checkpoint' in p.name]
+                    if valid:
+                        candidate = max(valid, key=os.path.getmtime) # Usa mtime per sicurezza
+                        if latest_ckpt is None or candidate.stat().st_mtime > latest_ckpt.stat().st_mtime:
+                            latest_ckpt = candidate
+
+        if latest_ckpt:
+            logger.info(f"✨ LATEST BRAIN DETECTED: {latest_ckpt.name} in {latest_ckpt.parent}. Promoting to API service.")
+            checkpoint_path = str(latest_ckpt)
+            os.environ["MODEL_PATH"] = checkpoint_path # Esporta per uso globale
         
         # Fallback a percorsi predefiniti se non specificato
         if not checkpoint_path:
@@ -1199,6 +1209,16 @@ async def optimize_schedule(
         total_delay = 0.0
         
         if model_config.get('type') == 'mappo' and processed_trains:
+            active_model_name = os.path.basename(os.getenv("MODEL_PATH", "UNKNOWN"))
+            # Se abbiamo caricato un checkpoint dinamico, proviamo a recuperarne il nome
+            try:
+                # Questo è un hack perché non stiamo salvando il modello caricato in una variabile globale con il nome
+                # Ma possiamo dedurlo se abbiamo appena fatto il load
+                pass 
+            except:
+                pass
+
+            logger.info(f"🧠 AI Inference using model: {active_model_name}")
             logger.info(f"AI (MAPPO) Inference for {num_trains_to_process} trains")
             
             for i, train in enumerate(processed_trains):

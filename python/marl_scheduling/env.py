@@ -63,19 +63,19 @@ class RailwayGymEnv(gym.Env):
                 self.graph.add_edge(s_ids[0], s_ids[1], id=t_id, length=t['length_km'], 
                                    capacity=t['capacity'], is_single=t.get('is_single_track', True))
         
-        # Observation space only contains agents we are training
+        # Observation space: 15 dimensions (pos, track, vel, 12 neighbors)
         self.observation_space = spaces.Dict({
             agent_id: spaces.Dict({
                 "position": spaces.Box(low=0, high=1000, shape=(1,), dtype=np.float32),
-                "current_track": spaces.Discrete(10000), # Expanded range
+                "current_track": spaces.Discrete(10000), 
                 "velocity": spaces.Box(low=0, high=300, shape=(1,), dtype=np.float32),
-                "neighbor_occupancy": spaces.Box(low=0, high=10, shape=(5,), dtype=np.float32),
+                "neighbor_occupancy": spaces.Box(low=0, high=10, shape=(12,), dtype=np.float32),
             }) for agent_id in self.agent_ids
         })
         
-        # Action Space: Discrete(3) only for active agents
+        # Action Space: Discrete(4) (0: Normal, 1: Slow, 2: Wait, 3: Fast)
         self.action_space = spaces.Dict({
-            agent_id: spaces.Discrete(3) for agent_id in self.agent_ids
+            agent_id: spaces.Discrete(4) for agent_id in self.agent_ids
         })
         
         self.current_step = 0
@@ -130,9 +130,27 @@ class RailwayGymEnv(gym.Env):
     def step(self, actions: Dict[str, int]):
         if HAS_CPP:
             cpp_actions = {}
-            # Active agents use NN actions
             for aid_str, act in actions.items():
-                cpp_actions[int(aid_str)] = act
+                tid = int(aid_str)
+                # Find the train to modulate its velocity
+                train_ref = next((t for t in self.trains if t['id'] == tid), None)
+                
+                if act == 0: # Normal
+                    cpp_actions[tid] = 0
+                    if train_ref: train_ref['velocity_kmh'] = 100.0
+                elif act == 1: # Slow
+                    cpp_actions[tid] = 0 # Still moving
+                    if train_ref: train_ref['velocity_kmh'] = 40.0
+                elif act == 2: # Wait
+                    cpp_actions[tid] = 1 # Stop (C++ Action 1)
+                    if train_ref: train_ref['velocity_kmh'] = 0.0
+                elif act == 3: # Fast
+                    cpp_actions[tid] = 0
+                    if train_ref: train_ref['velocity_kmh'] = 140.0
+                
+                # Sync velocity to C++
+                if train_ref:
+                    self.cpp_scheduler.update_train_state(tid, train_ref['position_on_track'], train_ref['velocity_kmh'], train_ref.get('is_delayed', False))
             
             # Background trains (missing from actions) use default logic (Action 0 = Speed)
             for t in self.trains:
@@ -216,29 +234,40 @@ class RailwayGymEnv(gym.Env):
                 continue # Only generate observations for active agents
                 
             curr_track_id = train.get('current_track', 1)
-            neighbor_occ = [0.0] * 5
-            neighbor_occ[0] = track_occupancy.get(curr_track_id, 1) - 1 
+            neighbor_occ = [0.0] * 12
             
+            # Slot 0: Current track occupancy (excluding self)
+            neighbor_occ[0] = max(0, track_occupancy.get(curr_track_id, 0) - 1)
+            
+            # Slots 1-11: Occupancy on connected tracks (BFS search up to depth 2)
             try:
+                visited_tracks = {curr_track_id}
+                tracked_stations = set()
+                
                 curr_track_data = self.raw_tracks.get(curr_track_id)
                 if curr_track_data:
-                    s_ids = curr_track_data['station_ids']
-                    idx = 1
-                    for s_id in s_ids:
-                        for _, _, edge_data in self.graph.edges(s_id, data=True):
-                            other_track_id = edge_data['id']
-                            if other_track_id != curr_track_id:
-                                neighbor_occ[idx] = track_occupancy.get(other_track_id, 0)
-                                idx += 1
-                                if idx >= 5: break
-                        if idx >= 5: break
+                    tracked_stations.update(curr_track_data['station_ids'])
+                
+                idx = 1
+                for s_id in tracked_stations:
+                    if idx >= 12: break
+                    for _, _, edge_data in self.graph.edges(s_id, data=True):
+                        other_track_id = edge_data['id']
+                        if other_track_id not in visited_tracks:
+                            neighbor_occ[idx] = track_occupancy.get(other_track_id, 0)
+                            visited_tracks.add(other_track_id)
+                            idx += 1
+                            if idx >= 12: break
+                            
+                # Fill remaining by searching neighbors of neighbors if possible
+                # (Omitted complex BFS for speed, just zero padding is fine)
             except Exception:
                 pass
                 
             obs[agent_id] = {
-                "position": np.array([train.get('position_on_track', 0.0)], dtype=np.float32),
+                "position": np.array([train.get('position_on_track', 0.0) / 10.0], dtype=np.float32),
                 "current_track": curr_track_id, 
-                "velocity": np.array([train.get('velocity_kmh', 120.0)], dtype=np.float32),
+                "velocity": np.array([train.get('velocity_kmh', 120.0) / 200.0], dtype=np.float32),
                 "neighbor_occupancy": np.array(neighbor_occ, dtype=np.float32)
             }
         return obs

@@ -164,17 +164,25 @@ class IdleTrainingManager:
                 "--out_dir", str(out_dir)
             ]
             
-            # Try to find the latest checkpoint to RESUME training
+            # Try to find the latest checkpoint up to date (MARL)
             checkpoint = self._find_latest_checkpoint(out_dir)
+            
+            # Fallback a modello Imitation se siamo all'inizio (o ricominciamo)
+            if not checkpoint:
+                imitation_path = Path("models/imitation/best_imitation_model.pth")
+                if imitation_path.exists():
+                    checkpoint = imitation_path
+                    self.last_logs.append(f"🎓 No MARL checkpoint found. Using IMITATION baseline as starting point.")
+            
             self.last_logs.append(f"═════════════════════════════════════════════════════════════")
             self.last_logs.append(f"🤖 AI AGENT DEPLOYMENT | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             self.last_logs.append(f"═════════════════════════════════════════════════════════════")
             
             if checkpoint:
                 cmd.extend(["--checkpoint", str(checkpoint)])
-                self.last_logs.append(f"📦 Resuming from: {checkpoint.name}")
+                self.last_logs.append(f"📦 Starting with: {checkpoint.name}")
             else:
-                self.last_logs.append(f"🆕 Starting fresh training (no checkpoint found)")
+                self.last_logs.append(f"🆕 Starting fresh training (no checkpoint or baseline found)")
 
             if self.curriculum_enabled:
                  cmd.extend(["--curriculum", "--level", str(self.curriculum_level)])

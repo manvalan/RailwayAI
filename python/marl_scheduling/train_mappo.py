@@ -48,10 +48,17 @@ def train_mappo(args):
     ckpt = None
     
     # 1. Peek at checkpoint to recover level/episode if available
+    imitation_mode = False
     if args.checkpoint and os.path.exists(args.checkpoint):
         try:
             logger.info(f"Peeking at checkpoint {args.checkpoint}...")
             ckpt = torch.load(args.checkpoint, map_location='cpu')
+            
+            # Detect if it's an imitation model (has model_state_dict but no actor/critic)
+            if 'model_state_dict' in ckpt and 'actor' not in ckpt:
+                logger.info("🎓 IMITATION MODEL DETECTED. Using as behavioral baseline.")
+                imitation_mode = True
+                
             if 'level' in ckpt and args.curriculum:
                 # Force upgrade if the checkpoint level is lower than the requested level
                 resumed_level = ckpt['level']
@@ -100,19 +107,24 @@ def train_mappo(args):
         return
 
     logger.info(f"Initialized environment with {len(agent_ids)} active agents.")
-    obs_dim = 8  # 1 (pos) + 1 (track) + 1 (vel) + 5 (neighbors)
+    obs_dim = 15  # 1 (pos) + 1 (track) + 1 (vel) + 12 (occupancy)
+    num_actions = 4 # Wait, Slow, Normal, Fast
     
     # 2. Universal Policy (Shared Weights)
-    actor = ActorNetwork(obs_dim)
+    actor = ActorNetwork(obs_dim, num_actions=num_actions)
     critic = CriticNetwork(obs_dim)
     
     # 3. Load weights if checkpoint exists
     if ckpt:
         try:
             logger.info("Loading network weights from checkpoint...")
-            actor.load_state_dict(ckpt['actor'])
-            critic.load_state_dict(ckpt['critic'])
-            logger.info("✅ Resumed weights successfully.")
+            if imitation_mode:
+                actor.load_state_dict(ckpt['model_state_dict'])
+                logger.info("✅ Resumed actor from IMITATION baseline.")
+            else:
+                actor.load_state_dict(ckpt['actor'])
+                critic.load_state_dict(ckpt['critic'])
+                logger.info("✅ Resumed PPO weights successfully.")
         except Exception as e:
             logger.warning(f"⚠️ Could not load weights due to architectural mismatch: {e}")
             logger.warning("Starting from scratch with fresh weights instead.")

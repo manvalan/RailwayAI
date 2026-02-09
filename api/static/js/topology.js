@@ -119,22 +119,54 @@ class TopologyVisualizer {
     }
 
     resetView() {
-        if (!this.data || this.data.nodes.length === 0) return;
+        if (!this.data || !this.data.nodes || this.data.nodes.length === 0) return;
 
         this.resize();
 
-        const padding = 50;
-        const viewWidth = this.canvas.width - padding * 2;
-        const viewHeight = this.canvas.height - padding * 2;
+        // Calculate actual bounding box in local coords at scale 1, offset 0
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        this.data.nodes.forEach(n => {
+            const pos = this.geoToLocalRaw(n.pos[0], n.pos[1]);
+            minX = Math.min(minX, pos.x);
+            maxX = Math.max(maxX, pos.x);
+            minY = Math.min(minY, pos.y);
+            maxY = Math.max(maxY, pos.y);
+        });
 
-        // Calculate the bounding box in "unscaled local coordinates" (offset=0, scale=1)
-        // But geoToLocal depends on scale, so let's simplify.
-        // We'll just center and pick a reasonable scale.
-        this.scale = Math.min(this.canvas.width, this.canvas.height) / 1200;
-        this.offsetX = this.canvas.width / 2;
-        this.offsetY = this.canvas.height / 2;
+        const contentWidth = maxX - minX || 1;
+        const contentHeight = maxY - minY || 1;
+
+        const padding = 60;
+        const availableW = this.canvas.width - padding * 2;
+        const availableH = this.canvas.height - padding * 2;
+
+        this.scale = Math.min(availableW / contentWidth, availableH / contentHeight);
+
+        // Center the content
+        this.offsetX = (this.canvas.width / 2) - ((minX + maxX) / 2) * this.scale;
+        this.offsetY = (this.canvas.height / 2) - ((minY + maxY) / 2) * this.scale;
 
         this.draw();
+    }
+
+    geoToLocalRaw(lat, lon) {
+        const { minLat, maxLat, minLon, maxLon } = this.bounds;
+        const rangeLat = maxLat - minLat || 0.0001;
+        const rangeLon = maxLon - minLon || 0.0001;
+
+        // Spherical Mercator-ish projection for local area
+        // lon -> x, lat -> y (inverted because Y grows down in Canvas)
+        const x = (lon - minLon) / rangeLon * 1000;
+        const y = -(lat - minLat) / rangeLat * (1000 / Math.cos(lat * Math.PI / 180));
+        return { x, y };
+    }
+
+    geoToLocal(lat, lon) {
+        const raw = this.geoToLocalRaw(lat, lon);
+        return {
+            x: raw.x * this.scale + this.offsetX,
+            y: raw.y * this.scale + this.offsetY
+        };
     }
 
     resize() {

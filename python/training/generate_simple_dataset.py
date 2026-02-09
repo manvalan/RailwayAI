@@ -35,25 +35,25 @@ def generate_simple_dataset(num_examples=2000, output_dir="data/expert_demonstra
     actions = []
     
     for _ in tqdm(range(num_examples), desc="Generating examples"):
-        # Random state
-        position = np.random.rand() * 100  # 0-100 km
-        velocity = np.random.rand() * 200  # 0-200 km/h
-        track_occ = np.random.rand()  # 0-1 occupancy
-        time_to_conflict = np.random.rand() * 60  # 0-60 min
+        # Random state (15 features: pos, track, vel, 12 occ)
+        position = np.random.rand() * 10.0
+        track_id = np.random.rand() * 100.0
+        velocity = np.random.rand() * 200.0
+        occupancy = np.random.rand(12)
         
-        state = np.array([
-            position / 100.0,
-            velocity / 200.0,
-            track_occ,
-            time_to_conflict / 60.0
-        ], dtype=np.float32)
+        state = np.concatenate([
+            [position / 10.0, track_id / 1000.0, velocity / 200.0],
+            occupancy
+        ]).astype(np.float32)
         
-        # Simple heuristic for action
-        if time_to_conflict < 5 or track_occ > 0.8:
+        # Simple heuristic for action (based on occupancy bins)
+        # If nearby occupancy is high, wait/slow
+        near_occ = np.mean(occupancy[:4])
+        if near_occ > 0.7:
             action = 0  # Wait
-        elif time_to_conflict < 15:
+        elif near_occ > 0.4:
             action = 1  # Slow
-        elif velocity < 100:
+        elif velocity < 80:
             action = 3  # Fast
         else:
             action = 2  # Normal

@@ -62,7 +62,7 @@ def populate_real_trains(scenario_path, output_path):
             "number": t_data["number"],
             "name": f"Regionale {t_data['number']}",
             "origin_station_id": origin_id,
-            "destination_station_id": s_map[dest_name],
+            "destination_station": s_map[dest_name],
             "scheduled_departure_time": t_data["stops"][0][1],
             "current_track": starting_track,
             "position_km": 0.0,

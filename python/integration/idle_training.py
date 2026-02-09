@@ -20,9 +20,9 @@ class IdleTrainingManager:
         self.enabled = True
         self.training_process: Optional[subprocess.Popen] = None
         self.check_interval = 30
-        self.scenario_path: Optional[str] = "scenarios/fdc_scenario.json"
-        self.episodes_per_run = 100
-        self.curriculum_enabled = True  # New: Curriculum mode
+        self.scenario_path: Optional[str] = "scenarios/siena_empoli_realtime.json"
+        self.episodes_per_run = 1000
+        self.curriculum_enabled = False  # Focus on the real-world scenario
         self.curriculum_level = 2
         self.active_agent_ids: Optional[str] = None # Comma-separated IDs for selective training
         self._task = None

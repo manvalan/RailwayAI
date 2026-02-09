@@ -857,24 +857,33 @@ def load_model(checkpoint_path: Optional[str] = None):
             checkpoint_path = env_path
             logger.info(f"Using MODEL_PATH from environment: {checkpoint_path}")
         
-        # PRIORITÀ 0: Checkpoint MAPPO in addestramento (Il nostro cervello attuale)
-        search_dirs = [Path("models/training"), Path("python/marl_scheduling/checkpoints")]
-        latest_ckpt = None
-        
-        for d in search_dirs:
-            if d.exists():
-                found = list(d.glob("*.pth")) # Cerca qualsiasi .pth, non solo mappo_curriculum
-                if found:
-                    # Filtra quelli che sembrano checkpoint validi
-                    valid = [p for p in found if 'ep' in p.name or 'checkpoint' in p.name]
-                    if valid:
-                        candidate = max(valid, key=os.path.getmtime) # Usa mtime per sicurezza
-                        if latest_ckpt is None or candidate.stat().st_mtime > latest_ckpt.stat().st_mtime:
-                            latest_ckpt = candidate
+        # PRIORITÀ 0: Modello manuale preferito (current_model.pth)
+        # Se l'utente ha salvato un modello specifico in current_model.pth, usiamo quello
+        manual_path = Path("models/training/current_model.pth")
+        if manual_path.exists():
+            logger.info(f"💎 MANUAL BRAIN DETECTED: {manual_path.name}. Using as priority.")
+            checkpoint_path = str(manual_path)
+        else:
+            # PRIORITÀ 1: Checkpoint MAPPO in addestramento (Il nostro cervello attuale)
+            search_dirs = [Path("models/training"), Path("python/marl_scheduling/checkpoints")]
+            latest_ckpt = None
+            
+            for d in search_dirs:
+                if d.exists():
+                    found = list(d.glob("*.pth"))
+                    if found:
+                        # Filtra quelli che sembrano checkpoint validi, escludendo il current se già cercato
+                        valid = [p for p in found if ('ep' in p.name or 'checkpoint' in p.name) and p.name != "current_model.pth"]
+                        if valid:
+                            candidate = max(valid, key=os.path.getmtime)
+                            if latest_ckpt is None or candidate.stat().st_mtime > latest_ckpt.stat().st_mtime:
+                                latest_ckpt = candidate
 
-        if latest_ckpt:
-            logger.info(f"✨ LATEST BRAIN DETECTED: {latest_ckpt.name} in {latest_ckpt.parent}. Promoting to API service.")
-            checkpoint_path = str(latest_ckpt)
+            if latest_ckpt:
+                logger.info(f"✨ LATEST CHECKPOINT DETECTED: {latest_ckpt.name} in {latest_ckpt.parent}. Promoting to API service.")
+                checkpoint_path = str(latest_ckpt)
+        
+        if checkpoint_path:
             os.environ["MODEL_PATH"] = checkpoint_path # Esporta per uso globale
         
         # Fallback a percorsi predefiniti se non specificato
@@ -890,16 +899,32 @@ def load_model(checkpoint_path: Optional[str] = None):
         # Controllo se è un checkpoint MAPPO (Actor/Critic) o un modello classico
         try:
             checkpoint_data = torch.load(checkpoint_path, map_location='cpu')
-            if 'actor' in checkpoint_data:
-                logger.info("⚡ MAPPO Multi-Agent Model detected.")
-                # L'osservazione del nostro MARL è di 15 dimensioni (come definito in train_mappo)
-                # Position (1) + Track (1) + Velocity (1) + Occupancy (12)
-                model = ActorNetwork(obs_dim=15, num_actions=3)
-                model.load_state_dict(checkpoint_data['actor'])
+            if 'actor' in checkpoint_data or 'model_state_dict' in checkpoint_data:
+                logger.info("⚡ Neural Model detected.")
+                
+                # Prova a dedurre le dimensioni dal checkpoint
+                obs_dim = checkpoint_data.get('obs_dim', 15)
+                
+                # Determina num_actions dai pesi se necessario
+                state_dict = checkpoint_data.get('actor', checkpoint_data.get('model_state_dict'))
+                fc_out_key = 'fc_out.weight' if 'fc_out.weight' in state_dict else None
+                if not fc_out_key:
+                    # Cerca l'ultimo layer lineare
+                    linears = [k for k in state_dict.keys() if 'weight' in k and state_dict[k].dim() == 2]
+                    if linears: fc_out_key = linears[-1]
+                
+                num_actions = state_dict[fc_out_key].shape[0] if fc_out_key else 3
+                
+                logger.info(f"📐 Model Dimensions: obs_dim={obs_dim}, num_actions={num_actions}")
+                
+                model = ActorNetwork(obs_dim=obs_dim, num_actions=num_actions)
+                model.load_state_dict(state_dict)
+                
                 model_config = {
-                    'type': 'mappo',
-                    'level': checkpoint_data.get('level', 2),
-                    'episode': checkpoint_data.get('episode', 0)
+                    'type': 'mappo' if 'actor' in checkpoint_data else 'imitation',
+                    'level': checkpoint_data.get('level', 1),
+                    'obs_dim': obs_dim,
+                    'num_actions': num_actions
                 }
             elif 'model_state_dict' in checkpoint_data:
                 # Modello Supervisionato classico
@@ -1266,7 +1291,7 @@ async def optimize_schedule(
         conflicts_resolved = 0
         total_delay = 0.0
         
-        if (model_config or {}).get('type') == 'mappo' and processed_trains:
+        if (model_config or {}).get('type') in ['mappo', 'imitation'] and processed_trains:
             active_model_name = os.path.basename(os.getenv("MODEL_PATH", "UNKNOWN"))
             # Se abbiamo caricato un checkpoint dinamico, proviamo a recuperarne il nome
             try:
@@ -1305,6 +1330,7 @@ async def optimize_schedule(
                 time_adj = 0.0
                 if action == 1: time_adj = 2.0
                 elif action == 2: time_adj = 5.0
+                elif action == 3: time_adj = 8.0 # Long wait for quick resolution
                 
                 if time_adj > 0 or confidence > 0.4:
                     resolutions.append(Resolution(

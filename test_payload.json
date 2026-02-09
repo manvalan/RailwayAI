@@ -1,0 +1,1531 @@
+{
+    "active_agent_ids": [
+        0,
+        27,
+        29,
+        25,
+        2,
+        10,
+        3,
+        18,
+        12,
+        9,
+        16,
+        28,
+        24,
+        13,
+        7,
+        5,
+        6,
+        17,
+        15,
+        1,
+        21,
+        23,
+        20,
+        26,
+        4,
+        22,
+        14,
+        8,
+        19,
+        11
+    ],
+    "temporal_obstacles": [
+        {
+            "track_id": 12,
+            "start_minute": 302,
+            "end_minute": 304,
+            "reason": "Traffico: S10 10202"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 310,
+            "end_minute": 313,
+            "reason": "Traffico: S12 12002"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 319,
+            "end_minute": 322,
+            "reason": "Merged Traffic"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 362,
+            "end_minute": 364,
+            "reason": "Traffico: S10 10204"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 373,
+            "end_minute": 375,
+            "reason": "Traffico: S12 12004"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 405,
+            "end_minute": 407,
+            "reason": "Traffico: S12 12001"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 417,
+            "end_minute": 420,
+            "reason": "Traffico: S11 11004"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 426,
+            "end_minute": 429,
+            "reason": "Merged Traffic"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 433,
+            "end_minute": 436,
+            "reason": "Traffico: S12 12006"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 447,
+            "end_minute": 449,
+            "reason": "Traffico: S10 10203"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 463,
+            "end_minute": 466,
+            "reason": "Merged Traffic"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 474,
+            "end_minute": 476,
+            "reason": "Traffico: S10 10201"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 486,
+            "end_minute": 488,
+            "reason": "Traffico: S12 12003"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 492,
+            "end_minute": 494,
+            "reason": "Traffico: S11 11006"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 496,
+            "end_minute": 498,
+            "reason": "Traffico: S12 12008"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 511,
+            "end_minute": 514,
+            "reason": "Traffico: S10 10205"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 520,
+            "end_minute": 522,
+            "reason": "Traffico: S10 10208"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 538,
+            "end_minute": 540,
+            "reason": "Traffico: S12 12005"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 546,
+            "end_minute": 549,
+            "reason": "Merged Traffic"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 561,
+            "end_minute": 563,
+            "reason": "Traffico: S12 12010"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 564,
+            "end_minute": 566,
+            "reason": "Traffico: S11 11003"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 590,
+            "end_minute": 592,
+            "reason": "Traffico: S11 11008"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 595,
+            "end_minute": 597,
+            "reason": "Traffico: S10 10210"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 598,
+            "end_minute": 600,
+            "reason": "Traffico: S12 12007"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 601,
+            "end_minute": 604,
+            "reason": "Traffico: S10 10207"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 613,
+            "end_minute": 615,
+            "reason": "Traffico: S12 12012"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 645,
+            "end_minute": 648,
+            "reason": "Traffico: S10 10212"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 655,
+            "end_minute": 660,
+            "reason": "Merged Traffic"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 662,
+            "end_minute": 665,
+            "reason": "Traffico: S12 12014"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 666,
+            "end_minute": 668,
+            "reason": "Traffico: S10 10008"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 672,
+            "end_minute": 675,
+            "reason": "Traffico: S10 10209"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 682,
+            "end_minute": 684,
+            "reason": "Traffico: S11 11010"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 698,
+            "end_minute": 700,
+            "reason": "Traffico: S10 10214"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 706,
+            "end_minute": 709,
+            "reason": "Traffico: S11 11005"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 721,
+            "end_minute": 724,
+            "reason": "Traffico: S12 12011"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 732,
+            "end_minute": 734,
+            "reason": "Traffico: S10 10211"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 742,
+            "end_minute": 745,
+            "reason": "Traffico: S12 12016"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 765,
+            "end_minute": 767,
+            "reason": "Traffico: S11 11007"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 773,
+            "end_minute": 776,
+            "reason": "Traffico: S10 10216"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 777,
+            "end_minute": 779,
+            "reason": "Traffico: S11 11012"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 783,
+            "end_minute": 785,
+            "reason": "Traffico: S10 10007"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 791,
+            "end_minute": 793,
+            "reason": "Traffico: S12 12013"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 794,
+            "end_minute": 796,
+            "reason": "Traffico: S10 10010"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 799,
+            "end_minute": 801,
+            "reason": "Traffico: S12 12018"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 804,
+            "end_minute": 806,
+            "reason": "Traffico: S10 10213"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 822,
+            "end_minute": 824,
+            "reason": "Traffico: S10 10218"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 834,
+            "end_minute": 837,
+            "reason": "Traffico: S10 10215"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 838,
+            "end_minute": 841,
+            "reason": "Traffico: S12 12015"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 853,
+            "end_minute": 856,
+            "reason": "Traffico: S12 12020"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 870,
+            "end_minute": 872,
+            "reason": "Traffico: S11 11014"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 875,
+            "end_minute": 877,
+            "reason": "Traffico: S10 10220"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 879,
+            "end_minute": 881,
+            "reason": "Traffico: S11 11009"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 906,
+            "end_minute": 909,
+            "reason": "Merged Traffic"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 912,
+            "end_minute": 914,
+            "reason": "Traffico: S12 12017"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 918,
+            "end_minute": 921,
+            "reason": "Traffico: S12 12022"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 927,
+            "end_minute": 929,
+            "reason": "Traffico: S11 11011"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 933,
+            "end_minute": 936,
+            "reason": "Traffico: S10 10217"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 943,
+            "end_minute": 945,
+            "reason": "Traffico: S11 11016"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 949,
+            "end_minute": 952,
+            "reason": "Traffico: S10 10219"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 958,
+            "end_minute": 960,
+            "reason": "Traffico: S10 10222"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 968,
+            "end_minute": 970,
+            "reason": "Traffico: S12 12019"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 971,
+            "end_minute": 974,
+            "reason": "Traffico: S12 12024"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1000,
+            "end_minute": 1002,
+            "reason": "Traffico: S10 10224"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1020,
+            "end_minute": 1022,
+            "reason": "Traffico: S12 12021"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1025,
+            "end_minute": 1028,
+            "reason": "Merged Traffic"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1033,
+            "end_minute": 1035,
+            "reason": "Traffico: S12 12026"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1041,
+            "end_minute": 1043,
+            "reason": "Traffico: S10 10221"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1050,
+            "end_minute": 1053,
+            "reason": "Merged Traffic"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1062,
+            "end_minute": 1064,
+            "reason": "Traffico: S11 11018"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1077,
+            "end_minute": 1081,
+            "reason": "Merged Traffic"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1087,
+            "end_minute": 1089,
+            "reason": "Traffico: S11 11015"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1094,
+            "end_minute": 1097,
+            "reason": "Traffico: S12 12028"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1133,
+            "end_minute": 1135,
+            "reason": "Traffico: S12 12025"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1136,
+            "end_minute": 1140,
+            "reason": "Merged Traffic"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1158,
+            "end_minute": 1160,
+            "reason": "Traffico: S10 10016"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1165,
+            "end_minute": 1167,
+            "reason": "Traffico: S12 12030"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1200,
+            "end_minute": 1203,
+            "reason": "Traffico: S12 12027"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1234,
+            "end_minute": 1236,
+            "reason": "Traffico: S11 11017"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1264,
+            "end_minute": 1267,
+            "reason": "Traffico: S12 12029"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1273,
+            "end_minute": 1275,
+            "reason": "Traffico: S10 10015"
+        },
+        {
+            "track_id": 12,
+            "start_minute": 1279,
+            "end_minute": 1282,
+            "reason": "Traffico: S11 11019"
+        }
+    ],
+    "tracks": [
+        {
+            "id": 0,
+            "capacity": 2,
+            "length_km": 20,
+            "station_ids": [
+                32,
+                34
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 1,
+            "capacity": 2,
+            "length_km": 24,
+            "station_ids": [
+                33,
+                75
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 2,
+            "capacity": 2,
+            "length_km": 26,
+            "station_ids": [
+                33,
+                34
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 100
+        },
+        {
+            "id": 3,
+            "capacity": 2,
+            "length_km": 10,
+            "station_ids": [
+                34,
+                35
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 4,
+            "capacity": 2,
+            "length_km": 20,
+            "station_ids": [
+                35,
+                36
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 5,
+            "capacity": 1,
+            "length_km": 20,
+            "station_ids": [
+                36,
+                37
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 6,
+            "capacity": 1,
+            "length_km": 20,
+            "station_ids": [
+                37,
+                38
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 7,
+            "capacity": 1,
+            "length_km": 22,
+            "station_ids": [
+                37,
+                50
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 100
+        },
+        {
+            "id": 8,
+            "capacity": 1,
+            "length_km": 9,
+            "station_ids": [
+                38,
+                39
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 9,
+            "capacity": 1,
+            "length_km": 8,
+            "station_ids": [
+                39,
+                40
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 10,
+            "capacity": 1,
+            "length_km": 4,
+            "station_ids": [
+                40,
+                41
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 11,
+            "capacity": 1,
+            "length_km": 10,
+            "station_ids": [
+                41,
+                42
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 12,
+            "capacity": 2,
+            "length_km": 3,
+            "station_ids": [
+                42,
+                43
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 160
+        },
+        {
+            "id": 13,
+            "capacity": 2,
+            "length_km": 12,
+            "station_ids": [
+                42,
+                63
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 160
+        },
+        {
+            "id": 14,
+            "capacity": 1,
+            "length_km": 12,
+            "station_ids": [
+                42,
+                53
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 15,
+            "capacity": 2,
+            "length_km": 15,
+            "station_ids": [
+                43,
+                82
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 200
+        },
+        {
+            "id": 16,
+            "capacity": 2,
+            "length_km": 20,
+            "station_ids": [
+                43,
+                54
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 200
+        },
+        {
+            "id": 17,
+            "capacity": 2,
+            "length_km": 8,
+            "station_ids": [
+                44,
+                69
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 18,
+            "capacity": 2,
+            "length_km": 16,
+            "station_ids": [
+                44,
+                63
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 19,
+            "capacity": 2,
+            "length_km": 11,
+            "station_ids": [
+                45,
+                63
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 160
+        },
+        {
+            "id": 20,
+            "capacity": 2,
+            "length_km": 12,
+            "station_ids": [
+                45,
+                64
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 160
+        },
+        {
+            "id": 21,
+            "capacity": 2,
+            "length_km": 10,
+            "station_ids": [
+                45,
+                46
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 100
+        },
+        {
+            "id": 22,
+            "capacity": 2,
+            "length_km": 10,
+            "station_ids": [
+                46,
+                85
+            ],
+            "is_single_track": false,
+            "max_speed_kmh": 100
+        },
+        {
+            "id": 23,
+            "capacity": 1,
+            "length_km": 10,
+            "station_ids": [
+                47,
+                48
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 24,
+            "capacity": 1,
+            "length_km": 12,
+            "station_ids": [
+                48,
+                49
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 25,
+            "capacity": 1,
+            "length_km": 12,
+            "station_ids": [
+                49,
+                50
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 26,
+            "capacity": 1,
+            "length_km": 6,
+            "station_ids": [
+                50,
+                51
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 27,
+            "capacity": 1,
+            "length_km": 6,
+            "station_ids": [
+                51,
+                52
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 120
+        },
+        {
+            "id": 28,
+            "capacity": 1,
+            "length_km": 8,
+            "station_ids": [
+                52,
+                53
+            ],
+            "is_single_track": true,
+            "max_speed_kmh": 120
+        }
+    ],
+    "current_time_minutes": 1341,
+    "trains": [
+        {
+            "id": 0,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "04:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 1,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "05:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 2,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "06:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 3,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "07:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 4,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "08:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 5,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "09:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 6,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "10:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 7,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "11:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 8,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "12:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 9,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "13:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 10,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "14:15:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 11,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "15:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 12,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "16:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 13,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "17:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 14,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 43,
+            "planned_route": [
+                12,
+                14,
+                28,
+                27,
+                26,
+                25,
+                24,
+                23
+            ],
+            "current_track": 12,
+            "scheduled_departure_time": "18:25:00",
+            "destination_station": 47,
+            "position_km": 0
+        },
+        {
+            "id": 15,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 5,
+            "priority": 5,
+            "is_delayed": false,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "04:38:00",
+            "destination_station": 43,
+            "position_km": 0
+        },
+        {
+            "id": 16,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "05:38:00",
+            "destination_station": 43,
+            "position_km": 0
+        },
+        {
+            "id": 17,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "06:38:00",
+            "destination_station": 43,
+            "position_km": 0
+        },
+        {
+            "id": 18,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "07:38:00",
+            "destination_station": 43,
+            "position_km": 0
+        },
+        {
+            "id": 19,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "08:38:00",
+            "destination_station": 43,
+            "position_km": 0
+        },
+        {
+            "id": 20,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "09:38:00",
+            "destination_station": 43,
+            "position_km": 0
+        },
+        {
+            "id": 21,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "10:38:00",
+            "destination_station": 43,
+            "position_km": 0
+        },
+        {
+            "id": 22,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "11:38:00",
+            "destination_station": 43,
+            "position_km": 0
+        },
+        {
+            "id": 23,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "12:38:00",
+            "destination_station": 43,
+            "position_km": 0
+        },
+        {
+            "id": 24,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "13:38:00",
+            "destination_station": 43,
+            "position_km": 0
+        },
+        {
+            "id": 25,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "14:08:00",
+            "destination_station": 43,
+            "position_km": 0
+        },
+        {
+            "id": 26,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "15:38:00",
+            "destination_station": 43,
+            "position_km": 0
+        },
+        {
+            "id": 27,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "16:38:00",
+            "destination_station": 43,
+            "position_km": 0
+        },
+        {
+            "id": 28,
+            "velocity_kmh": 117.08,
+            "delay_minutes": 0,
+            "min_dwell_minutes": 3,
+            "priority": 5,
+            "is_delayed": true,
+            "origin_station": 47,
+            "planned_route": [
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                14,
+                12
+            ],
+            "current_track": 23,
+            "scheduled_departure_time": "17:38:00",
+            "destination_station": 43,
+            "position_km": 0
+        }
+    ],
+    "max_iterations": 1000,
+    "stations": [
+        {
+            "num_platforms": 2,
+            "id": 0,
+            "name": "Hopsburg"
+        },
+        {
+            "num_platforms": 2,
+            "id": 43,
+            "name": "Bywater"
+        },
+        {
+            "num_platforms": 2,
+            "id": 47,
+            "name": "Girdlay Island"
+        }
+    ]
+}

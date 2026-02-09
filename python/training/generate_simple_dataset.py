@@ -50,13 +50,13 @@ def generate_simple_dataset(num_examples=2000, output_dir="data/expert_demonstra
         # If nearby occupancy is high, wait/slow
         near_occ = np.mean(occupancy[:4])
         if near_occ > 0.7:
-            action = 0  # Wait
+            action = 2  # Wait (+5)
         elif near_occ > 0.4:
-            action = 1  # Slow
+            action = 1  # Slow (+2)
         elif velocity < 80:
-            action = 3  # Fast
+            action = 3  # Quick
         else:
-            action = 2  # Normal
+            action = 0  # Normal (0)
         
         states.append(state)
         actions.append(action)

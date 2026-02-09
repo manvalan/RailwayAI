@@ -114,9 +114,13 @@ class IdleTrainingManager:
             return None
             
         if self.scenario_path:
-             if self.scenario_path in self.available_scenarios:
-                 return f"scenarios/{self.scenario_path}"
+             # Strip prefix if present for the check
+             name_only = os.path.basename(self.scenario_path)
+             if name_only in self.available_scenarios:
+                 return f"scenarios/{name_only}"
         
+        # Fallback to rotation if specific scenario not found
+        if not self.available_scenarios: return None
         fname = self.available_scenarios[self.current_scenario_index % len(self.available_scenarios)]
         return f"scenarios/{fname}"
 

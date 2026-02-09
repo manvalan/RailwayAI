@@ -21,7 +21,7 @@ from typing import List, Dict, Tuple
 import logging
 from tqdm import tqdm
 
-from python.scheduling.schedule_optimizer import ScheduleOptimizer
+from python.scheduling.fast_schedule_optimizer import FastScheduleOptimizer
 from python.marl_scheduling.env import RailwayGymEnv
 from python.marl_scheduling.scenario_loader import ScenarioLoader
 
@@ -34,7 +34,8 @@ class ExpertDatasetGenerator:
     def __init__(self, output_dir: str = "data/expert_demonstrations"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.optimizer = ScheduleOptimizer()
+        # FastScheduleOptimizer doesn't need initialization params
+        
         
     def load_real_scenarios(self) -> List[Dict]:
         """Load real European railway scenarios"""
@@ -101,8 +102,9 @@ class ExpertDatasetGenerator:
             tracks = scenario["tracks"]
             stations = scenario["stations"]
             
-            # Run GA optimization
-            result = self.optimizer.optimize(
+            # Use FastScheduleOptimizer
+            optimizer = FastScheduleOptimizer()
+            result = optimizer.optimize_fast(
                 trains=trains,
                 tracks=tracks,
                 stations=stations,
@@ -111,7 +113,7 @@ class ExpertDatasetGenerator:
             )
             
             if result and "resolutions" in result:
-                return result, result.get("fitness", 0.0)
+                return result, result.get("total_delay_minutes", 0.0)
             
         except Exception as e:
             logger.error(f"GA optimization failed: {e}")

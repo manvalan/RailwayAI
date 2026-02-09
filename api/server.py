@@ -1222,7 +1222,7 @@ async def optimize_schedule(
         # Prepare input tensors
         all_trains = request.trains
         num_trains_raw = len(all_trains)
-        max_trains = model_config.get('num_trains', 50)
+        max_trains = (model_config or {}).get('num_trains', 50)
         
         processed_trains = []
         active_ids = set(request.active_agent_ids or [])
@@ -1266,7 +1266,7 @@ async def optimize_schedule(
         conflicts_resolved = 0
         total_delay = 0.0
         
-        if model_config.get('type') == 'mappo' and processed_trains:
+        if (model_config or {}).get('type') == 'mappo' and processed_trains:
             active_model_name = os.path.basename(os.getenv("MODEL_PATH", "UNKNOWN"))
             # Se abbiamo caricato un checkpoint dinamico, proviamo a recuperarne il nome
             try:

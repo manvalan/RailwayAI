@@ -81,7 +81,7 @@ def train_imitation(
     
     # Model
     obs_dim = dataset.states.shape[1]
-    model = ActorNetwork(obs_dim).to(device)
+    model = ActorNetwork(obs_dim, num_actions=4).to(device)  # 4 actions: wait, slow, normal, fast
     
     params = sum(p.numel() for p in model.parameters())
     logger.info(f"Model parameters: {params:,}")

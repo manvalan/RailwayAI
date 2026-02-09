@@ -11,6 +11,7 @@ Endpoints:
 """
 
 import os
+import subprocess
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -70,10 +71,33 @@ async def lifespan(app: FastAPI):
     
     bootstrap_admin()
     load_model()
+    
+    # Startup Backup Service (auto-start)
+    try:
+        backup_script = Path("python/training/backup_service.py")
+        if backup_script.exists():
+            logger.info("📦 Starting Automatic Model Backup Service...")
+            app.state.backup_process = subprocess.Popen(
+                ["python3", str(backup_script)],
+                stdout=open("logs/backup_service.log", "a"),
+                stderr=subprocess.STDOUT
+            )
+        else:
+            logger.warning("! Backup service script not found. Backups disabled.")
+    except Exception as e:
+        logger.error(f"Failed to start backup service: {e}")
+
     poller_task = asyncio.create_task(event_poller())
     await idle_manager.start()
     yield
     # Shutdown logic
+    if hasattr(app.state, 'backup_process'):
+        logger.info("Stopping Backup Service...")
+        app.state.backup_process.terminate()
+        try:
+            app.state.backup_process.wait(timeout=5)
+        except:
+            app.state.backup_process.kill()
     poller_task.cancel()
     try:
         await poller_task

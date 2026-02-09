@@ -29,13 +29,13 @@ fi
 echo "✓ Found $SCENARIO_COUNT scenarios"
 echo ""
 
-# Step 2: Generate expert dataset (reduced size)
-echo "🎯 Step 1: Generating expert demonstrations..."
+# Step 2: Generate expert dataset (simplified version)
+echo "🎯 Step 1: Generating training dataset..."
 echo "  Examples: $EXAMPLES (reduced for CPU)"
-echo "  This will take ~15-30 minutes..."
+echo "  This will take ~1-2 minutes..."
 echo ""
 
-python3 python/training/generate_expert_dataset.py \
+python3 python/training/generate_simple_dataset.py \
     --examples $EXAMPLES \
     --output data/expert_demonstrations
 

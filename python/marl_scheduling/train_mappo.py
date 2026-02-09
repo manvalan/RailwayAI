@@ -366,7 +366,7 @@ def train_mappo(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--scenario", type=str, default="scenarios/toscana_cleaned.json")
+    parser.add_argument("--scenario", type=str, default="scenarios/siena_empoli_realtime.json")
     parser.add_argument("--curriculum", action="store_true", help="Use progressive complexity")
     parser.add_argument("--level", type=int, default=1, help="Start level for curriculum (1-5)")
     parser.add_argument("--episodes", type=int, default=100)

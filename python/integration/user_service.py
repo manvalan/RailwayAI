@@ -41,7 +41,7 @@ class UserService:
             return False
 
     @staticmethod
-    def set_user_status(username: str, is_active: bool) -> bool:
+    def update_user_status(username: str, is_active: bool) -> bool:
         """Attiva o disattiva un utente."""
         try:
             db.execute(
@@ -51,6 +51,19 @@ class UserService:
             return True
         except Exception as e:
             logger.error(f"Failed to update status for {username}: {e}")
+            return False
+
+    @staticmethod
+    def update_user_privilege(username: str, privilege: str) -> bool:
+        """Update a user's privilege level."""
+        try:
+            db.execute(
+                "UPDATE users SET privilege = ? WHERE username = ?",
+                (privilege, username)
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update privilege for {username}: {e}")
             return False
 
     @staticmethod

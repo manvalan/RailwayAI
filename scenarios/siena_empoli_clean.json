@@ -1,0 +1,1057 @@
+{
+  "stations": [
+    {
+      "id": 0,
+      "name": "Empoli",
+      "num_platforms": 6,
+      "lat": 43.7158642,
+      "lon": 10.9492244,
+      "osm_id": 239925589
+    },
+    {
+      "id": 1,
+      "name": "Lastra a Signa",
+      "num_platforms": 2,
+      "lat": 43.7692803,
+      "lon": 11.1024364,
+      "osm_id": 253248908
+    },
+    {
+      "id": 2,
+      "name": "Firenze Statuto",
+      "num_platforms": 2,
+      "lat": 43.7873323,
+      "lon": 11.2499596,
+      "osm_id": 271790930
+    },
+    {
+      "id": 3,
+      "name": "Firenze Castello",
+      "num_platforms": 2,
+      "lat": 43.8198547,
+      "lon": 11.2187241,
+      "osm_id": 279371582
+    },
+    {
+      "id": 4,
+      "name": "Firenze Rovezzano",
+      "num_platforms": 2,
+      "lat": 43.7688762,
+      "lon": 11.3088448,
+      "osm_id": 324248585
+    },
+    {
+      "id": 5,
+      "name": "Certaldo",
+      "num_platforms": 2,
+      "lat": 43.5471918,
+      "lon": 11.0378215,
+      "osm_id": 345011537
+    },
+    {
+      "id": 6,
+      "name": "Signa",
+      "num_platforms": 2,
+      "lat": 43.7755217,
+      "lon": 11.0957589,
+      "osm_id": 402540352
+    },
+    {
+      "id": 7,
+      "name": "Castelfiorentino",
+      "num_platforms": 2,
+      "lat": 43.6054197,
+      "lon": 10.9682231,
+      "osm_id": 413890083
+    },
+    {
+      "id": 8,
+      "name": "Badesse",
+      "num_platforms": 2,
+      "lat": 43.385602,
+      "lon": 11.2729533,
+      "osm_id": 513084904
+    },
+    {
+      "id": 9,
+      "name": "Poggibonsi-San Gimignano",
+      "num_platforms": 2,
+      "lat": 43.4679673,
+      "lon": 11.1493867,
+      "osm_id": 513101868
+    },
+    {
+      "id": 10,
+      "name": "Cambiano",
+      "num_platforms": 2,
+      "lat": 43.6304599,
+      "lon": 10.9592632,
+      "osm_id": 583589269
+    },
+    {
+      "id": 11,
+      "name": "Certaldo Alto",
+      "num_platforms": 2,
+      "lat": 43.5488944,
+      "lon": 11.0428919,
+      "osm_id": 896444139
+    },
+    {
+      "id": 12,
+      "name": "Barberino Val d'Elsa",
+      "num_platforms": 2,
+      "lat": 43.4993405,
+      "lon": 11.1112426,
+      "osm_id": 1319872627
+    },
+    {
+      "id": 13,
+      "name": "Sieci",
+      "num_platforms": 2,
+      "lat": 43.7908734,
+      "lon": 11.3946819,
+      "osm_id": 1397057661
+    },
+    {
+      "id": 14,
+      "name": "Firenze Santa Maria Novella",
+      "num_platforms": 2,
+      "lat": 43.7775719,
+      "lon": 11.2474177,
+      "osm_id": 1835203780
+    },
+    {
+      "id": 15,
+      "name": "Certaldo Basso",
+      "num_platforms": 2,
+      "lat": 43.5481693,
+      "lon": 11.0412818,
+      "osm_id": 1865672894
+    },
+    {
+      "id": 16,
+      "name": "Fiesole - Caldine",
+      "num_platforms": 2,
+      "lat": 43.8304136,
+      "lon": 11.3079009,
+      "osm_id": 1947357012
+    },
+    {
+      "id": 17,
+      "name": "Ponte a Tressa",
+      "num_platforms": 2,
+      "lat": 43.2508047,
+      "lon": 11.3963525,
+      "osm_id": 2363324102
+    },
+    {
+      "id": 18,
+      "name": "Siena Zona Industriale",
+      "num_platforms": 2,
+      "lat": 43.2651051,
+      "lon": 11.3766895,
+      "osm_id": 2363324103
+    },
+    {
+      "id": 19,
+      "name": "San Donnino",
+      "num_platforms": 2,
+      "lat": 43.785476,
+      "lon": 11.1421517,
+      "osm_id": 2417613113
+    },
+    {
+      "id": 20,
+      "name": "Pian del Mugnone",
+      "num_platforms": 2,
+      "lat": 43.8176732,
+      "lon": 11.2952929,
+      "osm_id": 2425303916
+    },
+    {
+      "id": 21,
+      "name": "Montelupo - Capraia",
+      "num_platforms": 2,
+      "lat": 43.733345,
+      "lon": 11.0190372,
+      "osm_id": 2442611476
+    },
+    {
+      "id": 22,
+      "name": "Arbia",
+      "num_platforms": 2,
+      "lat": 43.2942894,
+      "lon": 11.4063594,
+      "osm_id": 4811936409
+    },
+    {
+      "id": 23,
+      "name": "Firenze Campo di Marte",
+      "num_platforms": 2,
+      "lat": 43.7775989,
+      "lon": 11.2766652,
+      "osm_id": 8033523329
+    },
+    {
+      "id": 24,
+      "name": "Compiobbi",
+      "num_platforms": 2,
+      "lat": 43.7825845,
+      "lon": 11.3586663,
+      "osm_id": 8033523332
+    },
+    {
+      "id": 25,
+      "name": "Pontassieve",
+      "num_platforms": 2,
+      "lat": 43.7739961,
+      "lon": 11.4380363,
+      "osm_id": 8033523339
+    },
+    {
+      "id": 26,
+      "name": "Granaiolo",
+      "num_platforms": 3,
+      "lat": 43.6522642,
+      "lon": 10.9453565,
+      "osm_id": 9646692598
+    },
+    {
+      "id": 27,
+      "name": "Castellina in Chianti-Monteriggioni",
+      "num_platforms": 2,
+      "lat": 43.4087218,
+      "lon": 11.2121902,
+      "osm_id": 11019920501
+    },
+    {
+      "id": 28,
+      "name": "Siena",
+      "num_platforms": 2,
+      "lat": 43.3316658,
+      "lon": 11.3229024,
+      "osm_id": 11539665527
+    },
+    {
+      "id": 29,
+      "name": "Firenze San Marco Vecchio",
+      "num_platforms": 2,
+      "lat": 43.7907908,
+      "lon": 11.2676609,
+      "osm_id": 12999857060
+    }
+  ],
+  "tracks": [
+    {
+      "id": 0,
+      "length_km": 6.222,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        21
+      ]
+    },
+    {
+      "id": 1,
+      "length_km": 10.609,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        26
+      ]
+    },
+    {
+      "id": 2,
+      "length_km": 13.408,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        10
+      ]
+    },
+    {
+      "id": 3,
+      "length_km": 6.05,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        6
+      ]
+    },
+    {
+      "id": 4,
+      "length_km": 4.086,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        19
+      ]
+    },
+    {
+      "id": 5,
+      "length_km": 8.196,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        21
+      ]
+    },
+    {
+      "id": 6,
+      "length_km": 2.201,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        2,
+        14
+      ]
+    },
+    {
+      "id": 7,
+      "length_km": 3.83,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        2,
+        29
+      ]
+    },
+    {
+      "id": 8,
+      "length_km": 2.867,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        2,
+        23
+      ]
+    },
+    {
+      "id": 9,
+      "length_km": 4.69,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        2
+      ]
+    },
+    {
+      "id": 10,
+      "length_km": 7.046,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        29
+      ]
+    },
+    {
+      "id": 11,
+      "length_km": 5.352,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        14
+      ]
+    },
+    {
+      "id": 12,
+      "length_km": 3.036,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        4,
+        23
+      ]
+    },
+    {
+      "id": 13,
+      "length_km": 5.194,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        4,
+        29
+      ]
+    },
+    {
+      "id": 14,
+      "length_km": 4.971,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        4,
+        24
+      ]
+    },
+    {
+      "id": 15,
+      "length_km": 0.316,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        5,
+        15
+      ]
+    },
+    {
+      "id": 16,
+      "length_km": 0.467,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        5,
+        11
+      ]
+    },
+    {
+      "id": 17,
+      "length_km": 8.303,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        5,
+        12
+      ]
+    },
+    {
+      "id": 18,
+      "length_km": 4.074,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        6,
+        19
+      ]
+    },
+    {
+      "id": 19,
+      "length_km": 11.643,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        6,
+        21
+      ]
+    },
+    {
+      "id": 20,
+      "length_km": 12.92,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        6,
+        3
+      ]
+    },
+    {
+      "id": 21,
+      "length_km": 2.902,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        7,
+        10
+      ]
+    },
+    {
+      "id": 22,
+      "length_km": 5.714,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        7,
+        26
+      ]
+    },
+    {
+      "id": 23,
+      "length_km": 8.63,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        7,
+        5
+      ]
+    },
+    {
+      "id": 24,
+      "length_km": 6.291,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        8,
+        27
+      ]
+    },
+    {
+      "id": 25,
+      "length_km": 7.9,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        8,
+        28
+      ]
+    },
+    {
+      "id": 26,
+      "length_km": 17.191,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        8,
+        9
+      ]
+    },
+    {
+      "id": 27,
+      "length_km": 4.692,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        9,
+        12
+      ]
+    },
+    {
+      "id": 28,
+      "length_km": 10.925,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        9,
+        27
+      ]
+    },
+    {
+      "id": 29,
+      "length_km": 13.431,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        9,
+        11
+      ]
+    },
+    {
+      "id": 30,
+      "length_km": 2.824,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        10,
+        26
+      ]
+    },
+    {
+      "id": 31,
+      "length_km": 11.508,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        10,
+        5
+      ]
+    },
+    {
+      "id": 32,
+      "length_km": 11.807,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        10,
+        15
+      ]
+    },
+    {
+      "id": 33,
+      "length_km": 0.767,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        11,
+        15
+      ]
+    },
+    {
+      "id": 34,
+      "length_km": 8.753,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        11,
+        12
+      ]
+    },
+    {
+      "id": 35,
+      "length_km": 9.08,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        11,
+        7
+      ]
+    },
+    {
+      "id": 36,
+      "length_km": 8.602,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        12,
+        15
+      ]
+    },
+    {
+      "id": 37,
+      "length_km": 15.588,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        12,
+        27
+      ]
+    },
+    {
+      "id": 38,
+      "length_km": 3.444,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        13,
+        24
+      ]
+    },
+    {
+      "id": 39,
+      "length_km": 4.276,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        13,
+        25
+      ]
+    },
+    {
+      "id": 40,
+      "length_km": 8.405,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        13,
+        4
+      ]
+    },
+    {
+      "id": 41,
+      "length_km": 2.917,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        14,
+        29
+      ]
+    },
+    {
+      "id": 42,
+      "length_km": 4.078,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        14,
+        23
+      ]
+    },
+    {
+      "id": 43,
+      "length_km": 7.103,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        14,
+        4
+      ]
+    },
+    {
+      "id": 44,
+      "length_km": 8.929,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        15,
+        7
+      ]
+    },
+    {
+      "id": 45,
+      "length_km": 13.28,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        15,
+        9
+      ]
+    },
+    {
+      "id": 46,
+      "length_km": 14.619,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        15,
+        26
+      ]
+    },
+    {
+      "id": 47,
+      "length_km": 1.779,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        16,
+        20
+      ]
+    },
+    {
+      "id": 48,
+      "length_km": 5.644,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        16,
+        29
+      ]
+    },
+    {
+      "id": 49,
+      "length_km": 7.746,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        16,
+        23
+      ]
+    },
+    {
+      "id": 50,
+      "length_km": 2.591,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": 51,
+      "length_km": 22.194,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        17,
+        22
+      ]
+    },
+    {
+      "id": 52,
+      "length_km": 13.234,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        17,
+        28
+      ]
+    },
+    {
+      "id": 53,
+      "length_km": 19.621,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        18,
+        22
+      ]
+    },
+    {
+      "id": 54,
+      "length_km": 10.661,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        18,
+        28
+      ]
+    },
+    {
+      "id": 55,
+      "length_km": 8.968,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        19,
+        3
+      ]
+    },
+    {
+      "id": 56,
+      "length_km": 11.76,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        19,
+        14
+      ]
+    },
+    {
+      "id": 57,
+      "length_km": 11.099,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        19,
+        2
+      ]
+    },
+    {
+      "id": 58,
+      "length_km": 3.872,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        20,
+        29
+      ]
+    },
+    {
+      "id": 59,
+      "length_km": 5.975,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        20,
+        23
+      ]
+    },
+    {
+      "id": 60,
+      "length_km": 7.683,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        20,
+        2
+      ]
+    },
+    {
+      "id": 61,
+      "length_km": 16.804,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        21,
+        26
+      ]
+    },
+    {
+      "id": 62,
+      "length_km": 12.272,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        21,
+        19
+      ]
+    },
+    {
+      "id": 63,
+      "length_km": 19.603,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        21,
+        10
+      ]
+    },
+    {
+      "id": 64,
+      "length_km": 9.706,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        22,
+        28
+      ]
+    },
+    {
+      "id": 65,
+      "length_km": 17.584,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        22,
+        8
+      ]
+    },
+    {
+      "id": 66,
+      "length_km": 2.168,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        23,
+        29
+      ]
+    },
+    {
+      "id": 67,
+      "length_km": 7.997,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        23,
+        24
+      ]
+    },
+    {
+      "id": 68,
+      "length_km": 7.523,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        23,
+        3
+      ]
+    },
+    {
+      "id": 69,
+      "length_km": 13.538,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        24,
+        20
+      ]
+    },
+    {
+      "id": 70,
+      "length_km": 7.606,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        24,
+        25
+      ]
+    },
+    {
+      "id": 71,
+      "length_km": 15.31,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        24,
+        16
+      ]
+    },
+    {
+      "id": 72,
+      "length_km": 12.567,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        25,
+        4
+      ]
+    },
+    {
+      "id": 73,
+      "length_km": 22.906,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        25,
+        16
+      ]
+    },
+    {
+      "id": 74,
+      "length_km": 21.135,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        25,
+        20
+      ]
+    },
+    {
+      "id": 75,
+      "length_km": 14.32,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        26,
+        5
+      ]
+    },
+    {
+      "id": 76,
+      "length_km": 14.77,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        26,
+        11
+      ]
+    },
+    {
+      "id": 77,
+      "length_km": 14.172,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        27,
+        28
+      ]
+    },
+    {
+      "id": 78,
+      "length_km": 10.155,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        29,
+        24
+      ]
+    },
+    {
+      "id": 79,
+      "length_km": 13.454,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        29,
+        19
+      ]
+    },
+    {
+      "id": 80,
+      "length_km": 13.59,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        29,
+        13
+      ]
+    }
+  ],
+  "trains": []
+}

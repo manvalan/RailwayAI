@@ -30,6 +30,7 @@ from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
 from python.integration.auth import get_current_user, create_access_token, api_key_header
 from python.integration.user_service import UserService
+from python.integration.permissions import require_write_permission, require_admin, get_user_permissions
 from fastapi.security import OAuth2PasswordRequestForm
 
 from python.models.scheduler_network import SchedulerNetwork
@@ -636,8 +637,41 @@ async def register_user(
         
     return {"message": f"User {request.username} created successfully"}
 
+
 class UserStatusUpdate(BaseModel):
     is_active: bool
+
+class UserPrivilegeUpdate(BaseModel):
+    privilege: str = Field(..., description="New privilege level: admin, viewer, normal, guest")
+
+@app.post("/api/v1/admin/users/{username}/privilege", tags=["Admin"])
+async def update_user_privilege(
+    username: str,
+    privilege_update: UserPrivilegeUpdate,
+    current_user: dict = Depends(require_admin)
+):
+    """Admin-only: Change a user's privilege level."""
+    valid_privileges = ["admin", "viewer", "normal", "guest"]
+    if privilege_update.privilege not in valid_privileges:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid privilege. Must be one of: {', '.join(valid_privileges)}"
+        )
+    
+    if username == "admin" and privilege_update.privilege != "admin":
+        raise HTTPException(status_code=400, detail="Cannot change root admin privilege")
+    
+    success = UserService.update_user_privilege(username, privilege_update.privilege)
+    if not success:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    await manager.broadcast({
+        "type": "log", 
+        "message": f"Admin Action: Changed privilege for '{username}' to '{privilege_update.privilege}'.", 
+        "level": "info"
+    })
+    
+    return {"message": f"User {username} privilege updated to {privilege_update.privilege}"}
 
 @app.post("/api/v1/admin/users/{username}/status", tags=["Admin"])
 async def update_user_status(
@@ -658,6 +692,7 @@ async def update_user_status(
     
     action = "activated" if status_update.is_active else "suspended"
     return {"message": f"User {username} {action}"}
+
 
 @app.delete("/api/v1/admin/users/{username}", tags=["Admin"])
 async def delete_user(

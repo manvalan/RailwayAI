@@ -1,0 +1,38 @@
+{
+    "trains": [
+        {
+            "current_track": 19,
+            "is_delayed": true,
+            "planned_route": [
+                19,
+                21,
+                22,
+                42,
+                41,
+                40,
+                37,
+                38,
+                36,
+                35,
+                33
+            ],
+            "scheduled_departure_time": "04:17:00",
+            "origin_station": 63,
+            "destination_station": 58,
+            "min_dwell_minutes": 3,
+            "position_km": 0,
+            "priority": 5,
+            "velocity_kmh": 99.7229916897507,
+            "id": 0,
+            "delay_minutes": 0
+        }
+    ],
+    "temporal_obstacles": [],
+    "tracks": [],
+    "max_iterations": 1000,
+    "active_agent_ids": [
+        0
+    ],
+    "stations": [],
+    "current_time_minutes": 3
+}

@@ -558,24 +558,55 @@ async function fetchUsers() {
             const users = await response.json();
             const body = document.getElementById('user-table-body');
             body.innerHTML = '';
+
+            // Count by privilege
+            const counts = { admin: 0, normal: 0, viewer: 0, guest: 0 };
+            users.forEach(u => counts[u.privilege || 'normal']++);
+
+            document.getElementById('total-users-count').textContent = users.length;
+            document.getElementById('admin-count').textContent = counts.admin;
+            document.getElementById('normal-count').textContent = counts.normal;
+            document.getElementById('viewer-count').textContent = counts.viewer;
+            document.getElementById('guest-count').textContent = counts.guest;
+
             users.forEach(u => {
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+
+                const privilegeColors = {
+                    admin: 'var(--accent)',
+                    normal: 'var(--primary)',
+                    viewer: 'var(--success)',
+                    guest: 'var(--text-secondary)'
+                };
+
+                const createdDate = u.created_at ? new Date(u.created_at).toLocaleDateString('it-IT') : 'N/A';
+
                 tr.innerHTML = `
-                    <td style="padding: 0.75rem;">${u.username}</td>
-                    <td style="padding: 0.75rem;">
-                        <span style="color: ${u.is_active ? 'var(--success)' : 'var(--accent)'}; font-weight: 600;">
-                            ${u.is_active ? 'Active' : 'Locked'}
+                    <td style="padding: 1rem; font-weight: 600;">${u.username}</td>
+                    <td style="padding: 1rem;">
+                        <select onchange="changeUserPrivilege('${u.username}', this.value)" 
+                                style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 0.4rem; border-radius: 6px; color: ${privilegeColors[u.privilege || 'normal']}; font-weight: 600; font-size: 0.85rem; ${u.username === 'admin' ? 'pointer-events:none; opacity:0.5;' : ''}">
+                            <option value="guest" ${u.privilege === 'guest' ? 'selected' : ''}>Guest</option>
+                            <option value="viewer" ${u.privilege === 'viewer' ? 'selected' : ''}>Viewer</option>
+                            <option value="normal" ${(u.privilege === 'normal' || !u.privilege) ? 'selected' : ''}>Normal</option>
+                            <option value="admin" ${u.privilege === 'admin' ? 'selected' : ''}>Admin</option>
+                        </select>
+                    </td>
+                    <td style="padding: 1rem;">
+                        <span style="color: ${u.is_active ? 'var(--success)' : 'var(--accent)'}; font-weight: 600; font-size: 0.85rem;">
+                            ${u.is_active ? '✓ Attivo' : '✗ Bloccato'}
                         </span>
                         <button onclick="changeUserStatus('${u.username}', ${!u.is_active})" 
-                                style="background: rgba(255,255,255,0.05); padding: 0.2rem 0.6rem; font-size: 0.7rem; margin-left: 0.5rem; ${u.username === 'admin' ? 'display:none' : ''}">
-                            ${u.is_active ? 'Lock' : 'Unlock'}
+                                style="background: rgba(255,255,255,0.05); padding: 0.3rem 0.7rem; font-size: 0.7rem; margin-left: 0.5rem; border-radius: 6px; ${u.username === 'admin' ? 'display:none' : ''}">
+                            ${u.is_active ? 'Blocca' : 'Sblocca'}
                         </button>
                     </td>
-                    <td style="padding: 0.75rem; text-align: right;">
+                    <td style="padding: 1rem; color: var(--text-secondary); font-size: 0.85rem;">${createdDate}</td>
+                    <td style="padding: 1rem; text-align: right;">
                         <button onclick="deleteUser('${u.username}')" 
-                                style="background: var(--accent); padding: 0.25rem 0.5rem; font-size: 0.8rem; ${u.username === 'admin' ? 'display:none' : ''}">
-                            Revoke
+                                style="background: var(--accent); padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 6px; ${u.username === 'admin' ? 'display:none' : ''}">
+                            🗑️ Elimina
                         </button>
                     </td>
                 `;
@@ -615,9 +646,10 @@ async function changeUserStatus(username, newStatus) {
 async function addUser() {
     const user = document.getElementById('admin-new-username').value;
     const pass = document.getElementById('admin-new-password').value;
+    const privilege = document.getElementById('admin-new-privilege').value;
 
     if (!user || pass.length < 6) {
-        alert("Enter a username and password (6+ chars).");
+        alert("Inserisci username e password (min 6 caratteri).");
         return;
     }
 
@@ -628,19 +660,48 @@ async function addUser() {
                 'Content-Type': 'application/json',
                 'X-API-Key': accessToken
             },
-            body: JSON.stringify({ username: user, password: pass })
+            body: JSON.stringify({ username: user, password: pass, privilege: privilege })
         });
 
         if (response.ok) {
             document.getElementById('admin-new-username').value = '';
             document.getElementById('admin-new-password').value = '';
+            document.getElementById('admin-new-privilege').value = 'normal';
             fetchUsers();
+            addLog(`Nuovo utente creato: ${user} (${privilege})`, 'success');
         } else {
             const err = await response.json();
-            alert(`Error: ${err.detail}`);
+            alert(`Errore: ${err.detail}`);
         }
     } catch (err) {
-        alert("Connection error.");
+        alert("Errore di connessione.");
+    }
+}
+
+async function changeUserPrivilege(username, newPrivilege) {
+    if (username === 'admin') return;
+
+    try {
+        const response = await fetch(`/api/v1/admin/users/${username}/privilege`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': accessToken
+            },
+            body: JSON.stringify({ privilege: newPrivilege })
+        });
+
+        if (response.ok) {
+            fetchUsers();
+            addLog(`Privilegio di ${username} cambiato a: ${newPrivilege}`, 'info');
+        } else {
+            const err = await response.json();
+            alert(`Errore: ${err.detail}`);
+            fetchUsers(); // Reload to reset select
+        }
+    } catch (err) {
+        alert("Errore di connessione.");
+        fetchUsers();
     }
 }
 

@@ -404,33 +404,112 @@
 
         <!-- View: Personnel (Admin Only) -->
         <div id="view-users" class="hidden">
-            <div class="glass" style="padding: 2.5rem; max-width: 900px; margin: 0 auto;">
-                <h2>👥 Registro Utenti</h2>
-                <div class="glass" style="padding: 1.5rem; margin: 2rem 0; background: rgba(255,255,255,0.02);">
-                    <h3>Aggiungi Nuovo Operatore</h3>
-                    <div
-                        style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; margin-top: 1rem; align-items: flex-end;">
-                        <div>
-                            <label style="font-size: 0.75rem;">Nome Utente</label>
-                            <input type="text" id="admin-new-username" style="width: 100%;">
-                        </div>
-                        <div>
-                            <label style="font-size: 0.75rem;">Password</label>
-                            <input type="password" id="admin-new-password" style="width: 100%;">
-                        </div>
-                        <button id="admin-add-user-btn" style="height: 42px;">Registra</button>
+            <div class="glass" style="padding: 2.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <div>
+                        <h2>👥 Gestione Utenti</h2>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Amministrazione completa degli
+                            operatori di sistema</p>
+                    </div>
+                    <div id="users-count-badge" class="glass"
+                        style="padding: 0.5rem 1rem; font-size: 0.85rem; color: var(--primary);">
+                        <strong id="total-users-count">0</strong> utenti registrati
                     </div>
                 </div>
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="text-align: left; border-bottom: 2px solid var(--glass-border);">
-                            <th style="padding: 1rem;">Username</th>
-                            <th style="padding: 1rem;">Status</th>
-                            <th style="padding: 1rem; text-align: right;">Management</th>
-                        </tr>
-                    </thead>
-                    <tbody id="user-table-body"></tbody>
-                </table>
+
+                <!-- Add New User -->
+                <div class="glass"
+                    style="padding: 1.5rem; margin-bottom: 2rem; background: rgba(99, 102, 241, 0.03); border: 1px solid rgba(99, 102, 241, 0.1);">
+                    <h3 style="margin-bottom: 1rem; font-size: 1rem;">➕ Aggiungi Nuovo Operatore</h3>
+                    <div
+                        style="display: grid; grid-template-columns: 1fr 1fr 150px auto; gap: 1rem; align-items: flex-end;">
+                        <div>
+                            <label
+                                style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Nome
+                                Utente</label>
+                            <input type="text" id="admin-new-username" placeholder="username" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label
+                                style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Password</label>
+                            <input type="password" id="admin-new-password" placeholder="••••••••" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label
+                                style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Privilegio</label>
+                            <select id="admin-new-privilege"
+                                style="width: 100%; padding: 0.6rem; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; color: #fff;">
+                                <option value="guest">Guest</option>
+                                <option value="viewer">Viewer</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <button id="admin-add-user-btn"
+                            style="height: 42px; background: var(--primary);">Registra</button>
+                    </div>
+                </div>
+
+                <!-- Users Table -->
+                <div class="glass" style="overflow: hidden;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr
+                                style="text-align: left; border-bottom: 2px solid var(--glass-border); background: rgba(0,0,0,0.2);">
+                                <th
+                                    style="padding: 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary);">
+                                    Username</th>
+                                <th
+                                    style="padding: 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary);">
+                                    Privilegio</th>
+                                <th
+                                    style="padding: 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary);">
+                                    Stato</th>
+                                <th
+                                    style="padding: 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary);">
+                                    Creato</th>
+                                <th
+                                    style="padding: 1rem; text-align: right; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary);">
+                                    Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-table-body">
+                            <tr>
+                                <td colspan="5"
+                                    style="padding: 3rem; text-align: center; color: var(--text-secondary);">
+                                    Caricamento utenti...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Stats Footer -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2rem;">
+                    <div class="glass" style="padding: 1rem; text-align: center;">
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Admin
+                        </div>
+                        <div id="admin-count" style="font-size: 1.5rem; font-weight: 700; color: var(--accent);">0</div>
+                    </div>
+                    <div class="glass" style="padding: 1rem; text-align: center;">
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Normal
+                        </div>
+                        <div id="normal-count" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">0
+                        </div>
+                    </div>
+                    <div class="glass" style="padding: 1rem; text-align: center;">
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Viewer
+                        </div>
+                        <div id="viewer-count" style="font-size: 1.5rem; font-weight: 700; color: var(--success);">0
+                        </div>
+                    </div>
+                    <div class="glass" style="padding: 1rem; text-align: center;">
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Guest
+                        </div>
+                        <div id="guest-count"
+                            style="font-size: 1.5rem; font-weight: 700; color: var(--text-secondary);">0</div>
+                    </div>
+                </div>
             </div>
         </div>
 

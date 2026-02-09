@@ -33,7 +33,20 @@ def populate_real_trains(scenario_path, output_path):
     for idx, t_data in enumerate(real_trains_data):
         origin_name = t_data["stops"][0][0]
         dest_name = t_data["stops"][-1][0]
+        origin_id = s_map[origin_name]
         
+        # Find a track connected to the origin station to avoid 'current_track' warnings
+        # We look for the first track that contains the origin_id
+        starting_track = None
+        for track in scenario["tracks"]:
+            if origin_id in track["station_ids"]:
+                starting_track = track["id"]
+                break
+        
+        if starting_track is None:
+            print(f"Warning: Could not find a starting track for station {origin_name} (ID {origin_id})")
+            starting_track = 0 # Fallback
+
         # Build Stops list for the scenario format
         stops_list = []
         for s_name, t_str in t_data["stops"]:
@@ -48,13 +61,15 @@ def populate_real_trains(scenario_path, output_path):
             "id": idx + 1,
             "number": t_data["number"],
             "name": f"Regionale {t_data['number']}",
-            "origin_station_id": s_map[origin_name],
+            "origin_station_id": origin_id,
             "destination_station_id": s_map[dest_name],
             "scheduled_departure_time": t_data["stops"][0][1],
-            "velocity_kmh": 120,
+            "current_track": starting_track,
+            "position_km": 0.0,
+            "velocity_kmh": 0.0, # Starting from standstill
             "priority": t_data["prio"],
             "stops": stops_list,
-            "delay_minutes": 0 # Starting clean, AI can add delay to resolve conflicts
+            "delay_minutes": 0
         })
 
     scenario["trains"] = new_trains

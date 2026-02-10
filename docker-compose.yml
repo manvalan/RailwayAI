@@ -13,7 +13,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PYTHONPATH=/app
     volumes:
-      # - /opt/docker-projects/railway-ai:/app  <-- COMMENTED OUT TO FORCE USE OF IMAGE CODE
+      - /opt/docker-projects/railway-ai:/app # Usiamo il codice locale (git pulled) per aggiornamenti rapidi
       - ./railway.db:/app/railway.db # Persist DB
       - ./scenarios:/app/scenarios # Persist Scenarios
       - ./models:/app/models # Persist Models

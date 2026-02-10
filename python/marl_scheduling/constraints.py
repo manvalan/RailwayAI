@@ -64,7 +64,7 @@ class SafetyConstraintLayer:
                         
                         # Hard Constraint: Don't enter if full
                         if curr_occ >= capacity:
-                            logger.info(f"Constraint: Force STOP for train {agent_id} "
+                            logger.debug(f"Constraint: Force STOP for train {agent_id} "
                                         f"due to capacity on track {next_track_id}")
                             safe_actions[agent_id] = 1 # Force Stop
                             

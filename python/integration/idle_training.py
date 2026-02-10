@@ -23,7 +23,7 @@ class IdleTrainingManager:
         self.scenario_path: Optional[str] = "scenarios/siena_empoli_realtime.json"
         self.episodes_per_run = 1000
         self.curriculum_enabled = False  # Focus on the real-world scenario
-        self.curriculum_level = 2
+        self.curriculum_level = 1
         self.active_agent_ids: Optional[str] = None # Comma-separated IDs for selective training
         self._task = None
         
@@ -57,8 +57,8 @@ class IdleTrainingManager:
                     try:
                         level_part = name.split("curriculum_l")[1]
                         level = int(level_part.split("_")[0])
-                        self.curriculum_level = max(self.curriculum_level, level)
-                        logger.info(f"Recovered Curriculum Level: {level} (Current: {self.curriculum_level})")
+                        self.curriculum_level = level
+                        logger.info(f"Recovered Curriculum Level: {level}")
                     except:
                         pass
         except Exception as e:

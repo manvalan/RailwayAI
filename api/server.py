@@ -12,6 +12,7 @@ Endpoints:
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -74,16 +75,24 @@ async def lifespan(app: FastAPI):
     
     # Startup Backup Service (auto-start)
     try:
-        backup_script = Path("python/training/backup_service.py")
+        # Use absolute path for reliability within Docker
+        base_dir = Path(__file__).parent.parent
+        backup_script = base_dir / "python" / "training" / "backup_service.py"
+        
         if backup_script.exists():
-            logger.info("📦 Starting Automatic Model Backup Service...")
+            logger.info(f"📦 Starting Automatic Model Backup Service from {backup_script}")
+            # Ensure log dir exists
+            log_dir = base_dir / "logs"
+            log_dir.mkdir(exist_ok=True)
+            
             app.state.backup_process = subprocess.Popen(
-                ["python3", str(backup_script)],
-                stdout=open("logs/backup_service.log", "a"),
-                stderr=subprocess.STDOUT
+                [sys.executable, str(backup_script)],
+                stdout=open(str(log_dir / "backup_service.log"), "a"),
+                stderr=subprocess.STDOUT,
+                cwd=str(base_dir) # Set CWD to app root
             )
         else:
-            logger.warning("! Backup service script not found. Backups disabled.")
+            logger.warning(f"! Backup service script not found at {backup_script}. Backups disabled.")
     except Exception as e:
         logger.error(f"Failed to start backup service: {e}")
 
@@ -1254,6 +1263,10 @@ async def optimize_schedule(
 ):
     if idle_manager:
         idle_manager.record_activity("Direct Optimization API")
+    
+    # Increment API call counter for the user
+    UserService.increment_api_calls(current_user['username'])
+    
     """
     Optimize train schedule using ML model
     
@@ -1429,6 +1442,9 @@ async def optimize_scheduled_trains(
     
     start_time = time.time()
     metrics['total_requests'] += 1
+    
+    # Increment API call counter for the user
+    UserService.increment_api_calls(current_user['username'])
     
     if model is None:
         metrics['failed_optimizations'] += 1
@@ -1614,6 +1630,9 @@ async def suggest_schedule(
     start_time = time.time()
     metrics['total_requests'] += 1
     
+    # Increment API call counter for the user
+    UserService.increment_api_calls(current_user['username'])
+    
     try:
         if route_planner is None or temporal_simulator is None:
             route_planner = RoutePlanner(
@@ -1712,6 +1731,9 @@ async def analyze_line(request: LineAnalysisRequest, current_user: dict = Depend
     """
     Analizza una singola linea (asse A-B) per determinare cadenzamento e sfasamento ottimale.
     """
+    # Increment API call counter for the user
+    UserService.increment_api_calls(current_user['username'])
+    
     try:
         total_time = 0
         max_section_time = 0
@@ -1834,123 +1856,68 @@ async def propose_schedule(
 # ==================== User Management Endpoints ====================
 
 @app.get("/api/v1/users", tags=["Users"])
-async def get_users(current_user: dict = Depends(get_current_user)):
-    """Get all users (Admin only)"""
-    if current_user.get('privilege') != 'admin':
-        raise HTTPException(status_code=403, detail="Admin privileges required")
-    users = UserService.get_all_users()
-    # Remove sensitive data
-    for u in users:
-        u.pop('password_hash', None)
-    return users
-
-@app.get("/api/v1/users/me", tags=["Users"])
-async def get_current_user_profile(current_user: dict = Depends(get_current_user)):
-    """Get current user profile"""
-    user_profile = current_user.copy()
-    user_profile.pop('password_hash', None)
-    return user_profile
-
-@app.post("/api/v1/users", tags=["Users"])
-async def add_new_user(
-    username: str = Form(...),
-    password: str = Form(...),
-    privilege: str = Form(...),
-    current_user: dict = Depends(get_current_user)
-):
-    """Add a new user (Admin only)"""
-    if current_user.get('privilege') != 'admin':
-        raise HTTPException(status_code=403, detail="Admin privileges required")
-    
-    if UserService.get_user(username):
-        raise HTTPException(status_code=400, detail="Username already exists")
-    
-    try:
-        UserService.create_user(username, password, privilege)
-        return {"message": f"User {username} created successfully"}
-    except Exception as e:
-        logger.error(f"Error creating user: {e}")
-        raise HTTPException(status_code=500, detail="Could not create user")
-
-@app.post("/api/v1/users/{username}/status", tags=["Users"])
-async def update_user_status(
-    username: str,
-    action: str = Form(...), # 'activate' or 'deactivate'
-    current_user: dict = Depends(get_current_user)
-):
-    """Activate or deactivate a user (Admin only)"""
-    if current_user.get('privilege') != 'admin':
-        raise HTTPException(status_code=403, detail="Admin privileges required")
-    
-    try:
-        is_active = (action == 'activate')
-        if UserService.update_user_status(username, is_active):
-            return {"message": f"User {username} {'activated' if is_active else 'deactivated'}"}
-        else:
-            raise HTTPException(status_code=404, detail="User not found")
-    except Exception as e:
-        logger.error(f"Error updating user status: {e}")
-        raise HTTPException(status_code=500, detail="Could not update user status")
-
-@app.delete("/api/v1/users/{username}", tags=["Users"])
-async def delete_user(
-    username: str,
-    current_user: dict = Depends(get_current_user)
-):
-    """Delete a user (Admin only)"""
-    if current_user.get('privilege') != 'admin':
-        raise HTTPException(status_code=403, detail="Admin privileges required")
-        
-    if username == current_user['username']:
-        raise HTTPException(status_code=400, detail="Cannot delete your own account")
-        
-    try:
-        if UserService.delete_user(username):
-            return {"message": f"User {username} deleted"}
-        else:
-            raise HTTPException(status_code=404, detail="User not found")
-    except Exception as e:
-        logger.error(f"Error deleting user: {e}")
-        raise HTTPException(status_code=500, detail="Could not delete user")
-
-
 # ==================== User Management Endpoints ====================
 
 @app.get("/api/v1/users", tags=["Users"])
-async def get_users(current_user: dict = Depends(get_current_user)):
+async def get_users_list(current_user: dict = Depends(get_current_user)):
     """Get all users (Admin only)"""
     if current_user.get('privilege') != 'admin':
         raise HTTPException(status_code=403, detail="Admin privileges required")
-    users = UserService.list_users()
-    return users
+    return UserService.list_users()
 
 @app.get("/api/v1/users/me", tags=["Users"])
 async def get_current_user_profile(current_user: dict = Depends(get_current_user)):
-    """Get current user profile"""
+    """Get current user profile (GDPR: Data Access)"""
     user_profile = current_user.copy()
+    # Remove sensitive data
+    user_profile.pop('hashed_password', None)
     user_profile.pop('password_hash', None)
     return user_profile
 
-@app.post("/api/v1/users", tags=["Users"])
-async def add_new_user(
-    username: str = Form(...),
-    password: str = Form(...),
-    privilege: str = Form(...),
-    current_user: dict = Depends(get_current_user)
-):
-    """Add a new user (Admin only)"""
-    if current_user.get('privilege') != 'admin':
-        raise HTTPException(status_code=403, detail="Admin privileges required")
+@app.delete("/api/v1/users/me", tags=["Users"])
+async def delete_own_account(current_user: dict = Depends(get_current_user)):
+    """Delete own account (GDPR: Right to be Forgotten / Apple Compliance)"""
+    username = current_user['username']
+    if username == 'admin':
+        raise HTTPException(status_code=400, detail="Cannot delete root admin account")
     
-    if UserService.get_user(username):
-        raise HTTPException(status_code=400, detail="Username already exists")
-    
-    try:
-        UserService.create_user(username, password, privilege)
-        return {"message": f"User {username} created successfully"}
-    except Exception as e:
-        logger.error(f"Error creating user: {e}")
-        raise HTTPException(status_code=500, detail="Could not create user")
+    if UserService.delete_user(username):
+        logger.info(f"User '{username}' deleted their own account.")
+        return {"message": "Account deleted successfully. All your data has been removed."}
+    else:
+        raise HTTPException(status_code=500, detail="Could not delete account")
+
+@app.get("/api/v1/legal/privacy", tags=["Legal"])
+async def get_privacy_policy():
+    """Returns the Privacy Policy (GDPR/Apple Compliance)"""
+    return {
+        "title": "Privacy Policy",
+        "last_updated": "2026-02-10",
+        "summary": "Proteggiamo i tuoi dati e il traffico ferroviario.",
+        "data_collected": ["Email", "Username", "API Usage Counter"],
+        "purpose": "Ottimizzazione del traffico ferroviario e sicurezza account.",
+        "rights": ["Accesso ai dati", "Cancellazione account", "Portabilità"]
+    }
+
+@app.get("/api/v1/legal/terms", tags=["Legal"])
+async def get_terms_of_service():
+    """Returns the Terms of Service"""
+    return {
+        "title": "Terms of Service",
+        "last_updated": "2026-02-10",
+        "responsibility": "L'AI fornisce suggerimenti. La decisione finale spetta al capostazione.",
+        "license": "Uso professionale per la gestione del traffico."
+    }
+
+@app.post("/api/v1/admin/debug/backup-check", tags=["Admin"])
+async def manual_backup_start(current_user: dict = Depends(require_admin)):
+    """Manual trigger to check/start backup service if it died (Admin Only)"""
+    import subprocess
+    base_dir = Path(__file__).parent.parent
+    script = base_dir / "python" / "training" / "backup_service.py"
+    output = subprocess.check_output([sys.executable, str(script), "--once"], cwd=str(base_dir))
+    return {"message": "Manual backup run executed", "output": output.decode()}
+
 
 @app.post("/api/v1/users/{username}/status", tags=["Users"])
 async def update_user_status(

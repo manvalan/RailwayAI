@@ -214,14 +214,31 @@ class UserService:
 
     @staticmethod
     def list_users() -> list:
-        """Restituisce la lista di tutti gli utenti."""
-        return db.fetch_all("SELECT username, privilege, is_active FROM users")
+        """Restituisce la lista di tutti gli utenti con privilegi ed email."""
+        return db.fetch_all("SELECT username, privilege, email, api_calls, is_active FROM users")
+
+    @staticmethod
+    def increment_api_calls(username: str):
+        """Incrementa il contatore delle chiamate API per l'utente."""
+        try:
+            db.execute(
+                "UPDATE users SET api_calls = api_calls + 1 WHERE username = ?",
+                (username,)
+            )
+        except Exception as e:
+            logger.error(f"Failed to increment api_calls for {username}: {e}")
 
     @staticmethod
     def delete_user(username: str) -> bool:
-        """Rimuove un utente dal sistema."""
+        """Rimuove un utente e tutte le sue chiavi API dal sistema."""
+        user = UserService.get_user(username)
+        if not user:
+            return False
         try:
-            db.execute("DELETE FROM users WHERE username = ?", (username,))
+            # Rimuovi chiavi API prima (cascade manuale)
+            db.execute("DELETE FROM api_keys WHERE user_id = ?", (user['id'],))
+            # Rimuovi utente
+            db.execute("DELETE FROM users WHERE id = ?", (user['id'],))
             return True
         except Exception as e:
             logger.error(f"Failed to delete user {username}: {e}")

@@ -30,6 +30,7 @@ class DatabaseManager:
                     email TEXT UNIQUE,
                     hashed_password TEXT NOT NULL,
                     privilege TEXT DEFAULT 'normal',
+                    api_calls INTEGER DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     terms_accepted_at TIMESTAMP,
                     is_active BOOLEAN DEFAULT 1
@@ -84,6 +85,12 @@ class DatabaseManager:
             # Migration: add columns if they don't exist
             try:
                 cursor.execute("ALTER TABLE users ADD COLUMN email TEXT UNIQUE")
+                conn.commit()
+            except sqlite3.OperationalError:
+                pass
+            
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN api_calls INTEGER DEFAULT 0")
                 conn.commit()
             except sqlite3.OperationalError:
                 pass

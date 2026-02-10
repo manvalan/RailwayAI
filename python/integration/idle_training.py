@@ -22,7 +22,7 @@ class IdleTrainingManager:
         self.check_interval = 30
         self.scenario_path: Optional[str] = "scenarios/siena_empoli_realtime.json"
         self.episodes_per_run = 1000
-        self.curriculum_enabled = False  # Focus on the real-world scenario
+        self.curriculum_enabled = True  # Auto-progression enabled
         self.curriculum_level = 1
         self.active_agent_ids: Optional[str] = None # Comma-separated IDs for selective training
         self._task = None
@@ -145,8 +145,11 @@ class IdleTrainingManager:
         """Execute the training script in a non-blocking background process."""
         if not self.enabled or self.is_training:
             return
+        
+        # Refresh curriculum level from latest checkpoints before starting
+        self._initialize_level()
             
-        logger.info(f"System is idle. Starting background training on {scenario}...")
+        logger.info(f"System is idle. Starting background training (Curriculum L{self.curriculum_level})...")
         self.is_training = True
         self.last_training_time = datetime.now()
         self.last_logs = [] # Clear logs

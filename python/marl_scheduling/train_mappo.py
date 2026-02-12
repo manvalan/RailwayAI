@@ -368,13 +368,79 @@ def train_mappo(args):
         # Checkpoint
         if episode > 0 and episode % args.save_interval == 0:
             ckpt_path = os.path.join(args.out_dir, f"mappo_curriculum_l{current_level}_ep{episode}.pth")
-            torch.save({
-                'critic': critic.state_dict(),
-                'actor': actor.state_dict(),
-                'episode': episode,
-                'level': current_level
-            }, ckpt_path)
-            logger.info(f"Saved checkpoint: {ckpt_path}")
+            try:
+                state_dict = {
+                    'actor': actor.state_dict(),
+                    'critic': critic.state_dict(),
+                    'actor_optimizer': actor_opt.state_dict(), # Changed from ppo_agent.optimizer
+                    'critic_optimizer': critic_opt.state_dict(), # Added critic optimizer
+                    'episode': episode,
+                    'level': current_level,
+                    'reward': running_reward,
+                    'conflicts': avg_conflicts,
+                    'epsilon': epsilon # Added epsilon
+                }
+                torch.save(state_dict, ckpt_path)
+                logger.info(f"Saved checkpoint: {ckpt_path}")
+                
+                # --- METADATA ROBUSTNESS ---
+                import json
+                from datetime import datetime # Added import
+                meta_path = os.path.join(args.out_dir, "LATEST_SUCCESSFUL_LEVEL.json")
+                with open(meta_path, 'w') as f:
+                    json.dump({
+                        "filename": os.path.basename(ckpt_path),
+                        "level": current_level,
+                        "episode": episode,
+                        "avg_reward": running_reward,
+                        "avg_conflicts": avg_conflicts,
+                        "epsilon": epsilon, # Added epsilon
+                        "timestamp": datetime.now().isoformat()
+                    }, f, indent=2)
+                # ---------------------------
+                
+            except Exception as e:
+                logger.error(f"Failed to save checkpoint: {e}")
+
+        # --- HEALTH CHECK & AUTO-NOISE (Every 100 episodes) ---
+        if episode > 0 and episode % 100 == 0:
+             # Calculate simple metrics from recent history (simulated here as we don't have a buffer yet)
+             # In a real implementation, we would aggregate from info['velocity'] but for now we use reward proxy
+             try:
+                 is_stagnant = (abs(running_reward - last_reward) < 0.1) and (running_reward < -500)
+                 is_chaotic = (avg_conflicts > 3.0)
+                 
+                 monitor_data = {
+                     "episode": episode,
+                     "level": current_level,
+                     "avg_reward": running_reward,
+                     "avg_conflicts": avg_conflicts,
+                     "stagnant": is_stagnant,
+                     "chaotic": is_chaotic,
+                     "timestamp": datetime.now().isoformat()
+                 }
+                 
+                 # Write Monitor JSON
+                 with open(os.path.join(args.out_dir, "monitor.json"), 'w') as f:
+                     json.dump(monitor_data, f, indent=2)
+                 
+                 # Auto-Correction Logic
+                 if is_stagnant:
+                     logger.warning("💤 STAGNATION DETECTED (Lazy Agent). Injecting Noise!")
+                     # Temporarily boost entropy coefficient or epsilon
+                     epsilon = min(0.5, epsilon * 1.5) 
+                 elif is_chaotic:
+                     logger.warning("💥 CHAOS DETECTED. Reducing Learning Rate.")
+                     for param_group in actor_opt.param_groups:
+                         param_group['lr'] *= 0.9
+                 else:
+                     # Normal decay
+                     epsilon = max(0.05, epsilon * 0.99)
+                     
+             except Exception as e:
+                 logger.error(f"Health check failed: {e}")
+        # ------------------------------------------------------
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -382,13 +448,19 @@ if __name__ == "__main__":
     parser.add_argument("--curriculum", action="store_true", help="Use progressive complexity")
     parser.add_argument("--level", type=int, default=1, help="Start level for curriculum (1-5)")
     parser.add_argument("--episodes", type=int, default=100)
-    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--lr", type=float, default=3e-4, help="Learning rate")
+    parser.add_argument("--gamma", type=float, default=0.99, help="Discount factor")
+    parser.add_argument("--eps_clip", type=float, default=0.2, help="PPO clip parameter")
+    parser.add_argument("--K_epochs", type=int, default=15, help="PPO update epochs (Increased for stability)")
+    parser.add_argument("--mini_batch_size", type=int, default=64, help="Mini-batch size for PPO update")
+    parser.add_argument("--num_env", type=int, default=4, help="Number of parallel environments")
+    
+    # Checkpointing & Curriculum
     parser.add_argument("--save_interval", type=int, default=50)
-    parser.add_argument("--checkpoint", type=str, default=None)
-    parser.add_argument("--out_dir", type=str, default="checkpoints")
+    parser.add_argument("--checkpoint", type=str, default=None, help="Path to checkpoint")
+    parser.add_argument("--out_dir", type=str, default="checkpoints", help="Output directory")
     parser.add_argument("--background", action="store_true", help="Running in background mode")
     parser.add_argument("--active_agents", type=str, default=None, help="Comma-separated IDs of agents to train (others will be background)")
     
     args = parser.parse_args()
     train_mappo(args)
-

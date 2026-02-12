@@ -2205,8 +2205,8 @@ async def import_from_rail(
 @app.get("/api/v1/ai/status", tags=["AI Management"])
 async def get_ai_status(current_user: dict = Depends(get_current_user)):
     """Get auto-training status and statistics (Admin only)"""
-    if current_user.get('privilege') != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user.get('privilege') not in ['admin', 'viewer']:
+        raise HTTPException(status_code=403, detail="Admin or Viewer access required")
     
     from python.integration.idle_training import idle_manager
     
@@ -2219,8 +2219,8 @@ async def get_ai_status(current_user: dict = Depends(get_current_user)):
 @app.get("/api/v1/ai/scenarios", tags=["AI Management"])
 async def list_scenarios(current_user: dict = Depends(get_current_user)):
     """List available training scenarios (Admin only)"""
-    if current_user.get('privilege') != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user.get('privilege') not in ['admin', 'viewer']:
+        raise HTTPException(status_code=403, detail="Admin or Viewer access required")
     
     scenarios_dir = Path("scenarios")
     scenarios = []
@@ -2279,8 +2279,8 @@ async def stop_auto_training(current_user: dict = Depends(get_current_user)):
 @app.get("/api/v1/ai/model-stats", tags=["AI Management"])
 async def get_model_statistics(current_user: dict = Depends(get_current_user)):
     """Get model training statistics (Admin only)"""
-    if current_user.get('privilege') != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user.get('privilege') not in ['admin', 'viewer']:
+        raise HTTPException(status_code=403, detail="Admin or Viewer access required")
     
     return {
         "episodes_completed": metrics.get('training_episodes', 0),
@@ -2359,8 +2359,8 @@ async def backup_model(current_user: dict = Depends(get_current_user)):
 @app.get("/api/v1/ai/backups", tags=["AI Management"])
 async def list_backups(current_user: dict = Depends(get_current_user)):
     """List available model backups (Admin only)"""
-    if current_user.get('privilege') != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user.get('privilege') not in ['admin', 'viewer']:
+        raise HTTPException(status_code=403, detail="Admin or Viewer access required")
     
     if not os.path.exists("backups"):
         return []
@@ -2419,8 +2419,8 @@ async def delete_backup(filename: str, current_user: dict = Depends(get_current_
 @app.get("/api/v1/ai/config", tags=["AI Management"])
 async def get_ai_config(current_user: dict = Depends(get_current_user)):
     """Get current auto-training configuration (Admin only)"""
-    if current_user.get('privilege') != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user.get('privilege') not in ['admin', 'viewer']:
+        raise HTTPException(status_code=403, detail="Admin or Viewer access required")
     
     from python.integration.idle_training import idle_manager
     
@@ -2432,8 +2432,8 @@ async def get_ai_config(current_user: dict = Depends(get_current_user)):
 @app.get("/api/v1/ai/quality-metrics", tags=["AI Management"])
 async def get_ai_quality_metrics(current_user: dict = Depends(get_current_user)):
     """Get AI model quality and reliability metrics (Admin only)"""
-    if current_user.get('privilege') != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    if current_user.get('privilege') not in ['admin', 'viewer']:
+        raise HTTPException(status_code=403, detail="Admin or Viewer access required")
     
     # TODO: Replace with real metrics from training logs/checkpoints
     return {

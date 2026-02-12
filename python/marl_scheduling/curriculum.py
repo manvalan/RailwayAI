@@ -78,26 +78,73 @@ class CurriculumManager:
 
     @staticmethod
     def _generate_l3():
-        """Level 3: 8 trains, Star Topology (Junction Management)"""
-        stations = [{"id": 0, "name": "Hub", "num_platforms": 4}]
-        tracks = []
-        trains = []
-        for i in range(1, 5):
-            stations.append({"id": i, "name": f"Station {i}", "num_platforms": 2})
-            tracks.append({"id": i, "length_km": 20.0, "is_single_track": True, "capacity": 1, "station_ids": [0, i]})
+        """Level 3: Real Topology (Siena-Empoli) - High Traffic Injection"""
+        # Load the GROUND TRUTH map
+        try:
+            with open("scenarios/siena_empoli_real.json", "r") as f:
+                scenario = json.load(f)
             
-        for i in range(8):
-            start = np.random.randint(1, 5)
-            end = np.random.randint(1, 4)
-            if end >= start: end += 1 # Ensure different
+            # Inject dynamic traffic (8 trains)
+            # Focus on the single-track bottleneck (Siena-Empoli)
+            scenario['trains'] = []
             
-            trains.append({
-                "id": i, "origin_station": start, "destination_station": end,
-                "scheduled_departure_time": "12:00:00", "velocity_kmh": 140,
-                "position_km": 0, "current_track": start,
-                "priority": np.random.randint(1, 10), "delay_minutes": 0
-            })
-        return {"stations": stations, "tracks": tracks, "trains": trains}
+            # Inject dynamic traffic (8 trains) using VALID ROUTES
+            # We must use RoutePlanner logic (simplified here for curriculum generation)
+            # Or assume we have network graph available.
+            # Ideally: Import RoutePlanner, but for simplicity in curriculum generator 
+            # we rely on pre-calculated key routes or load them dynamically.
+            
+            # Since importing RoutePlanner inside static method might be tricky with deps,
+            # We hardcode valid routes for L3 based on the NEW Siena-Empoli map.
+            
+            # Routes definitions (Sequence of Track IDs)
+            route_empoli_siena = [111, 110, 109, 108, 107, 106, 105, 104, 103, 102, 101, 100] # Empoli -> Siena 
+            route_siena_empoli = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111] # Siena -> Empoli
+            
+            # Florence Node Crossing (Pontassieve -> Empoli)
+            # Pontassieve(25) -> Sieci(13) -> Compiobbi(24) -> Rovezzano(4) -> CampoMarte(23) -> Statuto(2) -> SMN(14)
+            # Track sequence: 305, 304, 303, 302, 301, 300 ... then to empoli
+            # For L3 we focus on the single track conflict, so Empoli-Siena is best.
+            
+            scenario['trains'] = []
+            
+            # 4 trains EMPOLI -> SIENA
+            for i in range(4):
+                scenario['trains'].append({
+                    "id": i, 
+                    "origin_station": 0,    # Empoli
+                    "destination_station": 28, # Siena
+                    "scheduled_departure_time": f"08:{i*20:02d}:00", 
+                    "velocity_kmh": 100,
+                    "position_km": 0.0, 
+                    "current_track": route_empoli_siena[0], # Must start on valid track
+                    "planned_route": route_empoli_siena,    # Critical for navigation
+                    "route_index": 0,
+                    "priority": 5, 
+                    "delay_minutes": np.random.randint(0, 5)
+                })
+                
+            # 4 trains SIENA -> EMPOLI
+            for i in range(4):
+                scenario['trains'].append({
+                    "id": i + 4, 
+                    "origin_station": 28, # Siena
+                    "destination_station": 0,  # Empoli
+                    "scheduled_departure_time": f"08:{10 + i*20:02d}:00", 
+                    "velocity_kmh": 100,
+                    "position_km": 0.0, 
+                    "current_track": route_siena_empoli[0],
+                    "planned_route": route_siena_empoli,
+                    "route_index": 0,
+                    "priority": 5, 
+                    "delay_minutes": np.random.randint(0, 5)
+                })
+                
+            return scenario
+        except Exception as e:
+            logger.error(f"Failed to load L3 real map: {e}")
+            # Fallback to synthetic hub if file missing
+            return CurriculumManager._generate_l2()
 
     @staticmethod
     def _generate_l4():
@@ -137,10 +184,23 @@ class CurriculumManager:
     @staticmethod
     def determine_level(episode_reward: float, current_level: int, threshold: float = -100) -> int:
         """
-        Heuristic to decide if we should advance to the next level.
-        If reward is consistently above threshold, increment level.
+        Stochastic Curriculum: Hard-Switching.
+        Instead of waiting for perfect score, try next level occasionally.
         """
-        if episode_reward > threshold and current_level < 5:
+        import random
+        
+        # Soft threshold for exploration (-300 is decent but not perfect)
+        exploration_threshold = threshold * 3.0 
+        
+        if episode_reward > threshold:
+            # Solid performance -> Advance permanently
             logger.info(f"Performance target reached ({episode_reward:.1f} > {threshold}). Advancing to Level {current_level + 1}")
-            return current_level + 1
+            return min(5, current_level + 1)
+            
+        elif episode_reward > exploration_threshold and current_level < 5:
+            # Decent performance -> Try next level 20% of the time (Epsilon-Greedy)
+            if random.random() < 0.20:
+                logger.info("🎲 Exploring Next Level (20% chance)...")
+                return current_level + 1
+        
         return current_level

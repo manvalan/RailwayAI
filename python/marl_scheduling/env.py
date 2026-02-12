@@ -197,10 +197,20 @@ class RailwayGymEnv(gym.Env):
                     progress += 5.0 
                 
                 rewards[tid] += progress * 10.0
-                rewards[tid] -= (train['delay_min'] ** 1.6) * 0.06 # Slightly more aggressive delay scaling
                 
-                if progress < 0.01:
-                    rewards[tid] -= 1.0 # Harsher standstill penalty
+                # --- PROGRESSIVE PENALTY SHAPING (Anti-Pigrizia) ---
+                # Quadratic penalty: Small delays OK, large delays catastrophic.
+                # Example: 
+                # 5 min delay -> 0.05^2 * 50 = 0.125 (negligible)
+                # 60 min delay -> 0.6^2 * 50 = 18.0 (painful)
+                delay_factor = max(0.0, train['delay_min'] / 100.0)
+                rewards[tid] -= (delay_factor ** 2.5) * 80.0
+                
+                # Standstill Penalty (Dynamic)
+                if progress < 0.001:
+                    # Penalty grows with current conflict level expectation
+                    rewards[tid] -= 1.5 
+                # ---------------------------------------------------
                 
                 train['last_position'] = train['position_on_track']
                 train['last_route_index'] = train['route_index']

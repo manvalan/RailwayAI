@@ -95,10 +95,14 @@ async function checkUserRole() {
         if (response.ok) {
             const user = await response.json();
             window.isUserAdmin = (user.privilege === 'admin');
+            window.isUserViewer = (user.privilege === 'viewer' || user.privilege === 'admin');
             console.log(`👤 Identity verified: ${user.username} (Role: ${user.privilege})`);
 
             document.querySelectorAll('.admin-only').forEach(el => {
                 el.style.display = window.isUserAdmin ? '' : 'none';
+            });
+            document.querySelectorAll('.viewer-plus').forEach(el => {
+                el.style.display = window.isUserViewer ? '' : 'none';
             });
         } else if (response.status === 401) {
             console.warn("⚠️ Session expired. Forcing re-auth.");

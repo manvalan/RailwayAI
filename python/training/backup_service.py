@@ -38,7 +38,7 @@ def create_backup():
     current_model = Path("/app/models/training/current_model.pth")
     if current_model.exists():
         dest = BACKUP_DIR / f"{backup_name}_current.pth"
-        shutil.copy2(current_model, dest)
+        shutil.copy(current_model, dest) # Use copy instead of copy2 to update timestamp
         backups_created.append(dest)
         logger.info(f"✅ Backed up current model")
     
@@ -46,7 +46,7 @@ def create_backup():
     imitation_model = Path("/app/models/imitation/best_imitation_model.pth")
     if imitation_model.exists():
         dest = BACKUP_DIR / f"{backup_name}_imitation.pth"
-        shutil.copy2(imitation_model, dest)
+        shutil.copy(imitation_model, dest)
         backups_created.append(dest)
         logger.info(f"✅ Backed up imitation model")
     
@@ -61,10 +61,10 @@ def create_backup():
         if mappo_checkpoints:
             latest_mappo = mappo_checkpoints[0]
             dest = BACKUP_DIR / f"{backup_name}_mappo.pth"
-            shutil.copy2(latest_mappo, dest)
+            shutil.copy(latest_mappo, dest)
             backups_created.append(dest)
             logger.info(f"✅ Backed up MAPPO checkpoint: {latest_mappo.name}")
-    
+            
     # Clean old backups
     cleanup_old_backups()
     
@@ -75,8 +75,9 @@ def create_backup():
         f.write(f"Timestamp: {timestamp}\n")
         f.write(f"Files backed up:\n")
         for backup in backups_created:
-            size = backup.stat().st_size / 1024  # KB
-            f.write(f"  - {backup.name} ({size:.1f} KB)\n")
+            if backup.exists():
+                size = backup.stat().st_size / 1024  # KB
+                f.write(f"  - {backup.name} ({size:.1f} KB)\n")
     
     total_backups = len(list(BACKUP_DIR.glob("model_backup_*.pth")))
     logger.info(f"✅ Backup completed: {backup_name}")

@@ -139,6 +139,10 @@ def train_mappo(args):
     os.makedirs(args.out_dir, exist_ok=True)
     
     running_reward = 0
+    # --- AGGIUNGI QUESTE RIGHE ---
+    conflict_history = [] 
+    avg_conflicts = 0.0
+    # -----------------------------
     window_size = 3 # Smaller window for more frequent level-up checks in background
     
     # Buffer for PPO
@@ -347,6 +351,13 @@ def train_mappo(args):
 
         # PULISCI FLUSSO: Only log change or every 5th episode
         current_conflicts = info.get('conflicts', 0)
+        # --- AGGIUNGI QUESTE RIGHE ---
+        conflict_history.append(current_conflicts)
+        if len(conflict_history) > 100: # Media mobile su 100 episodi
+            conflict_history.pop(0)
+        avg_conflicts = sum(conflict_history) / len(conflict_history)
+        # -----------------------------
+        
         has_changed = (abs(episode_reward - last_reward) > 0.1) or (current_conflicts != last_conflicts)
         
         if has_changed:
@@ -366,6 +377,20 @@ def train_mappo(args):
                 logger.info(f"Network complexity increased to Level {current_level}")
 
         # Checkpoint
+        # Checkpoint
+        if episode > 0 and episode % args.save_interval == 0:
+            ckpt_path = os.path.join(args.out_dir, f"mappo_curriculum_l{current_level}_ep{episode}.pth")
+            try:
+                from datetime import datetime # Assicurati che sia qui o in cima al file
+                state_dict = {
+                    'actor': actor.state_dict(),
+                    'critic': critic.state_dict(),
+                    # ... restanti campi ...
+                    'conflicts': avg_conflicts, # ORA FUNZIONA
+                    'epsilon': epsilon 
+                }
+        /******
+            
         if episode > 0 and episode % args.save_interval == 0:
             ckpt_path = os.path.join(args.out_dir, f"mappo_curriculum_l{current_level}_ep{episode}.pth")
             try:
@@ -401,7 +426,7 @@ def train_mappo(args):
                 
             except Exception as e:
                 logger.error(f"Failed to save checkpoint: {e}")
-
+        */        
         # --- HEALTH CHECK & AUTO-NOISE (Every 100 episodes) ---
         if episode > 0 and episode % 100 == 0:
              # Calculate simple metrics from recent history (simulated here as we don't have a buffer yet)

@@ -274,16 +274,176 @@
     },
     {
       "id": 3,
-      "length_km": 6.05,
+      "length_km": 14.407,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
-        1,
-        6
+        0,
+        1
       ]
     },
     {
       "id": 4,
+      "length_km": 16.298,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        7
+      ]
+    },
+    {
+      "id": 5,
+      "length_km": 17.855,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        6
+      ]
+    },
+    {
+      "id": 6,
+      "length_km": 18.486,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        19
+      ]
+    },
+    {
+      "id": 7,
+      "length_km": 24.904,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        5
+      ]
+    },
+    {
+      "id": 8,
+      "length_km": 25.203,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        15
+      ]
+    },
+    {
+      "id": 9,
+      "length_km": 25.354,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        11
+      ]
+    },
+    {
+      "id": 10,
+      "length_km": 27.452,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        3
+      ]
+    },
+    {
+      "id": 11,
+      "length_km": 29.583,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        2
+      ]
+    },
+    {
+      "id": 12,
+      "length_km": 30.244,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        14
+      ]
+    },
+    {
+      "id": 13,
+      "length_km": 31.938,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        29
+      ]
+    },
+    {
+      "id": 14,
+      "length_km": 32.416,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        23
+      ]
+    },
+    {
+      "id": 15,
+      "length_km": 33.187,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        12
+      ]
+    },
+    {
+      "id": 16,
+      "length_km": 35.443,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        4
+      ]
+    },
+    {
+      "id": 17,
+      "length_km": 35.791,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        20
+      ]
+    },
+    {
+      "id": 18,
+      "length_km": 37.562,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        16
+      ]
+    },
+    {
+      "id": 19,
+      "length_km": 37.864,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        0,
+        9
+      ]
+    },
+    {
+      "id": 20,
       "length_km": 4.086,
       "capacity": 1,
       "is_single_track": true,
@@ -293,7 +453,17 @@
       ]
     },
     {
-      "id": 5,
+      "id": 21,
+      "length_km": 6.05,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        6
+      ]
+    },
+    {
+      "id": 22,
       "length_km": 8.196,
       "capacity": 1,
       "is_single_track": true,
@@ -303,7 +473,177 @@
       ]
     },
     {
-      "id": 6,
+      "id": 23,
+      "length_km": 13.052,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        3
+      ]
+    },
+    {
+      "id": 24,
+      "length_km": 15.183,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 25,
+      "length_km": 15.844,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        14
+      ]
+    },
+    {
+      "id": 26,
+      "length_km": 17.538,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        29
+      ]
+    },
+    {
+      "id": 27,
+      "length_km": 18.016,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        23
+      ]
+    },
+    {
+      "id": 28,
+      "length_km": 21.043,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        4
+      ]
+    },
+    {
+      "id": 29,
+      "length_km": 21.391,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        20
+      ]
+    },
+    {
+      "id": 30,
+      "length_km": 23.162,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        16
+      ]
+    },
+    {
+      "id": 31,
+      "length_km": 24.989,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        26
+      ]
+    },
+    {
+      "id": 32,
+      "length_km": 26.004,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        24
+      ]
+    },
+    {
+      "id": 33,
+      "length_km": 27.789,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        10
+      ]
+    },
+    {
+      "id": 34,
+      "length_km": 29.439,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        13
+      ]
+    },
+    {
+      "id": 35,
+      "length_km": 30.679,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        7
+      ]
+    },
+    {
+      "id": 36,
+      "length_km": 33.601,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        25
+      ]
+    },
+    {
+      "id": 37,
+      "length_km": 39.284,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        5
+      ]
+    },
+    {
+      "id": 38,
+      "length_km": 39.584,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        15
+      ]
+    },
+    {
+      "id": 39,
+      "length_km": 39.735,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        1,
+        11
+      ]
+    },
+    {
+      "id": 40,
       "length_km": 2.201,
       "capacity": 1,
       "is_single_track": true,
@@ -313,17 +653,7 @@
       ]
     },
     {
-      "id": 7,
-      "length_km": 3.83,
-      "capacity": 1,
-      "is_single_track": true,
-      "station_ids": [
-        2,
-        29
-      ]
-    },
-    {
-      "id": 8,
+      "id": 41,
       "length_km": 2.867,
       "capacity": 1,
       "is_single_track": true,
@@ -333,27 +663,117 @@
       ]
     },
     {
-      "id": 9,
-      "length_km": 4.69,
+      "id": 42,
+      "length_km": 3.83,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
-        3,
-        2
-      ]
-    },
-    {
-      "id": 10,
-      "length_km": 7.046,
-      "capacity": 1,
-      "is_single_track": true,
-      "station_ids": [
-        3,
+        2,
         29
       ]
     },
     {
-      "id": 11,
+      "id": 43,
+      "length_km": 4.69,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": 44,
+      "length_km": 5.893,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        2,
+        4
+      ]
+    },
+    {
+      "id": 45,
+      "length_km": 7.683,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        2,
+        20
+      ]
+    },
+    {
+      "id": 46,
+      "length_km": 9.454,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        2,
+        16
+      ]
+    },
+    {
+      "id": 47,
+      "length_km": 10.854,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        2,
+        24
+      ]
+    },
+    {
+      "id": 48,
+      "length_km": 11.099,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        2,
+        19
+      ]
+    },
+    {
+      "id": 49,
+      "length_km": 14.289,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        2,
+        13
+      ]
+    },
+    {
+      "id": 50,
+      "length_km": 15.051,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        2,
+        6
+      ]
+    },
+    {
+      "id": 51,
+      "length_km": 18.451,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        2,
+        25
+      ]
+    },
+    {
+      "id": 52,
+      "length_km": 23.369,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        2,
+        21
+      ]
+    },
+    {
+      "id": 53,
       "length_km": 5.352,
       "capacity": 1,
       "is_single_track": true,
@@ -363,7 +783,127 @@
       ]
     },
     {
-      "id": 12,
+      "id": 54,
+      "length_km": 7.046,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        29
+      ]
+    },
+    {
+      "id": 55,
+      "length_km": 7.523,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        23
+      ]
+    },
+    {
+      "id": 56,
+      "length_km": 8.968,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        19
+      ]
+    },
+    {
+      "id": 57,
+      "length_km": 10.55,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        4
+      ]
+    },
+    {
+      "id": 58,
+      "length_km": 10.898,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        20
+      ]
+    },
+    {
+      "id": 59,
+      "length_km": 12.67,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        16
+      ]
+    },
+    {
+      "id": 60,
+      "length_km": 12.92,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        6
+      ]
+    },
+    {
+      "id": 61,
+      "length_km": 15.511,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        24
+      ]
+    },
+    {
+      "id": 62,
+      "length_km": 18.946,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        13
+      ]
+    },
+    {
+      "id": 63,
+      "length_km": 21.238,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        21
+      ]
+    },
+    {
+      "id": 64,
+      "length_km": 23.108,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        25
+      ]
+    },
+    {
+      "id": 65,
+      "length_km": 38.033,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        3,
+        26
+      ]
+    },
+    {
+      "id": 66,
       "length_km": 3.036,
       "capacity": 1,
       "is_single_track": true,
@@ -373,17 +913,7 @@
       ]
     },
     {
-      "id": 13,
-      "length_km": 5.194,
-      "capacity": 1,
-      "is_single_track": true,
-      "station_ids": [
-        4,
-        29
-      ]
-    },
-    {
-      "id": 14,
+      "id": 67,
       "length_km": 4.971,
       "capacity": 1,
       "is_single_track": true,
@@ -393,7 +923,97 @@
       ]
     },
     {
-      "id": 15,
+      "id": 68,
+      "length_km": 5.194,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        4,
+        29
+      ]
+    },
+    {
+      "id": 69,
+      "length_km": 7.103,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        4,
+        14
+      ]
+    },
+    {
+      "id": 70,
+      "length_km": 8.405,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        4,
+        13
+      ]
+    },
+    {
+      "id": 71,
+      "length_km": 8.577,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        4,
+        20
+      ]
+    },
+    {
+      "id": 72,
+      "length_km": 10.349,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        4,
+        16
+      ]
+    },
+    {
+      "id": 73,
+      "length_km": 12.567,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        4,
+        25
+      ]
+    },
+    {
+      "id": 74,
+      "length_km": 16.959,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        4,
+        19
+      ]
+    },
+    {
+      "id": 75,
+      "length_km": 20.911,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        4,
+        6
+      ]
+    },
+    {
+      "id": 76,
+      "length_km": 29.229,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        4,
+        21
+      ]
+    },
+    {
+      "id": 77,
       "length_km": 0.316,
       "capacity": 1,
       "is_single_track": true,
@@ -403,7 +1023,7 @@
       ]
     },
     {
-      "id": 16,
+      "id": 78,
       "length_km": 0.467,
       "capacity": 1,
       "is_single_track": true,
@@ -413,7 +1033,7 @@
       ]
     },
     {
-      "id": 17,
+      "id": 79,
       "length_km": 8.303,
       "capacity": 1,
       "is_single_track": true,
@@ -423,7 +1043,87 @@
       ]
     },
     {
-      "id": 18,
+      "id": 80,
+      "length_km": 8.63,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        5,
+        7
+      ]
+    },
+    {
+      "id": 81,
+      "length_km": 11.508,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        5,
+        10
+      ]
+    },
+    {
+      "id": 82,
+      "length_km": 12.98,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        5,
+        9
+      ]
+    },
+    {
+      "id": 83,
+      "length_km": 14.32,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        5,
+        26
+      ]
+    },
+    {
+      "id": 84,
+      "length_km": 23.876,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        5,
+        27
+      ]
+    },
+    {
+      "id": 85,
+      "length_km": 30.142,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        5,
+        8
+      ]
+    },
+    {
+      "id": 86,
+      "length_km": 31.099,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        5,
+        21
+      ]
+    },
+    {
+      "id": 87,
+      "length_km": 38.023,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        5,
+        28
+      ]
+    },
+    {
+      "id": 88,
       "length_km": 4.074,
       "capacity": 1,
       "is_single_track": true,
@@ -433,7 +1133,7 @@
       ]
     },
     {
-      "id": 19,
+      "id": 89,
       "length_km": 11.643,
       "capacity": 1,
       "is_single_track": true,
@@ -443,17 +1143,117 @@
       ]
     },
     {
-      "id": 20,
-      "length_km": 12.92,
+      "id": 90,
+      "length_km": 15.711,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         6,
-        3
+        14
       ]
     },
     {
-      "id": 21,
+      "id": 91,
+      "length_km": 17.406,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        6,
+        29
+      ]
+    },
+    {
+      "id": 92,
+      "length_km": 17.884,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        6,
+        23
+      ]
+    },
+    {
+      "id": 93,
+      "length_km": 21.259,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        6,
+        20
+      ]
+    },
+    {
+      "id": 94,
+      "length_km": 23.03,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        6,
+        16
+      ]
+    },
+    {
+      "id": 95,
+      "length_km": 25.872,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        6,
+        24
+      ]
+    },
+    {
+      "id": 96,
+      "length_km": 28.437,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        6,
+        26
+      ]
+    },
+    {
+      "id": 97,
+      "length_km": 29.307,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        6,
+        13
+      ]
+    },
+    {
+      "id": 98,
+      "length_km": 31.237,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        6,
+        10
+      ]
+    },
+    {
+      "id": 99,
+      "length_km": 33.468,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        6,
+        25
+      ]
+    },
+    {
+      "id": 100,
+      "length_km": 34.126,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        6,
+        7
+      ]
+    },
+    {
+      "id": 101,
       "length_km": 2.902,
       "capacity": 1,
       "is_single_track": true,
@@ -463,7 +1263,7 @@
       ]
     },
     {
-      "id": 22,
+      "id": 102,
       "length_km": 5.714,
       "capacity": 1,
       "is_single_track": true,
@@ -473,17 +1273,87 @@
       ]
     },
     {
-      "id": 23,
-      "length_km": 8.63,
+      "id": 103,
+      "length_km": 8.929,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         7,
-        5
+        15
       ]
     },
     {
-      "id": 24,
+      "id": 104,
+      "length_km": 9.08,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        7,
+        11
+      ]
+    },
+    {
+      "id": 105,
+      "length_km": 16.913,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        7,
+        12
+      ]
+    },
+    {
+      "id": 106,
+      "length_km": 21.591,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        7,
+        9
+      ]
+    },
+    {
+      "id": 107,
+      "length_km": 22.493,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        7,
+        21
+      ]
+    },
+    {
+      "id": 108,
+      "length_km": 32.487,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        7,
+        27
+      ]
+    },
+    {
+      "id": 109,
+      "length_km": 34.757,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        7,
+        19
+      ]
+    },
+    {
+      "id": 110,
+      "length_km": 38.752,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        7,
+        8
+      ]
+    },
+    {
+      "id": 111,
       "length_km": 6.291,
       "capacity": 1,
       "is_single_track": true,
@@ -493,7 +1363,7 @@
       ]
     },
     {
-      "id": 25,
+      "id": 112,
       "length_km": 7.9,
       "capacity": 1,
       "is_single_track": true,
@@ -503,7 +1373,7 @@
       ]
     },
     {
-      "id": 26,
+      "id": 113,
       "length_km": 17.191,
       "capacity": 1,
       "is_single_track": true,
@@ -513,7 +1383,67 @@
       ]
     },
     {
-      "id": 27,
+      "id": 114,
+      "length_km": 17.584,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        8,
+        22
+      ]
+    },
+    {
+      "id": 115,
+      "length_km": 18.539,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        8,
+        18
+      ]
+    },
+    {
+      "id": 116,
+      "length_km": 21.112,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        8,
+        17
+      ]
+    },
+    {
+      "id": 117,
+      "length_km": 21.854,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        8,
+        12
+      ]
+    },
+    {
+      "id": 118,
+      "length_km": 30.442,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        8,
+        15
+      ]
+    },
+    {
+      "id": 119,
+      "length_km": 30.593,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        8,
+        11
+      ]
+    },
+    {
+      "id": 120,
       "length_km": 4.692,
       "capacity": 1,
       "is_single_track": true,
@@ -523,7 +1453,7 @@
       ]
     },
     {
-      "id": 28,
+      "id": 121,
       "length_km": 10.925,
       "capacity": 1,
       "is_single_track": true,
@@ -533,7 +1463,17 @@
       ]
     },
     {
-      "id": 29,
+      "id": 122,
+      "length_km": 13.28,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        9,
+        15
+      ]
+    },
+    {
+      "id": 123,
       "length_km": 13.431,
       "capacity": 1,
       "is_single_track": true,
@@ -543,7 +1483,67 @@
       ]
     },
     {
-      "id": 30,
+      "id": 124,
+      "length_km": 24.469,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        9,
+        10
+      ]
+    },
+    {
+      "id": 125,
+      "length_km": 25.072,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        9,
+        28
+      ]
+    },
+    {
+      "id": 126,
+      "length_km": 27.281,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        9,
+        26
+      ]
+    },
+    {
+      "id": 127,
+      "length_km": 34.756,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        9,
+        22
+      ]
+    },
+    {
+      "id": 128,
+      "length_km": 35.711,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        9,
+        18
+      ]
+    },
+    {
+      "id": 129,
+      "length_km": 38.284,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        9,
+        17
+      ]
+    },
+    {
+      "id": 130,
       "length_km": 2.824,
       "capacity": 1,
       "is_single_track": true,
@@ -553,17 +1553,7 @@
       ]
     },
     {
-      "id": 31,
-      "length_km": 11.508,
-      "capacity": 1,
-      "is_single_track": true,
-      "station_ids": [
-        10,
-        5
-      ]
-    },
-    {
-      "id": 32,
+      "id": 131,
       "length_km": 11.807,
       "capacity": 1,
       "is_single_track": true,
@@ -573,7 +1563,57 @@
       ]
     },
     {
-      "id": 33,
+      "id": 132,
+      "length_km": 11.958,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        10,
+        11
+      ]
+    },
+    {
+      "id": 133,
+      "length_km": 19.603,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        10,
+        21
+      ]
+    },
+    {
+      "id": 134,
+      "length_km": 19.792,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        10,
+        12
+      ]
+    },
+    {
+      "id": 135,
+      "length_km": 31.868,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        10,
+        19
+      ]
+    },
+    {
+      "id": 136,
+      "length_km": 35.365,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        10,
+        27
+      ]
+    },
+    {
+      "id": 137,
       "length_km": 0.767,
       "capacity": 1,
       "is_single_track": true,
@@ -583,7 +1623,7 @@
       ]
     },
     {
-      "id": 34,
+      "id": 138,
       "length_km": 8.753,
       "capacity": 1,
       "is_single_track": true,
@@ -593,17 +1633,47 @@
       ]
     },
     {
-      "id": 35,
-      "length_km": 9.08,
+      "id": 139,
+      "length_km": 14.77,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         11,
-        7
+        26
       ]
     },
     {
-      "id": 36,
+      "id": 140,
+      "length_km": 24.327,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        11,
+        27
+      ]
+    },
+    {
+      "id": 141,
+      "length_km": 31.549,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        11,
+        21
+      ]
+    },
+    {
+      "id": 142,
+      "length_km": 38.473,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        11,
+        28
+      ]
+    },
+    {
+      "id": 143,
       "length_km": 8.602,
       "capacity": 1,
       "is_single_track": true,
@@ -613,7 +1683,7 @@
       ]
     },
     {
-      "id": 37,
+      "id": 144,
       "length_km": 15.588,
       "capacity": 1,
       "is_single_track": true,
@@ -623,7 +1693,47 @@
       ]
     },
     {
-      "id": 38,
+      "id": 145,
+      "length_km": 22.604,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        12,
+        26
+      ]
+    },
+    {
+      "id": 146,
+      "length_km": 29.735,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        12,
+        28
+      ]
+    },
+    {
+      "id": 147,
+      "length_km": 39.382,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": 148,
+      "length_km": 39.419,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        12,
+        22
+      ]
+    },
+    {
+      "id": 149,
       "length_km": 3.444,
       "capacity": 1,
       "is_single_track": true,
@@ -633,7 +1743,7 @@
       ]
     },
     {
-      "id": 39,
+      "id": 150,
       "length_km": 4.276,
       "capacity": 1,
       "is_single_track": true,
@@ -643,17 +1753,77 @@
       ]
     },
     {
-      "id": 40,
-      "length_km": 8.405,
+      "id": 151,
+      "length_km": 11.432,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         13,
-        4
+        23
       ]
     },
     {
-      "id": 41,
+      "id": 152,
+      "length_km": 13.59,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        13,
+        29
+      ]
+    },
+    {
+      "id": 153,
+      "length_km": 15.499,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        13,
+        14
+      ]
+    },
+    {
+      "id": 154,
+      "length_km": 16.973,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        13,
+        20
+      ]
+    },
+    {
+      "id": 155,
+      "length_km": 18.744,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        13,
+        16
+      ]
+    },
+    {
+      "id": 156,
+      "length_km": 25.355,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        13,
+        19
+      ]
+    },
+    {
+      "id": 157,
+      "length_km": 37.625,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        13,
+        21
+      ]
+    },
+    {
+      "id": 158,
       "length_km": 2.917,
       "capacity": 1,
       "is_single_track": true,
@@ -663,7 +1833,7 @@
       ]
     },
     {
-      "id": 42,
+      "id": 159,
       "length_km": 4.078,
       "capacity": 1,
       "is_single_track": true,
@@ -673,37 +1843,67 @@
       ]
     },
     {
-      "id": 43,
-      "length_km": 7.103,
+      "id": 160,
+      "length_km": 6.769,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         14,
-        4
+        20
       ]
     },
     {
-      "id": 44,
-      "length_km": 8.929,
+      "id": 161,
+      "length_km": 8.54,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
-        15,
-        7
+        14,
+        16
       ]
     },
     {
-      "id": 45,
-      "length_km": 13.28,
+      "id": 162,
+      "length_km": 11.76,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
-        15,
-        9
+        14,
+        19
       ]
     },
     {
-      "id": 46,
+      "id": 163,
+      "length_km": 12.064,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        14,
+        24
+      ]
+    },
+    {
+      "id": 164,
+      "length_km": 19.661,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        14,
+        25
+      ]
+    },
+    {
+      "id": 165,
+      "length_km": 24.03,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        14,
+        21
+      ]
+    },
+    {
+      "id": 166,
       "length_km": 14.619,
       "capacity": 1,
       "is_single_track": true,
@@ -713,7 +1913,37 @@
       ]
     },
     {
-      "id": 47,
+      "id": 167,
+      "length_km": 24.176,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        15,
+        27
+      ]
+    },
+    {
+      "id": 168,
+      "length_km": 31.398,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        15,
+        21
+      ]
+    },
+    {
+      "id": 169,
+      "length_km": 38.322,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        15,
+        28
+      ]
+    },
+    {
+      "id": 170,
       "length_km": 1.779,
       "capacity": 1,
       "is_single_track": true,
@@ -723,7 +1953,7 @@
       ]
     },
     {
-      "id": 48,
+      "id": 171,
       "length_km": 5.644,
       "capacity": 1,
       "is_single_track": true,
@@ -733,7 +1963,7 @@
       ]
     },
     {
-      "id": 49,
+      "id": 172,
       "length_km": 7.746,
       "capacity": 1,
       "is_single_track": true,
@@ -743,7 +1973,47 @@
       ]
     },
     {
-      "id": 50,
+      "id": 173,
+      "length_km": 15.31,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        16,
+        24
+      ]
+    },
+    {
+      "id": 174,
+      "length_km": 19.078,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        16,
+        19
+      ]
+    },
+    {
+      "id": 175,
+      "length_km": 22.906,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        16,
+        25
+      ]
+    },
+    {
+      "id": 176,
+      "length_km": 31.348,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        16,
+        21
+      ]
+    },
+    {
+      "id": 177,
       "length_km": 2.591,
       "capacity": 1,
       "is_single_track": true,
@@ -753,17 +2023,7 @@
       ]
     },
     {
-      "id": 51,
-      "length_km": 22.194,
-      "capacity": 1,
-      "is_single_track": true,
-      "station_ids": [
-        17,
-        22
-      ]
-    },
-    {
-      "id": 52,
+      "id": 178,
       "length_km": 13.234,
       "capacity": 1,
       "is_single_track": true,
@@ -773,17 +2033,27 @@
       ]
     },
     {
-      "id": 53,
-      "length_km": 19.621,
+      "id": 179,
+      "length_km": 22.194,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
-        18,
+        17,
         22
       ]
     },
     {
-      "id": 54,
+      "id": 180,
+      "length_km": 27.385,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        17,
+        27
+      ]
+    },
+    {
+      "id": 181,
       "length_km": 10.661,
       "capacity": 1,
       "is_single_track": true,
@@ -793,37 +2063,97 @@
       ]
     },
     {
-      "id": 55,
-      "length_km": 8.968,
+      "id": 182,
+      "length_km": 19.621,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        18,
+        22
+      ]
+    },
+    {
+      "id": 183,
+      "length_km": 24.812,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        18,
+        27
+      ]
+    },
+    {
+      "id": 184,
+      "length_km": 12.272,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         19,
-        3
+        21
       ]
     },
     {
-      "id": 56,
-      "length_km": 11.76,
+      "id": 185,
+      "length_km": 13.454,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         19,
-        14
+        29
       ]
     },
     {
-      "id": 57,
-      "length_km": 11.099,
+      "id": 186,
+      "length_km": 13.932,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         19,
-        2
+        23
       ]
     },
     {
-      "id": 58,
+      "id": 187,
+      "length_km": 17.307,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        19,
+        20
+      ]
+    },
+    {
+      "id": 188,
+      "length_km": 21.92,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        19,
+        24
+      ]
+    },
+    {
+      "id": 189,
+      "length_km": 29.068,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        19,
+        26
+      ]
+    },
+    {
+      "id": 190,
+      "length_km": 29.517,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        19,
+        25
+      ]
+    },
+    {
+      "id": 191,
       "length_km": 3.872,
       "capacity": 1,
       "is_single_track": true,
@@ -833,7 +2163,7 @@
       ]
     },
     {
-      "id": 59,
+      "id": 192,
       "length_km": 5.975,
       "capacity": 1,
       "is_single_track": true,
@@ -843,17 +2173,37 @@
       ]
     },
     {
-      "id": 60,
-      "length_km": 7.683,
+      "id": 193,
+      "length_km": 13.538,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         20,
-        2
+        24
       ]
     },
     {
-      "id": 61,
+      "id": 194,
+      "length_km": 21.135,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        20,
+        25
+      ]
+    },
+    {
+      "id": 195,
+      "length_km": 29.577,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        20,
+        21
+      ]
+    },
+    {
+      "id": 196,
       "length_km": 16.804,
       "capacity": 1,
       "is_single_track": true,
@@ -863,27 +2213,37 @@
       ]
     },
     {
-      "id": 62,
-      "length_km": 12.272,
+      "id": 197,
+      "length_km": 25.724,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         21,
-        19
+        29
       ]
     },
     {
-      "id": 63,
-      "length_km": 19.603,
+      "id": 198,
+      "length_km": 26.202,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         21,
-        10
+        23
       ]
     },
     {
-      "id": 64,
+      "id": 199,
+      "length_km": 34.19,
+      "capacity": 1,
+      "is_single_track": true,
+      "station_ids": [
+        21,
+        24
+      ]
+    },
+    {
+      "id": 200,
       "length_km": 9.706,
       "capacity": 1,
       "is_single_track": true,
@@ -893,17 +2253,17 @@
       ]
     },
     {
-      "id": 65,
-      "length_km": 17.584,
+      "id": 201,
+      "length_km": 23.856,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         22,
-        8
+        27
       ]
     },
     {
-      "id": 66,
+      "id": 202,
       "length_km": 2.168,
       "capacity": 1,
       "is_single_track": true,
@@ -913,7 +2273,7 @@
       ]
     },
     {
-      "id": 67,
+      "id": 203,
       "length_km": 7.997,
       "capacity": 1,
       "is_single_track": true,
@@ -923,27 +2283,17 @@
       ]
     },
     {
-      "id": 68,
-      "length_km": 7.523,
+      "id": 204,
+      "length_km": 15.593,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         23,
-        3
+        25
       ]
     },
     {
-      "id": 69,
-      "length_km": 13.538,
-      "capacity": 1,
-      "is_single_track": true,
-      "station_ids": [
-        24,
-        20
-      ]
-    },
-    {
-      "id": 70,
+      "id": 205,
       "length_km": 7.606,
       "capacity": 1,
       "is_single_track": true,
@@ -953,67 +2303,37 @@
       ]
     },
     {
-      "id": 71,
-      "length_km": 15.31,
+      "id": 206,
+      "length_km": 10.155,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         24,
-        16
+        29
       ]
     },
     {
-      "id": 72,
-      "length_km": 12.567,
+      "id": 207,
+      "length_km": 17.751,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         25,
-        4
+        29
       ]
     },
     {
-      "id": 73,
-      "length_km": 22.906,
-      "capacity": 1,
-      "is_single_track": true,
-      "station_ids": [
-        25,
-        16
-      ]
-    },
-    {
-      "id": 74,
-      "length_km": 21.135,
-      "capacity": 1,
-      "is_single_track": true,
-      "station_ids": [
-        25,
-        20
-      ]
-    },
-    {
-      "id": 75,
-      "length_km": 14.32,
+      "id": 208,
+      "length_km": 38.177,
       "capacity": 1,
       "is_single_track": true,
       "station_ids": [
         26,
-        5
+        27
       ]
     },
     {
-      "id": 76,
-      "length_km": 14.77,
-      "capacity": 1,
-      "is_single_track": true,
-      "station_ids": [
-        26,
-        11
-      ]
-    },
-    {
-      "id": 77,
+      "id": 209,
       "length_km": 14.172,
       "capacity": 1,
       "is_single_track": true,
@@ -1021,344 +2341,143 @@
         27,
         28
       ]
-    },
-    {
-      "id": 78,
-      "length_km": 10.155,
-      "capacity": 1,
-      "is_single_track": true,
-      "station_ids": [
-        29,
-        24
-      ]
-    },
-    {
-      "id": 79,
-      "length_km": 13.454,
-      "capacity": 1,
-      "is_single_track": true,
-      "station_ids": [
-        29,
-        19
-      ]
-    },
-    {
-      "id": 80,
-      "length_km": 13.59,
-      "capacity": 1,
-      "is_single_track": true,
-      "station_ids": [
-        29,
-        13
-      ]
     }
   ],
   "trains": [
     {
       "id": 1,
-      "number": 18200,
-      "name": "Regionale 18200",
-      "origin_station_id": 28,
-      "destination_station": 14,
-      "scheduled_departure_time": "05:43",
-      "current_track": 25,
       "position_km": 0.0,
-      "velocity_kmh": 0.0,
+      "velocity_kmh": 120.0,
+      "current_track": 17,
+      "destination_station": 3,
       "priority": 5,
-      "stops": [
-        {
-          "station_id": 28,
-          "arrival_time": "05:43",
-          "departure_time": "05:43",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 9,
-          "arrival_time": "06:06",
-          "departure_time": "06:06",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 5,
-          "arrival_time": "06:17",
-          "departure_time": "06:17",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 7,
-          "arrival_time": "06:25",
-          "departure_time": "06:25",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 0,
-          "arrival_time": "06:45",
-          "departure_time": "06:45",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 14,
-          "arrival_time": "07:23",
-          "departure_time": "07:23",
-          "min_dwell_minutes": 2
-        }
-      ],
-      "delay_minutes": 0
+      "planned_route": []
     },
     {
       "id": 2,
-      "number": 18214,
-      "name": "Regionale 18214",
-      "origin_station_id": 28,
-      "destination_station": 14,
-      "scheduled_departure_time": "08:18",
-      "current_track": 25,
       "position_km": 0.0,
-      "velocity_kmh": 0.0,
-      "priority": 8,
-      "stops": [
-        {
-          "station_id": 28,
-          "arrival_time": "08:18",
-          "departure_time": "08:18",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 9,
-          "arrival_time": "08:42",
-          "departure_time": "08:42",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 5,
-          "arrival_time": "08:54",
-          "departure_time": "08:54",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 7,
-          "arrival_time": "09:02",
-          "departure_time": "09:02",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 0,
-          "arrival_time": "09:21",
-          "departure_time": "09:21",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 14,
-          "arrival_time": "09:52",
-          "departure_time": "09:52",
-          "min_dwell_minutes": 2
-        }
-      ],
-      "delay_minutes": 0
+      "velocity_kmh": 120.0,
+      "current_track": 108,
+      "destination_station": 4,
+      "priority": 2,
+      "planned_route": []
     },
     {
       "id": 3,
-      "number": 18226,
-      "name": "Regionale 18226",
-      "origin_station_id": 28,
-      "destination_station": 14,
-      "scheduled_departure_time": "14:18",
-      "current_track": 25,
       "position_km": 0.0,
-      "velocity_kmh": 0.0,
-      "priority": 5,
-      "stops": [
-        {
-          "station_id": 28,
-          "arrival_time": "14:18",
-          "departure_time": "14:18",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 9,
-          "arrival_time": "14:42",
-          "departure_time": "14:42",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 5,
-          "arrival_time": "14:54",
-          "departure_time": "14:54",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 7,
-          "arrival_time": "15:02",
-          "departure_time": "15:02",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 0,
-          "arrival_time": "15:21",
-          "departure_time": "15:21",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 14,
-          "arrival_time": "15:52",
-          "departure_time": "15:52",
-          "min_dwell_minutes": 2
-        }
-      ],
-      "delay_minutes": 0
+      "velocity_kmh": 120.0,
+      "current_track": 196,
+      "destination_station": 23,
+      "priority": 2,
+      "planned_route": []
     },
     {
       "id": 4,
-      "number": 18201,
-      "name": "Regionale 18201",
-      "origin_station_id": 14,
-      "destination_station": 28,
-      "scheduled_departure_time": "06:20",
-      "current_track": 6,
       "position_km": 0.0,
-      "velocity_kmh": 0.0,
-      "priority": 5,
-      "stops": [
-        {
-          "station_id": 14,
-          "arrival_time": "06:20",
-          "departure_time": "06:20",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 0,
-          "arrival_time": "06:50",
-          "departure_time": "06:50",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 7,
-          "arrival_time": "07:04",
-          "departure_time": "07:04",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 5,
-          "arrival_time": "07:13",
-          "departure_time": "07:13",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 9,
-          "arrival_time": "07:29",
-          "departure_time": "07:29",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 28,
-          "arrival_time": "07:55",
-          "departure_time": "07:55",
-          "min_dwell_minutes": 2
-        }
-      ],
-      "delay_minutes": 0
+      "velocity_kmh": 120.0,
+      "current_track": 115,
+      "destination_station": 13,
+      "priority": 1,
+      "planned_route": []
     },
     {
       "id": 5,
-      "number": 18205,
-      "name": "Regionale 18205",
-      "origin_station_id": 14,
-      "destination_station": 28,
-      "scheduled_departure_time": "09:10",
-      "current_track": 6,
       "position_km": 0.0,
-      "velocity_kmh": 0.0,
-      "priority": 5,
-      "stops": [
-        {
-          "station_id": 14,
-          "arrival_time": "09:10",
-          "departure_time": "09:10",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 0,
-          "arrival_time": "09:40",
-          "departure_time": "09:40",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 7,
-          "arrival_time": "09:55",
-          "departure_time": "09:55",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 5,
-          "arrival_time": "10:03",
-          "departure_time": "10:03",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 9,
-          "arrival_time": "10:15",
-          "departure_time": "10:15",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 28,
-          "arrival_time": "10:40",
-          "departure_time": "10:40",
-          "min_dwell_minutes": 2
-        }
-      ],
-      "delay_minutes": 0
+      "velocity_kmh": 120.0,
+      "current_track": 41,
+      "destination_station": 6,
+      "priority": 9,
+      "planned_route": []
     },
     {
       "id": 6,
-      "number": 18211,
-      "name": "Regionale 18211",
-      "origin_station_id": 14,
-      "destination_station": 28,
-      "scheduled_departure_time": "12:10",
-      "current_track": 6,
       "position_km": 0.0,
-      "velocity_kmh": 0.0,
+      "velocity_kmh": 120.0,
+      "current_track": 190,
+      "destination_station": 0,
+      "priority": 4,
+      "planned_route": []
+    },
+    {
+      "id": 7,
+      "position_km": 0.0,
+      "velocity_kmh": 120.0,
+      "current_track": 200,
+      "destination_station": 20,
+      "priority": 9,
+      "planned_route": []
+    },
+    {
+      "id": 8,
+      "position_km": 0.0,
+      "velocity_kmh": 120.0,
+      "current_track": 151,
+      "destination_station": 7,
+      "priority": 10,
+      "planned_route": []
+    },
+    {
+      "id": 9,
+      "position_km": 0.0,
+      "velocity_kmh": 120.0,
+      "current_track": 85,
+      "destination_station": 25,
+      "priority": 3,
+      "planned_route": []
+    },
+    {
+      "id": 10,
+      "position_km": 0.0,
+      "velocity_kmh": 120.0,
+      "current_track": 148,
+      "destination_station": 13,
       "priority": 5,
-      "stops": [
-        {
-          "station_id": 14,
-          "arrival_time": "12:10",
-          "departure_time": "12:10",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 0,
-          "arrival_time": "12:40",
-          "departure_time": "12:40",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 7,
-          "arrival_time": "12:55",
-          "departure_time": "12:55",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 5,
-          "arrival_time": "13:03",
-          "departure_time": "13:03",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 9,
-          "arrival_time": "13:15",
-          "departure_time": "13:15",
-          "min_dwell_minutes": 2
-        },
-        {
-          "station_id": 28,
-          "arrival_time": "13:40",
-          "departure_time": "13:40",
-          "min_dwell_minutes": 2
-        }
-      ],
-      "delay_minutes": 0
+      "planned_route": []
+    },
+    {
+      "id": 11,
+      "position_km": 0.0,
+      "velocity_kmh": 120.0,
+      "current_track": 74,
+      "destination_station": 6,
+      "priority": 6,
+      "planned_route": []
+    },
+    {
+      "id": 12,
+      "position_km": 0.0,
+      "velocity_kmh": 120.0,
+      "current_track": 62,
+      "destination_station": 2,
+      "priority": 2,
+      "planned_route": []
+    },
+    {
+      "id": 13,
+      "position_km": 0.0,
+      "velocity_kmh": 120.0,
+      "current_track": 123,
+      "destination_station": 27,
+      "priority": 10,
+      "planned_route": []
+    },
+    {
+      "id": 14,
+      "position_km": 0.0,
+      "velocity_kmh": 120.0,
+      "current_track": 85,
+      "destination_station": 25,
+      "priority": 8,
+      "planned_route": []
+    },
+    {
+      "id": 15,
+      "position_km": 0.0,
+      "velocity_kmh": 120.0,
+      "current_track": 178,
+      "destination_station": 3,
+      "priority": 2,
+      "planned_route": []
     }
   ]
 }

@@ -48,6 +48,44 @@ function initAIManagement() {
             fetchAIStatus();
         }
     }, 2000);
+
+    // Permission enforcement
+    enforcePermissions();
+}
+
+function enforcePermissions() {
+    if (window.isUserAdmin) return;
+
+    console.log("🛡️ Read-only mode active: Disabling admin controls");
+
+    // Disable main action buttons
+    const adminButtons = [
+        'ai-start-btn', 'ai-stop-btn', 'save-config-btn', 'ai-backup-btn',
+        'rail-upload-btn', 'dl-net-btn'
+    ];
+
+    adminButtons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+            btn.title = "Azione riservata agli amministratori";
+        }
+    });
+
+    // Disable inputs
+    const adminInputs = [
+        'config-enabled', 'config-threshold', 'train-episodes', 'train-lr', 'train-curriculum'
+    ];
+
+    adminInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.disabled = true;
+            el.style.opacity = '0.7';
+        }
+    });
 }
 
 async function refreshAIManagementData() {
@@ -163,9 +201,9 @@ async function fetchScenarios() {
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">${s.stations} nodi • ${s.tracks} binari</div>
                 </div>
                 <div style="display: flex; gap: 0.4rem;">
-                    <button onclick="activateScenario('${s.name}')" style="background: var(--success); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Attiva">AVVIA</button>
+                    ${window.isUserAdmin ? `<button onclick="activateScenario('${s.name}')" style="background: var(--success); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Attiva">AVVIA</button>` : ''}
                     <button onclick="exportToRail('${s.name}')" style="background: var(--primary); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Esporta .rail">EXPORT</button>
-                    <button onclick="deleteScenario('${s.name}')" style="background: var(--accent); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Elimina">🗑️</button>
+                    ${window.isUserAdmin ? `<button onclick="deleteScenario('${s.name}')" style="background: var(--accent); padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 4px;" title="Elimina">🗑️</button>` : ''}
                 </div>
             </div>
         `).join('');
@@ -345,8 +383,8 @@ async function fetchBackups() {
                     <div style="font-size: 0.65rem; color: var(--text-secondary);">${new Date(b.date).toLocaleString()} • ${b.size_kb} KB</div>
                 </div>
                 <div style="display: flex; gap: 0.3rem;">
-                    <button onclick="restoreBackup('${b.filename}')" style="background: var(--success); padding: 0.3rem 0.5rem; font-size: 0.65rem; border-radius: 4px;">LOAD</button>
-                    <button onclick="deleteBackup('${b.filename}')" style="background: var(--accent); padding: 0.3rem 0.5rem; font-size: 0.65rem; border-radius: 4px;">PURGE</button>
+                    ${window.isUserAdmin ? `<button onclick="restoreBackup('${b.filename}')" style="background: var(--success); padding: 0.3rem 0.5rem; font-size: 0.65rem; border-radius: 4px;">LOAD</button>` : ''}
+                    ${window.isUserAdmin ? `<button onclick="deleteBackup('${b.filename}')" style="background: var(--accent); padding: 0.3rem 0.5rem; font-size: 0.65rem; border-radius: 4px;">PURGE</button>` : ''}
                 </div>
             </div>
         `).join('');

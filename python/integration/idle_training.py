@@ -4,8 +4,9 @@ import time
 import subprocess
 import logging
 import json
+import re
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Callable
 from pathlib import Path
 import os
 
@@ -36,6 +37,9 @@ class IdleTrainingManager:
         self.available_scenarios: List[str] = []
         self._refresh_scenarios()
         self._initialize_level()
+        
+        # New: Progress callback for WebSocket broadcasting
+        self.on_training_update: Optional[Callable[[Dict[str, Any]], None]] = None
 
 
     def _refresh_scenarios(self):
@@ -266,6 +270,27 @@ class IdleTrainingManager:
                 if line:
                     self.last_logs.append(line)
                     
+                    # Live Progress Broadcast for Dashboard
+                    # Match: ✨ Episode 160800 (L2) | Reward: -11945.47 | Conflicts: 2
+                    if "Episode" in line and "Reward:" in line:
+                        try:
+                            # Robust regex to catch various formats (Improvement/Variance/stable)
+                            match = re.search(r"Episode\s+(\d+).*?Reward:\s*([\d\.\-]+).*?Conflicts:\s*(\d+)", line)
+                            if match and self.on_training_update:
+                                ep = int(match.group(1))
+                                reward = float(match.group(2))
+                                conflicts = int(match.group(3))
+                                
+                                # Broadcast every update from background
+                                self.on_training_update({
+                                    "type": "training_update",
+                                    "episode": ep,
+                                    "reward": reward,
+                                    "conflicts": conflicts
+                                })
+                        except Exception as p_err:
+                            pass # Silent for parsing noise
+
                     # Log parsing for curriculum updates
                     if "Network complexity increased to Level" in line:
                          try:

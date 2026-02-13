@@ -97,6 +97,9 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to start backup service: {e}")
 
     poller_task = asyncio.create_task(event_poller())
+    # Connect IdleManager to WebSocket for live updates
+    idle_manager.on_training_update = manager.broadcast
+    
     await idle_manager.start()
     yield
     # Shutdown logic

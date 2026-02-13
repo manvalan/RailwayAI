@@ -17,10 +17,10 @@ class IdleTrainingManager:
         self.last_activity = time.time()
         self.last_training_time: Optional[datetime] = None
         self.is_training = False
-        self.enabled = False
+        self.enabled = True
         self.training_process: Optional[subprocess.Popen] = None
         self.check_interval = 30
-        self.scenario_path: Optional[str] = "scenarios/siena_empoli_realtime.json"
+        self.scenario_path = "scenarios/siena_empoli_real.json"
         self.episodes_per_run = 1000
         self.curriculum_enabled = True  # Auto-progression enabled
         self.curriculum_level = 2
@@ -203,8 +203,8 @@ class IdleTrainingManager:
             if self.curriculum_enabled:
                  cmd.extend(["--curriculum", "--level", str(self.curriculum_level)])
                  # Force the correct base scenario for map loaded
-                 cmd.extend(["--scenario", "scenarios/siena_empoli_realtime.json"]) 
-                 self.last_logs.append(f"🎓 Curriculum Level: {self.curriculum_level} (Map: siena_empoli_realtime.json)")
+                 cmd.extend(["--scenario", "scenarios/siena_empoli_real.json"]) 
+                 self.last_logs.append(f"🎓 Curriculum Level: {self.curriculum_level} (Map: siena_empoli_real.json)")
             else:
                 cmd.extend(["--scenario", scenario])
             

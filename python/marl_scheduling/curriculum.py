@@ -97,14 +97,11 @@ class CurriculumManager:
             # Since importing RoutePlanner inside static method might be tricky with deps,
             # We hardcode valid routes for L3 based on the NEW Siena-Empoli map.
             
-            # Routes definitions (Sequence of Track IDs)
-            route_empoli_siena = [111, 110, 109, 108, 107, 106, 105, 104, 103, 102, 101, 100] # Empoli -> Siena 
-            route_siena_empoli = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111] # Siena -> Empoli
-            
-            # Florence Node Crossing (Pontassieve -> Empoli)
-            # Pontassieve(25) -> Sieci(13) -> Compiobbi(24) -> Rovezzano(4) -> CampoMarte(23) -> Statuto(2) -> SMN(14)
-            # Track sequence: 305, 304, 303, 302, 301, 300 ... then to empoli
-            # For L3 we focus on the single track conflict, so Empoli-Siena is best.
+            # Corrected FS Track Sequences for Level 3
+            # Empoli (0) -> Granaiolo(26) -> ... -> Siena(28)
+            # Tracks: 100, 101, 102, 103, 104, 105, 106, 107, 108
+            route_empoli_siena = [100, 101, 102, 103, 104, 105, 106, 107, 108] 
+            route_siena_empoli = [108, 107, 106, 105, 104, 103, 102, 101, 100]
             
             scenario['trains'] = []
             
@@ -117,11 +114,11 @@ class CurriculumManager:
                     "scheduled_departure_time": f"08:{i*20:02d}:00", 
                     "velocity_kmh": 100,
                     "position_km": 0.0, 
-                    "current_track": route_empoli_siena[0], # Must start on valid track
-                    "planned_route": route_empoli_siena,    # Critical for navigation
+                    "current_track": route_empoli_siena[0],
+                    "planned_route": route_empoli_siena,
                     "route_index": 0,
                     "priority": 5, 
-                    "delay_minutes": np.random.randint(0, 5)
+                    "delay_minutes": np.random.randint(0, 10) # Higher variety
                 })
                 
             # 4 trains SIENA -> EMPOLI
@@ -137,7 +134,7 @@ class CurriculumManager:
                     "planned_route": route_siena_empoli,
                     "route_index": 0,
                     "priority": 5, 
-                    "delay_minutes": np.random.randint(0, 5)
+                    "delay_minutes": np.random.randint(0, 10)
                 })
                 
             return scenario

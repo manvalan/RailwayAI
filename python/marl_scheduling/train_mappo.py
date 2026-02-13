@@ -14,6 +14,8 @@ os.environ["MKL_THREADING_LAYER"] = "SEQUENTIAL"
 import numpy as np
 import argparse
 import logging
+import json
+from datetime import datetime
 
 # Add current directory to sys.path
 current_dir = Path(__file__).parent.absolute()
@@ -133,16 +135,12 @@ def train_mappo(args):
     critic_opt = optim.Adam(critic.parameters(), lr=args.lr)
     
     safety_layer = SafetyConstraintLayer(env.raw_tracks)
-
-
     
     os.makedirs(args.out_dir, exist_ok=True)
     
     running_reward = 0
-    # --- AGGIUNGI QUESTE RIGHE ---
     conflict_history = [] 
     avg_conflicts = 0.0
-    # -----------------------------
     window_size = 3 # Smaller window for more frequent level-up checks in background
     
     # Buffer for PPO
@@ -164,6 +162,12 @@ def train_mappo(args):
         episode_reward = 0
         done = False
         
+        # Epsilon decay
+        epsilon_start = 0.10
+        epsilon_end = 0.05
+        decay_steps = 10000 
+        epsilon = max(epsilon_end, epsilon_start - (episode / decay_steps) * (epsilon_start - epsilon_end))
+
         while not done:
             actions = {}
             log_probs = {}
@@ -174,7 +178,7 @@ def train_mappo(args):
             curr_action_list = []
             curr_log_prob_list = []
             
-            # NEW: Batch processing of all agents in one pass with Attention
+            # Batch processing of all agents in one pass
             all_agent_keys = list(current_agent_ids)
             o_vec_list = []
             for aid in all_agent_keys:
@@ -186,10 +190,9 @@ def train_mappo(args):
                 o_vec = np.concatenate([norm_pos, norm_track, norm_vel, norm_occ])
                 o_vec_list.append(o_vec)
             
-            # (NumAgents, ObsDim)
-            batch_obs_tensor = torch.FloatTensor(np.array(o_vec_list)).unsqueeze(0) # (1, NumAgents, ObsDim)
+            # (1, NumAgents, ObsDim)
+            batch_obs_tensor = torch.FloatTensor(np.array(o_vec_list)).unsqueeze(0) 
             
-            # Temperature scaling - reduced from 1.2 to 1.1 to start consolidating gains
             temperature = 1.1 
             
             with torch.no_grad():
@@ -200,18 +203,10 @@ def train_mappo(args):
                 scaled_probs = torch.pow(raw_probs, 1.0 / temperature)
                 scaled_probs = scaled_probs / scaled_probs.sum(dim=-1, keepdim=True)
                 
-                # EPSILON DECAY: Start at 0.10 and decay to 0.05 to refine the strategy
-                # We want less chaos now that we've found the 1-conflict solution multiple times
-                epsilon_start = 0.10
-                epsilon_end = 0.05
-                decay_steps = 10000 
-                
-                # Calculate current epsilon based on global episode progression
-                epsilon = max(epsilon_end, epsilon_start - (episode / decay_steps) * (epsilon_start - epsilon_end))
-                
                 dist = torch.distributions.Categorical(scaled_probs)
                 batch_actions = dist.sample()
                 
+                # Manual epsilon-greedy on top
                 for k in range(len(all_agent_keys)):
                     if np.random.random() < epsilon:
                         batch_actions[k] = torch.randint(0, scaled_probs.size(-1), (1,))
@@ -252,13 +247,12 @@ def train_mappo(args):
             obs = next_obs
             if truncated: done = True
                 
-        # Update Logic (Every Episode for simplicity in background)
+        # Update Logic (PPO)
         if len(reward_buffer) > 0:
-            # Compute Returns and Advantages (GAE)
             returns = []
             advantages = []
             gae = 0
-            next_value = 0 # Assume 0 for terminal
+            next_value = 0 
             
             for i in reversed(range(len(reward_buffer))):
                 delta = reward_buffer[i] + gamma * next_value * mask_buffer[i] - value_buffer[i]
@@ -269,11 +263,8 @@ def train_mappo(args):
             
             adv_tensor = torch.FloatTensor(advantages)
             ret_tensor = torch.FloatTensor(returns)
-            
-            # PPO Update - Advantage Normalization
             adv_tensor = (adv_tensor - adv_tensor.mean()) / (adv_tensor.std() + 1e-8)
             
-            # Diagnostic variables
             total_actor_loss = 0
             total_critic_loss = 0
             total_entropy = 0
@@ -293,19 +284,14 @@ def train_mappo(args):
                         
                         # Actor Loss
                         probs = actor(o_t)
-                        
-                        # NOISE INJECTION: More aggressive threshold (0.6 instead of 0.5)
-                        # An entropy of 0.29 is still too "stuck" for a multi-agent network.
                         dist = torch.distributions.Categorical(probs)
                         entropy = dist.entropy().mean()
                         
+                        # Shock Therapy
                         if entropy < 0.6:
-                            # Add random noise to kick the policy out of the local minimum
                             noise = torch.ones_like(probs) / probs.size(-1)
-                            # Increase randomness: 30% noise if stuck (SHOCK THERAPY)
                             probs = 0.70 * probs + 0.30 * noise
                             dist = torch.distributions.Categorical(probs)
-                            # Recalculate entropy after noise injection
                             entropy = dist.entropy().mean()
 
                         new_lp = dist.log_prob(a_t)
@@ -313,7 +299,6 @@ def train_mappo(args):
                         surr1 = ratio * adv_tensor[i]
                         surr2 = torch.clamp(ratio, 1.0 - clip_param, 1.0 + clip_param) * adv_tensor[i]
                         
-                        # High entropy weight to force variety (Up to 0.2)
                         actor_loss = -torch.min(surr1, surr2).mean() - 0.2 * entropy
                         
                         # Critic Loss
@@ -333,33 +318,26 @@ def train_mappo(args):
                         total_critic_loss += critic_loss.item()
                         total_entropy += entropy.item()
             
-            # Diagnostic log (every 10 episodes to avoid clutter)
             if episode % 10 == 0:
                 avg_ent = total_entropy / (ppo_epochs * len(obs_buffer))
                 logger.info(f"PPO Update - Entropy: {avg_ent:.4f}, Actor Loss: {total_actor_loss:.4f}")
             
-            # Clear buffers
             obs_buffer, action_buffer, log_prob_buffer, reward_buffer, value_buffer, mask_buffer = [], [], [], [], [], []
 
-        # Curriculum update logic
+        # Metrics and Logging
         running_reward = 0.9 * running_reward + 0.1 * episode_reward if episode > 0 else episode_reward
+        current_conflicts = info.get('conflicts', 0)
+        conflict_history.append(current_conflicts)
+        if len(conflict_history) > 100:
+            conflict_history.pop(0)
+        avg_conflicts = sum(conflict_history) / len(conflict_history)
         
         if episode == start_episode:
             last_reward = episode_reward
-            last_conflicts = info.get('conflicts', 0)
+            last_conflicts = current_conflicts
             logger.info(f"🚀 Training Session Started | Level: {current_level} | Baseline Reward: {episode_reward:.2f}")
 
-        # PULISCI FLUSSO: Only log change or every 5th episode
-        current_conflicts = info.get('conflicts', 0)
-        # --- AGGIUNGI QUESTE RIGHE ---
-        conflict_history.append(current_conflicts)
-        if len(conflict_history) > 100: # Media mobile su 100 episodi
-            conflict_history.pop(0)
-        avg_conflicts = sum(conflict_history) / len(conflict_history)
-        # -----------------------------
-        
         has_changed = (abs(episode_reward - last_reward) > 0.1) or (current_conflicts != last_conflicts)
-        
         if has_changed:
             change_str = "📈 Improvement!" if episode_reward > last_reward else "📉 Variance"
             logger.info(f"✨ Episode {episode} (L{current_level}) | Reward: {episode_reward:.2f} | Conflicts: {current_conflicts} | {change_str}")
@@ -368,6 +346,7 @@ def train_mappo(args):
         elif episode % 5 == 0:
             logger.info(f"⏳ Episode {episode} (L{current_level}) | Reward: {episode_reward:.2f} (stable) | Conflicts: {current_conflicts}")
             
+        # Curriculum update
         if args.curriculum and episode > 0 and episode % window_size == 0:
             new_level = CurriculumManager.determine_level(running_reward, current_level, threshold=-10.0 * current_level)
             if new_level != current_level:
@@ -376,41 +355,25 @@ def train_mappo(args):
                 safety_layer = SafetyConstraintLayer(env.raw_tracks)
                 logger.info(f"Network complexity increased to Level {current_level}")
 
-        # Checkpoint
-        # Checkpoint
-        if episode > 0 and episode % args.save_interval == 0:
-            ckpt_path = os.path.join(args.out_dir, f"mappo_curriculum_l{current_level}_ep{episode}.pth")
-            try:
-                from datetime import datetime # Assicurati che sia qui o in cima al file
-                state_dict = {
-                    'actor': actor.state_dict(),
-                    'critic': critic.state_dict(),
-                    # ... restanti campi ...
-                    'conflicts': avg_conflicts, # ORA FUNZIONA
-                    'epsilon': epsilon 
-                }
-        /******
-            
+        # Checkpointing
         if episode > 0 and episode % args.save_interval == 0:
             ckpt_path = os.path.join(args.out_dir, f"mappo_curriculum_l{current_level}_ep{episode}.pth")
             try:
                 state_dict = {
                     'actor': actor.state_dict(),
                     'critic': critic.state_dict(),
-                    'actor_optimizer': actor_opt.state_dict(), # Changed from ppo_agent.optimizer
-                    'critic_optimizer': critic_opt.state_dict(), # Added critic optimizer
+                    'actor_optimizer': actor_opt.state_dict(),
+                    'critic_optimizer': critic_opt.state_dict(),
                     'episode': episode,
                     'level': current_level,
                     'reward': running_reward,
                     'conflicts': avg_conflicts,
-                    'epsilon': epsilon # Added epsilon
+                    'epsilon': epsilon 
                 }
                 torch.save(state_dict, ckpt_path)
                 logger.info(f"Saved checkpoint: {ckpt_path}")
                 
-                # --- METADATA ROBUSTNESS ---
-                import json
-                from datetime import datetime # Added import
+                # Sync LATEST_SUCCESSFUL_LEVEL.json
                 meta_path = os.path.join(args.out_dir, "LATEST_SUCCESSFUL_LEVEL.json")
                 with open(meta_path, 'w') as f:
                     json.dump({
@@ -419,20 +382,16 @@ def train_mappo(args):
                         "episode": episode,
                         "avg_reward": running_reward,
                         "avg_conflicts": avg_conflicts,
-                        "epsilon": epsilon, # Added epsilon
+                        "epsilon": epsilon,
                         "timestamp": datetime.now().isoformat()
                     }, f, indent=2)
-                # ---------------------------
-                
             except Exception as e:
                 logger.error(f"Failed to save checkpoint: {e}")
-        */        
-        # --- HEALTH CHECK & AUTO-NOISE (Every 100 episodes) ---
+
+        # Health Check
         if episode > 0 and episode % 100 == 0:
-             # Calculate simple metrics from recent history (simulated here as we don't have a buffer yet)
-             # In a real implementation, we would aggregate from info['velocity'] but for now we use reward proxy
              try:
-                 is_stagnant = (abs(running_reward - last_reward) < 0.1) and (running_reward < -500)
+                 is_stagnant = (abs(episode_reward - last_reward) < 0.1) and (running_reward < -500)
                  is_chaotic = (avg_conflicts > 3.0)
                  
                  monitor_data = {
@@ -445,27 +404,15 @@ def train_mappo(args):
                      "timestamp": datetime.now().isoformat()
                  }
                  
-                 # Write Monitor JSON
                  with open(os.path.join(args.out_dir, "monitor.json"), 'w') as f:
                      json.dump(monitor_data, f, indent=2)
                  
-                 # Auto-Correction Logic
                  if is_stagnant:
-                     logger.warning("💤 STAGNATION DETECTED (Lazy Agent). Injecting Noise!")
-                     # Temporarily boost entropy coefficient or epsilon
-                     epsilon = min(0.5, epsilon * 1.5) 
+                     logger.warning("💤 STAGNATION DETECTED. Adjusting training parameters.")
                  elif is_chaotic:
-                     logger.warning("💥 CHAOS DETECTED. Reducing Learning Rate.")
-                     for param_group in actor_opt.param_groups:
-                         param_group['lr'] *= 0.9
-                 else:
-                     # Normal decay
-                     epsilon = max(0.05, epsilon * 0.99)
-                     
+                     logger.warning("💥 CHAOS DETECTED. Reducing exploration.")
              except Exception as e:
                  logger.error(f"Health check failed: {e}")
-        # ------------------------------------------------------
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

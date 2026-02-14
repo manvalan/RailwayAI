@@ -77,26 +77,27 @@ def train_mappo(args):
             logger.warning(f"Could not peek at checkpoint: {e}")
 
     def setup_level(level):
-        if args.curriculum:
-            logger.info(f"Setting up Curriculum Level {level}...")
-            scenario = CurriculumManager.get_scenario_for_level(level)
-            if not scenario or "stations" not in scenario or "tracks" not in scenario:
-                 logger.error(f"Generated Level {level} scenario is missing components!")
-            ScenarioLoader._inject_default_routes(scenario)
-        else:
-            logger.info(f"Loading static scenario: {args.scenario}")
-            scenario = ScenarioLoader.load_scenario(args.scenario)
-        
-        active_ids = None
+        active_ids_list = None
         if args.active_agents:
-            active_ids = [int(x) for x in args.active_agents.split(",")]
-            logger.info(f"Isolating optimization to agents: {active_ids}")
+            active_ids_list = [int(x) for x in args.active_agents.split(",")]
+            logger.info(f"Isolating optimization to agents: {active_ids_list}")
+
+        if args.curriculum and not args.active_agents:
+             logger.info(f"Setting up Synthetic Curriculum Level {level}...")
+             scenario = CurriculumManager.get_scenario_for_level(level)
+             if not scenario or "stations" not in scenario or "tracks" not in scenario:
+                  logger.error(f"Generated Level {level} scenario is missing components!")
+             ScenarioLoader._inject_default_routes(scenario)
+        else:
+            # REAL MAP CURRICULUM or Static Scenario: Use the actual map
+            logger.info(f"Loading Real-Map Scenario: {args.scenario}")
+            scenario = ScenarioLoader.load_scenario(args.scenario)
             
         env = RailwayGymEnv(
             scenario['tracks'], 
             scenario['stations'], 
             scenario['trains'], 
-            active_agent_ids=active_ids
+            active_agent_ids=active_ids_list
         )
         return env, scenario
 
@@ -179,54 +180,63 @@ def train_mappo(args):
             curr_log_prob_list = []
             
             # Batch processing of all agents in one pass
-            all_agent_keys = list(current_agent_ids)
+            all_active_keys = list(current_agent_ids)
             o_vec_list = []
-            for aid in all_agent_keys:
+            batch_aids = [] # Keep track of which aid is at which index
+            
+            for aid in all_active_keys:
+                if aid not in obs:
+                    continue # Skip agents not yet present
+                
                 o = obs[aid]
                 norm_pos = o['position'] / 10.0
                 norm_track = [o['current_track'] / 1000.0]
                 norm_vel = o['velocity'] / 200.0
                 norm_occ = o['neighbor_occupancy'] / 5.0
-                norm_approach = o['approach_vector'] / 1.0 # Already normalized roughly
+                norm_approach = o['approach_vector'] / 1.0
                 o_vec = np.concatenate([norm_pos, norm_track, norm_vel, norm_occ, norm_approach])
+                
                 o_vec_list.append(o_vec)
+                batch_aids.append(aid)
             
-            # (1, NumAgents, ObsDim)
+            if not batch_aids:
+                # No agents active on track right now
+                next_obs, rewards, done, truncated, info = env.step({})
+                obs = next_obs
+                continue
+
+            # (1, NumAgentsCurrentlyOnTrack, ObsDim)
             batch_obs_tensor = torch.FloatTensor(np.array(o_vec_list)).unsqueeze(0) 
             
             temperature = 1.1 
             
             with torch.no_grad():
-                # Forward pass returns (1, NumAgents, NumActions)
                 raw_probs = actor(batch_obs_tensor).squeeze(0) # (NumAgents, NumActions)
-                
-                # Apply temperature and noise injection during SAMPLING
                 scaled_probs = torch.pow(raw_probs, 1.0 / temperature)
                 scaled_probs = scaled_probs / scaled_probs.sum(dim=-1, keepdim=True)
                 
                 dist = torch.distributions.Categorical(scaled_probs)
                 batch_actions = dist.sample()
                 
-                # Manual epsilon-greedy on top
-                for k in range(len(all_agent_keys)):
+                # Manual epsilon-greedy
+                for k in range(len(batch_aids)):
                     if np.random.random() < epsilon:
                         batch_actions[k] = torch.randint(0, scaled_probs.size(-1), (1,))
                 
                 batch_log_probs = dist.log_prob(batch_actions)
-                
-                # Centralized Critic
                 val = critic(batch_obs_tensor)
                 step_value = val.item()
 
-            for i, aid in enumerate(all_agent_keys):
+            curr_obs_list = []
+            curr_action_list = []
+            curr_log_prob_list = []
+            
+            for i, aid in enumerate(batch_aids):
                 actions[aid] = batch_actions[i].item()
                 log_probs[aid] = batch_log_probs[i]
                 curr_obs_list.append(o_vec_list[i])
                 curr_action_list.append(batch_actions[i].item())
                 curr_log_prob_list.append(batch_log_probs[i].item())
-            
-            if not curr_obs_list:
-                break
 
             # Constraint Layer (Safety)
             safe_actions = safety_layer.apply_constraints(actions, {"trains": env.trains})

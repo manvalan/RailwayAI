@@ -282,12 +282,13 @@ class IdleTrainingManager:
                                 conflicts = int(match.group(3))
                                 
                                 # Broadcast every update from background
-                                self.on_training_update({
+                                if asyncio.iscoroutine(res := self.on_training_update({
                                     "type": "training_update",
                                     "episode": ep,
                                     "reward": reward,
                                     "conflicts": conflicts
-                                })
+                                })):
+                                    await res
                         except Exception as p_err:
                             pass # Silent for parsing noise
 

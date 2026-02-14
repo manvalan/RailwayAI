@@ -273,10 +273,21 @@ class RailwayGymEnv(gym.Env):
             except Exception:
                 pass
                 
+            # Slot 12: Weighted Approach Velocity (Positive means neighbors are coming at me)
+            approach_vel = 0.0
+            for neighbor_tid in self.trains:
+                if neighbor_tid['id'] == train['id'] or neighbor_tid['has_arrived']: continue
+                if neighbor_tid['current_track'] in visited_tracks:
+                    # Very simple: if they have different directions on same/nearby track, it's a risk
+                    # This is a heuristic but better than just occupancy
+                    rel_v = (neighbor_tid['velocity_kmh'] - train['velocity_kmh']) / 200.0
+                    approach_vel += rel_v
+            
             obs[agent_id] = {
                 "position": np.array([train.get('position_on_track', 0.0) / 10.0], dtype=np.float32),
                 "current_track": curr_track_id, 
                 "velocity": np.array([train.get('velocity_kmh', 120.0) / 200.0], dtype=np.float32),
-                "neighbor_occupancy": np.array(neighbor_occ, dtype=np.float32)
+                "neighbor_occupancy": np.array(neighbor_occ, dtype=np.float32),
+                "approach_vector": np.array([approach_vel], dtype=np.float32)
             }
         return obs

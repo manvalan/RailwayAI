@@ -48,6 +48,38 @@ class IdleTrainingManager:
         if scenarios_dir.exists():
             self.available_scenarios = sorted([p.name for p in scenarios_dir.glob("*.json")])
 
+    def _load_curriculum_agents(self):
+        """Loads or generates agent groups for the current curriculum level."""
+        groups_path = Path("api/models/training/curriculum_groups.json")
+        
+        # Generator logic if file missing
+        if not groups_path.exists():
+            try:
+                # Add local path to sys.path to ensure we can import our script
+                sys.path.append(str(Path(__file__).parent.parent.parent))
+                from python.integration.curriculum_selector import generate_curriculum_groups
+                groups = generate_curriculum_groups(self.scenario_path)
+                groups_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(groups_path, 'w') as f:
+                    json.dump(groups, f, indent=2)
+                logger.info("✅ Automatically generated curriculum groups.")
+            except Exception as e:
+                logger.error(f"Failed to generate curriculum groups: {e}")
+                return
+                
+        try:
+            with open(groups_path, 'r') as f:
+                groups = json.load(f)
+                level_str = str(self.curriculum_level)
+                active_ids = groups.get(level_str, [])
+                if active_ids:
+                    self.active_agent_ids = ",".join(active_ids)
+                    logger.info(f"🎯 Selective Training: Level {self.curriculum_level} -> {len(active_ids)} agents active.")
+                else:
+                    self.active_agent_ids = None # default all
+        except Exception as e:
+            logger.error(f"Failed to load curriculum agents: {e}")
+
     def _initialize_level(self):
         """Attempts to recover the last curriculum level from the checkpoints directory using robust metadata."""
         out_dir = Path("checkpoints")
@@ -177,12 +209,22 @@ class IdleTrainingManager:
             out_dir.mkdir(parents=True, exist_ok=True)
             
             # Prepare command
+            self._load_curriculum_agents()
+            
             cmd = [
                 "python3", "-u", "python/marl_scheduling/train_mappo.py",
                 "--episodes", str(self.episodes_per_run),
                 "--background",
-                "--out_dir", str(out_dir)
+                "--out_dir", str(out_dir),
+                "--scenario", "scenarios/siena_empoli_real.json" # Always use the real map for production
             ]
+            
+            if self.curriculum_enabled:
+                cmd.extend(["--curriculum", "--level", str(self.curriculum_level)])
+
+            if self.active_agent_ids:
+                cmd.extend(["--active_agents", self.active_agent_ids])
+                self.last_logs.append(f"🎯 Selective Training: Focus on {len(self.active_agent_ids.split(','))} agents.")
             
             # Try to find the latest checkpoint up to date (MARL)
             checkpoint = self._find_latest_checkpoint(out_dir)
@@ -204,18 +246,9 @@ class IdleTrainingManager:
             else:
                 self.last_logs.append(f"🆕 Starting fresh training (no checkpoint or baseline found)")
 
+            self.last_logs.append(f"🌍 Scenario: {scenario}")
             if self.curriculum_enabled:
-                 cmd.extend(["--curriculum", "--level", str(self.curriculum_level)])
-                 # Force the correct base scenario for map loaded
-                 cmd.extend(["--scenario", "scenarios/siena_empoli_real.json"]) 
-                 self.last_logs.append(f"🎓 Curriculum Level: {self.curriculum_level} (Map: siena_empoli_real.json)")
-            else:
-                cmd.extend(["--scenario", scenario])
-            
-            if self.active_agent_ids:
-                cmd.extend(["--active_agents", self.active_agent_ids])
-            
-            self.last_logs.append(f"🌍 Scenario: {Path(scenario).name}")
+                self.last_logs.append(f"🎓 Curriculum Level: {self.curriculum_level}")
             
             # Start process using asyncio
             env = os.environ.copy()

@@ -296,8 +296,8 @@ class IdleTrainingManager:
                             
                             if ep_match and rw_match and cf_match and self.on_training_update:
                                 ep = int(ep_match.group(1))
-                                reward = float(rw_match.group(2))
-                                conflicts = int(cf_match.group(3))
+                                reward = float(rw_match.group(1))
+                                conflicts = int(cf_match.group(1))
                                 
                                 # Broadcast structured update
                                 res_chart = self.on_training_update({

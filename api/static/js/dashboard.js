@@ -1,9 +1,13 @@
 let accessToken = localStorage.getItem('access_token');
-let trainingChart = null;
 let currentScenarioPath = null;
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const wsUrl = `${protocol}//${window.location.host}/ws/monitoring`;
 let ws = new WebSocket(wsUrl);
+
+// Dashboard State & Charts
+let trainingChart = null;
+let conflictDistChart = null;
+let conflictCounts = [0, 0, 0, 0, 0, 0]; // 0, 1, 2, 3, 4, 5+
 
 document.addEventListener('DOMContentLoaded', () => {
     if (accessToken) {
@@ -184,6 +188,7 @@ function initDashboard() {
     console.log("🚀 Initializing Operational Intelligence Dashboard...");
     try {
         initChart();
+        initConflictDistChart();
         connectWebSocket();
         fetchStats();
         checkUserRole();
@@ -465,10 +470,68 @@ function initChart() {
             maintainAspectRatio: false,
             scales: {
                 y: { type: 'linear', display: true, position: 'left', grid: { color: 'rgba(255,255,255,0.05)' } },
-                y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false } }
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    min: 0,
+                    suggestedMax: 5,
+                    ticks: { stepSize: 1 },
+                    grid: { drawOnChartArea: false }
+                }
             },
             plugins: {
                 legend: { labels: { color: '#f8fafc' } }
+            }
+        }
+    });
+}
+
+function initConflictDistChart() {
+    const canvas = document.getElementById('conflict-dist-chart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    conflictDistChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['0', '1', '2', '3', '4', '5+'],
+            datasets: [{
+                label: 'Frequenza Episodi',
+                data: conflictCounts,
+                backgroundColor: [
+                    'rgba(16, 185, 129, 0.6)',
+                    'rgba(99, 102, 241, 0.6)',
+                    'rgba(245, 158, 11, 0.6)',
+                    'rgba(244, 63, 94, 0.6)',
+                    'rgba(244, 63, 94, 0.7)',
+                    'rgba(244, 63, 94, 0.9)'
+                ],
+                borderColor: [
+                    'var(--success)',
+                    'var(--primary)',
+                    'var(--warning)',
+                    'var(--accent)',
+                    'var(--accent)',
+                    'var(--accent)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#94a3b8' }
+                },
+                x: {
+                    ticks: { color: '#94a3b8' }
+                }
+            },
+            plugins: {
+                legend: { display: false }
             }
         }
     });
@@ -551,6 +614,14 @@ function updateChart(episode, reward, conflicts) {
         trainingChart.data.datasets[1].data.shift();
     }
     trainingChart.update('none');
+
+    // Update Histograms
+    const idx = Math.min(Math.floor(conflicts), 5);
+    conflictCounts[idx]++;
+    if (conflictDistChart) {
+        conflictDistChart.data.datasets[0].data = conflictCounts;
+        conflictDistChart.update('none');
+    }
 }
 
 async function fetchUsers() {

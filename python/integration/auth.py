@@ -62,7 +62,11 @@ async def get_current_user(
     # RECORD ACTIVITY
     # EXCLUSION: Don't count background polling/monitoring as "activity" 
     # otherwise training will be killed by the dashboard just for being open.
-    ignore_paths = ["/api/v1/ai/status", "/api/v1/metrics", "/api/v1/ai/scenarios", "/api/v1/ai/backups", "/api/v1/users/me", "/api/v1/network/topology", "/ws/monitoring"]
+    ignore_paths = [
+        "/api/v1/ai/status", "/api/v1/metrics", "/api/v1/ai/scenarios", 
+        "/api/v1/ai/backups", "/api/v1/users/me", "/api/v1/network/topology", 
+        "/ws/monitoring", "/api/v1/ai/config", "/favicon.ico"
+    ]
     is_boring_get = request.method == "GET" and (request.url.path in ignore_paths or request.url.path.startswith("/api/v1/ai/status"))
 
     if not is_boring_get:

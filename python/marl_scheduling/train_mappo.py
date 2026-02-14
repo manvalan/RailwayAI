@@ -408,9 +408,24 @@ def train_mappo(args):
                      json.dump(monitor_data, f, indent=2)
                  
                  if is_stagnant:
-                     logger.warning("💤 STAGNATION DETECTED. Adjusting training parameters.")
+                     logger.warning("💤 STAGNATION DETECTED. Applying Neural Shock (LR Boost + Entropy Kick).")
+                     # Temporary learning rate boost to escape local minima
+                     for param_group in actor_opt.param_groups:
+                         param_group['lr'] = args.lr * 2.5
+                     for param_group in critic_opt.param_groups:
+                         param_group['lr'] = args.lr * 2.5
                  elif is_chaotic:
-                     logger.warning("💥 CHAOS DETECTED. Reducing exploration.")
+                     logger.warning("💥 CHAOS DETECTED. Stabilizing learning rate.")
+                     for param_group in actor_opt.param_groups:
+                         param_group['lr'] = args.lr * 0.5
+                     for param_group in critic_opt.param_groups:
+                         param_group['lr'] = args.lr * 0.5
+                 else:
+                     # Back to normal lr
+                     for param_group in actor_opt.param_groups:
+                         param_group['lr'] = args.lr
+                     for param_group in critic_opt.param_groups:
+                         param_group['lr'] = args.lr
              except Exception as e:
                  logger.error(f"Health check failed: {e}")
 

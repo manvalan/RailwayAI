@@ -199,17 +199,15 @@ class RailwayGymEnv(gym.Env):
                 rewards[tid] += progress * 10.0
                 
                 # --- PROGRESSIVE PENALTY SHAPING (Anti-Pigrizia) ---
-                # Quadratic penalty: Small delays OK, large delays catastrophic.
-                # Example: 
-                # 5 min delay -> 0.05^2 * 50 = 0.125 (negligible)
-                # 60 min delay -> 0.6^2 * 50 = 18.0 (painful)
+                # Softened quadratic penalty: Small delays tolerated to solve conflicts.
                 delay_factor = max(0.0, train['delay_min'] / 100.0)
-                rewards[tid] -= (delay_factor ** 2.5) * 80.0
+                # Reduced power from 2.5 to 2.0 to avoid overwhelming the conflict penalty
+                rewards[tid] -= (delay_factor ** 2.0) * 60.0
                 
                 # Standstill Penalty (Dynamic)
                 if progress < 0.001:
-                    # Penalty grows with current conflict level expectation
-                    rewards[tid] -= 1.5 
+                    # Penalty for not moving
+                    rewards[tid] -= 2.0 
                 # ---------------------------------------------------
                 
                 train['last_position'] = train['position_on_track']
@@ -218,9 +216,10 @@ class RailwayGymEnv(gym.Env):
         if HAS_CPP:
             for c in conflicts:
                 t1, t2 = str(c.train1_id), str(c.train2_id)
-                # Penalize only the learning agents involved in conflicts (even with background trains)
-                if t1 in rewards: rewards[t1] -= 150.0 
-                if t2 in rewards: rewards[t2] -= 150.0
+                # DRAMATIC INCREASE: Penalty for conflict must dominate the delay reward
+                # Increased from 150 to 1000 per agent involved
+                if t1 in rewards: rewards[t1] -= 1000.0 
+                if t2 in rewards: rewards[t2] -= 1000.0
 
         self.current_step += 1
         truncated = self.current_step >= self.max_steps

@@ -270,27 +270,48 @@ class IdleTrainingManager:
                 if line:
                     self.last_logs.append(line)
                     
-                    # Live Progress Broadcast for Dashboard
-                    # Match: ✨ Episode 160800 (L2) | Reward: -11945.47 | Conflicts: 2
-                    if "Episode" in line and "Reward:" in line:
+                    # 1. Forward ALL raw logs to the dashboard terminal for visibility
+                    if self.on_training_update:
                         try:
-                            # Robust regex to catch various formats (Improvement/Variance/stable)
-                            match = re.search(r"Episode\s+(\d+).*?Reward:\s*([\d\.\-]+).*?Conflicts:\s*(\d+)", line)
-                            if match and self.on_training_update:
-                                ep = int(match.group(1))
-                                reward = float(match.group(2))
-                                conflicts = int(match.group(3))
+                            # Forward as a 'log' type message
+                            res_log = self.on_training_update({
+                                "type": "log",
+                                "message": line,
+                                "level": "info"
+                            })
+                            if asyncio.iscoroutine(res_log):
+                                await res_log
+                        except Exception as forward_err:
+                            logger.error(f"Failed to forward log to dashboard: {forward_err}")
+
+                    # 2. Extract structured data for charts
+                    # Match: Episode 160800 ... Reward: -11945.47 ... Conflicts: 2
+                    # The emoji and other text might vary, so we look for keywords
+                    if "Episode" in line and "Reward" in line:
+                        try:
+                            # More permissive regex
+                            ep_match = re.search(r"Episode\s+(\d+)", line)
+                            rw_match = re.search(r"Reward:\s*([\d\.\-]+)", line)
+                            cf_match = re.search(r"Conflicts:\s*(\d+)", line)
+                            
+                            if ep_match and rw_match and cf_match and self.on_training_update:
+                                ep = int(ep_match.group(1))
+                                reward = float(rw_match.group(2))
+                                conflicts = int(cf_match.group(3))
                                 
-                                # Broadcast every update from background
-                                if asyncio.iscoroutine(res := self.on_training_update({
+                                # Broadcast structured update
+                                res_chart = self.on_training_update({
                                     "type": "training_update",
                                     "episode": ep,
                                     "reward": reward,
                                     "conflicts": conflicts
-                                })):
-                                    await res
+                                })
+                                if asyncio.iscoroutine(res_chart):
+                                    await res_chart
+                                    
+                                logger.info(f"📊 Broadcasted progress: Ep {ep}, Reward {reward}, Conflicts {conflicts}")
                         except Exception as p_err:
-                            pass # Silent for parsing noise
+                            logger.error(f"Error parsing progress from line '{line}': {p_err}")
 
                     # Log parsing for curriculum updates
                     if "Network complexity increased to Level" in line:

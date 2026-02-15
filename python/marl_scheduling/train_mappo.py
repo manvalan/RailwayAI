@@ -110,7 +110,7 @@ def train_mappo(args):
         return
 
     logger.info(f"Initialized environment with {len(agent_ids)} active agents.")
-    obs_dim = 16  # 1 (pos) + 1 (track) + 1 (vel) + 12 (occupancy) + 1 (approach)
+    obs_dim = 18  # 1 (pos) + 1 (track) + 1 (vel) + 12 (occupancy) + 1 (approach) + 2 (station/lookahead)
     num_actions = 4 # Wait, Slow, Normal, Fast
     
     # 2. Universal Policy (Shared Weights)
@@ -194,7 +194,8 @@ def train_mappo(args):
                 norm_vel = o['velocity'] / 200.0
                 norm_occ = o['neighbor_occupancy'] / 5.0
                 norm_approach = o['approach_vector'] / 1.0
-                o_vec = np.concatenate([norm_pos, norm_track, norm_vel, norm_occ, norm_approach])
+                norm_extra = o['station_lookahead'] 
+                o_vec = np.concatenate([norm_pos, norm_track, norm_vel, norm_occ, norm_approach, norm_extra])
                 
                 o_vec_list.append(o_vec)
                 batch_aids.append(aid)

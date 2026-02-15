@@ -273,21 +273,33 @@ class RailwayGymEnv(gym.Env):
             except Exception:
                 pass
                 
-            # Slot 12: Weighted Approach Velocity (Positive means neighbors are coming at me)
+            # Slot 12: Weighted Approach Velocity
             approach_vel = 0.0
             for neighbor_tid in self.trains:
                 if neighbor_tid['id'] == train['id'] or neighbor_tid['has_arrived']: continue
                 if neighbor_tid['current_track'] in visited_tracks:
-                    # Very simple: if they have different directions on same/nearby track, it's a risk
-                    # This is a heuristic but better than just occupancy
                     rel_v = (neighbor_tid['velocity_kmh'] - train['velocity_kmh']) / 200.0
                     approach_vel += rel_v
             
+            # Slot 13: Station Awareness (Can I safely wait here?)
+            curr_track_data = self.raw_tracks.get(curr_track_id)
+            is_station = 1.0 if (curr_track_data and curr_track_data.get('capacity', 1) > 1) else 0.0
+            
+            # Slot 14: Route Lookahead (Is the path ahead blocked?)
+            lookahead_danger = 0.0
+            route = train.get('planned_route', [])
+            curr_idx = train.get('route_index', 0)
+            # Look 4 segments ahead in our own planned path
+            for nt_id in route[curr_idx + 1 : curr_idx + 5]:
+                if track_occupancy.get(nt_id, 0) > 0:
+                    lookahead_danger += 1.0
+
             obs[agent_id] = {
                 "position": np.array([train.get('position_on_track', 0.0) / 10.0], dtype=np.float32),
                 "current_track": curr_track_id, 
                 "velocity": np.array([train.get('velocity_kmh', 120.0) / 200.0], dtype=np.float32),
                 "neighbor_occupancy": np.array(neighbor_occ, dtype=np.float32),
-                "approach_vector": np.array([approach_vel], dtype=np.float32)
+                "approach_vector": np.array([approach_vel], dtype=np.float32),
+                "station_lookahead": np.array([is_station, lookahead_danger], dtype=np.float32)
             }
         return obs

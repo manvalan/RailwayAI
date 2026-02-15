@@ -294,12 +294,42 @@ class RailwayGymEnv(gym.Env):
                 if track_occupancy.get(nt_id, 0) > 0:
                     lookahead_danger += 1.0
 
+            # --- NEW STRATEGIC NEURONS (v3: Hierarchy & Urgency) ---
+            # Slot 15-16: Own Stats
+            self_priority = train.get('priority', 5) / 10.0
+            self_delay = min(1.0, train.get('delay_min', 0.0) / 60.0)
+            
+            # Slot 17: Distance to next station/safe-point
+            dist_to_station = 1.0 # Default if no station ahead
+            remaining_route = route[curr_idx:]
+            acc_dist = 0
+            for idx, r_id in enumerate(remaining_route):
+                tr_data = self.raw_tracks.get(r_id)
+                if not tr_data: continue
+                
+                if idx == 0:
+                    acc_dist += max(0, tr_data['length_km'] - train.get('position_on_track', 0.0))
+                else:
+                    acc_dist += tr_data['length_km']
+                
+                if tr_data.get('capacity', 1) > 1:
+                    dist_to_station = min(1.0, acc_dist / 20.0) # Normalized to 20km
+                    break
+            
+            # Slot 18: Hierarchy Awareness (Who is around me?)
+            max_neighbor_prio = 0.0
+            for neighbor in self.trains:
+                if neighbor['id'] == train['id'] or neighbor['has_arrived']: continue
+                if neighbor['current_track'] in visited_tracks:
+                    max_neighbor_prio = max(max_neighbor_prio, neighbor.get('priority', 5) / 10.0)
+
             obs[agent_id] = {
                 "position": np.array([train.get('position_on_track', 0.0) / 10.0], dtype=np.float32),
                 "current_track": curr_track_id, 
                 "velocity": np.array([train.get('velocity_kmh', 120.0) / 200.0], dtype=np.float32),
                 "neighbor_occupancy": np.array(neighbor_occ, dtype=np.float32),
                 "approach_vector": np.array([approach_vel], dtype=np.float32),
-                "station_lookahead": np.array([is_station, lookahead_danger], dtype=np.float32)
+                "station_lookahead": np.array([is_station, lookahead_danger], dtype=np.float32),
+                "strategic_stats": np.array([self_priority, self_delay, dist_to_station, max_neighbor_prio], dtype=np.float32)
             }
         return obs

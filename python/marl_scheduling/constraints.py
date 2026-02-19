@@ -37,21 +37,11 @@ class SafetyConstraintLayer:
             
             action = actions.get(agent_id, 0)
             
-            # If train wants to move (Cruise)
-            if action == 0:
-                # Check if it's nearing the end of the current track and entering the next
+            # If train wants to move (Cruise (0), Slow (1), Fast (3))
+            if action in [0, 1, 3]:
                 curr_track_id = train.get('current_track')
                 route = train.get('planned_route', [])
                 route_idx = train.get('route_index', 0)
-                
-                # Simple look-ahead: if it's at the end of track, check the next one
-                # For simplicity in this dummy layer, we just check general track capacity
-                track = self.tracks.get(curr_track_id)
-                if track:
-                    # If it's a single track and there's another train on it, 
-                    # we should be careful. But if it's already on it, it might have to continue.
-                    # The more critical check is ENTERING a track.
-                    pass
                 
                 # Check next track in route
                 if route_idx + 1 < len(route):
@@ -59,13 +49,36 @@ class SafetyConstraintLayer:
                     next_track = self.tracks.get(next_track_id)
                     
                     if next_track:
+                        # 1. Capacity Check
                         curr_occ = projected_occupancy.get(next_track_id, 0)
                         capacity = next_track.get('capacity', 1)
-                        
-                        # Hard Constraint: Don't enter if full
                         if curr_occ >= capacity:
                             logger.debug(f"Constraint: Force STOP for train {agent_id} "
                                         f"due to capacity on track {next_track_id}")
-                            safe_actions[agent_id] = 1 # Force Stop
+                            safe_actions[agent_id] = 2 # Force Wait (Stop)
+                            continue
+
+                        # 2. SINGLE TRACK RECURSIVE CHECK
+                        if next_track.get('is_single_track', False):
+                            # Look ahead for the entire single-track chain
+                            chain = []
+                            for i in range(route_idx + 1, len(route)):
+                                t_id = route[i]
+                                tr_data = self.tracks.get(t_id)
+                                if tr_data and tr_data.get('is_single_track', False):
+                                    chain.append(t_id)
+                                else:
+                                    break # Chain ends at double track or station
+                            
+                            # If anyone else is on this chain, WAIT at the gateway
+                            danger = False
+                            for t_id in chain:
+                                if projected_occupancy.get(t_id, 0) > 0:
+                                    danger = True
+                                    break
+                            
+                            if danger:
+                                logger.info(f"🛡️ SAFETY: Blocking train {agent_id} entry to single-track chain {chain} (Occupied)")
+                                safe_actions[agent_id] = 2
                             
         return safe_actions

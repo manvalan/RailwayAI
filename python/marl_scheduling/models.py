@@ -16,14 +16,15 @@ class MultiHeadAttention(nn.Module):
 
 class ActorNetwork(nn.Module):
     """
-    Advanced Actor with Self-Attention.
-    Allows the agent to perceive the state of other agents and their relative importance.
+    Advanced Actor with Self-Attention and Skip Connections.
+    Allows the agent to perceive the state of other agents while maintaining its own identity.
     """
     def __init__(self, obs_dim: int, num_actions: int = 3, embed_dim: int = 64):
         super(ActorNetwork, self).__init__()
         self.encoder = nn.Linear(obs_dim, embed_dim)
         self.attention = MultiHeadAttention(embed_dim)
-        self.fc1 = nn.Linear(embed_dim, 128)
+        # Concat: [Self-Feature (64) + Context (64)] -> 128
+        self.fc1 = nn.Linear(embed_dim * 2, 128)
         self.fc2 = nn.Linear(128, num_actions)
         
     def forward(self, x):
@@ -35,9 +36,12 @@ class ActorNetwork(nn.Module):
             
         h = F.relu(self.encoder(x))
         h_attn = self.attention(h)
-        # Use first agent or aggregate? For individual actor, we take the target agent's feature
-        # but the feature now contains context from others.
-        x = F.relu(self.fc1(h_attn))
+        
+        # Skip Connection: Concatenate self-embedding with context
+        # This is CRITICAL: It lets the agent know "I am me" (h) vs "They are them" (h_attn)
+        combined = torch.cat([h, h_attn], dim=-1)
+        
+        x = F.relu(self.fc1(combined))
         return F.softmax(self.fc2(x), dim=-1)
 
 class CriticNetwork(nn.Module):

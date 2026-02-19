@@ -36,18 +36,24 @@ class CurriculumManager:
                 {"id": 2, "name": "Station B", "num_platforms": 2}
             ],
             "tracks": [
+                # Platform tracks at stations
+                {"id": 101, "length_km": 1.0, "is_single_track": False, "capacity": 2, "station_ids": [1]},
+                {"id": 102, "length_km": 1.0, "is_single_track": False, "capacity": 2, "station_ids": [2]},
+                # The single-track line
                 {"id": 1, "length_km": 10.0, "is_single_track": True, "capacity": 1, "station_ids": [1, 2]}
             ],
             "trains": [
                 {
                     "id": 1, "origin_station": 1, "destination_station": 2, 
                     "scheduled_departure_time": "08:00:00", "velocity_kmh": 100,
-                    "position_km": 0, "current_track": 1, "priority": 5, "delay_minutes": 0
+                    "position_km": 0, "current_track": 101, "priority": 5, "delay_minutes": 0,
+                    "planned_route": [101, 1, 102]
                 },
                 {
                     "id": 2, "origin_station": 2, "destination_station": 1, 
                     "scheduled_departure_time": "08:00:00", "velocity_kmh": 100,
-                    "position_km": 10, "current_track": 1, "priority": 5, "delay_minutes": 0
+                    "position_km": 0, "current_track": 102, "priority": 5, "delay_minutes": 0,
+                    "planned_route": [102, 1, 101]
                 }
             ]
         }

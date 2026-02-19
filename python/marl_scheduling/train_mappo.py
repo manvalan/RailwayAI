@@ -17,10 +17,13 @@ import logging
 import json
 from datetime import datetime
 
-# Add current directory to sys.path
+# Add current and parent 'python' directory to sys.path
 current_dir = Path(__file__).parent.absolute()
+parent_python_dir = current_dir.parent.absolute()
 if str(current_dir) not in sys.path:
     sys.path.insert(0, str(current_dir))
+if str(parent_python_dir) not in sys.path:
+    sys.path.insert(0, str(parent_python_dir))
 
 # Force INFO level logging
 logging.basicConfig(
@@ -97,7 +100,8 @@ def train_mappo(args):
             scenario['tracks'], 
             scenario['stations'], 
             scenario['trains'], 
-            active_agent_ids=active_ids_list
+            active_agent_ids=active_ids_list,
+            safety_enabled=args.safety
         )
         return env, scenario
 
@@ -111,7 +115,7 @@ def train_mappo(args):
 
     logger.info(f"Initialized environment with {len(agent_ids)} active agents.")
     obs_dim = 22  # v3: 1 (pos) + 1 (track) + 1 (vel) + 12 (occ) + 1 (appr) + 2 (st/look) + 4 (strat)
-    num_actions = 4 # Wait, Slow, Normal, Fast
+    num_actions = 4 # 0:Normal, 1:Slow, 2:Wait, 3:Fast
     
     # 2. Universal Policy (Shared Weights)
     actor = ActorNetwork(obs_dim, num_actions=num_actions)
@@ -124,10 +128,15 @@ def train_mappo(args):
             if imitation_mode:
                 actor.load_state_dict(ckpt['model_state_dict'])
                 logger.info("✅ Resumed actor from IMITATION baseline.")
-            else:
+            elif 'actor' in ckpt:
                 actor.load_state_dict(ckpt['actor'])
-                critic.load_state_dict(ckpt['critic'])
-                logger.info("✅ Resumed PPO weights successfully.")
+                if 'critic' in ckpt:
+                    critic.load_state_dict(ckpt['critic'])
+                logger.info("✅ Resumed weights successfully.")
+            else:
+                # Direct state dict load
+                actor.load_state_dict(ckpt)
+                logger.info("✅ Resumed weights from direct state dict.")
         except Exception as e:
             logger.warning(f"⚠️ Could not load weights due to architectural mismatch: {e}")
             logger.warning("Starting from scratch with fresh weights instead.")
@@ -240,13 +249,10 @@ def train_mappo(args):
                 curr_action_list.append(batch_actions[i].item())
                 curr_log_prob_list.append(batch_log_probs[i].item())
 
-            # Constraint Layer (Safety)
-            safe_actions = safety_layer.apply_constraints(actions, {"trains": env.trains})
+            # Environment STEP (Safety is handled internally by env.step)
+            next_obs, rewards, done, truncated, info = env.step(actions)
             
-            # Environment STEP
-            next_obs, rewards, done, truncated, info = env.step(safe_actions)
-            
-            total_reward = sum(rewards.values())
+            total_reward = sum(rewards.values()) * 0.01 # Normalize huge rewards
             episode_reward += total_reward
             
             # Store in buffer
@@ -301,11 +307,9 @@ def train_mappo(args):
                         entropy = dist.entropy().mean()
                         
                         # Shock Therapy
-                        if entropy < 0.6:
-                            noise = torch.ones_like(probs) / probs.size(-1)
-                            probs = 0.70 * probs + 0.30 * noise
-                            dist = torch.distributions.Categorical(probs)
-                            entropy = dist.entropy().mean()
+                        # Shock Therapy REMOVED - It was causing instability
+                        # We rely on entropy regularization in the loss function instead
+                        # if entropy < 0.6: ...
 
                         new_lp = dist.log_prob(a_t)
                         ratio = torch.exp(new_lp - old_lp)
@@ -381,7 +385,9 @@ def train_mappo(args):
                     'level': current_level,
                     'reward': running_reward,
                     'conflicts': avg_conflicts,
-                    'epsilon': epsilon 
+                    'epsilon': epsilon,
+                    'obs_dim': obs_dim,
+                    'num_actions': num_actions
                 }
                 torch.save(state_dict, ckpt_path)
                 logger.info(f"Saved checkpoint: {ckpt_path}")
@@ -461,6 +467,7 @@ if __name__ == "__main__":
     parser.add_argument("--out_dir", type=str, default="checkpoints", help="Output directory")
     parser.add_argument("--background", action="store_true", help="Running in background mode")
     parser.add_argument("--active_agents", type=str, default=None, help="Comma-separated IDs of agents to train (others will be background)")
+    parser.add_argument("--safety", action="store_true", help="Enable hard safety constraints shield")
     
     args = parser.parse_args()
     train_mappo(args)

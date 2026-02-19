@@ -27,11 +27,14 @@ class RailwayGymEnv(gym.Env):
     """
     metadata = {"render_modes": ["human"], "name": "railway_marl_v1"}
 
-    def __init__(self, tracks: List[Dict], stations: List[Dict], trains: List[Dict], active_agent_ids: Optional[List[int]] = None):
+    def __init__(self, tracks: List[Dict], stations: List[Dict], trains: List[Dict], 
+                 active_agent_ids: Optional[List[int]] = None,
+                 safety_enabled: bool = False):
         super().__init__()
         
         self.raw_tracks = {t['id']: t for t in tracks}
         self.raw_stations = {s['id']: s for s in stations}
+        self.safety_enabled = safety_enabled
         
         # Ensure trains have all necessary fields from loader
         for t in trains:
@@ -80,7 +83,13 @@ class RailwayGymEnv(gym.Env):
         
         self.current_step = 0
         self.time_step_min = 1.0 
-        self.max_steps = 150 # Increased horizon for larger scenarios like Roma
+        
+        # Dynamic horizon: Level 1 needs less time, Level 5 needs more.
+        # Starting with a base of 100, plus 50 per level of difficulty.
+        # If active_agent_ids is large, we increase it.
+        self.max_steps = 100 + (len(self.agent_ids) * 20)
+        self.max_steps = min(300, max(120, self.max_steps))
+        
         self.active_ids_int = [int(aid) for aid in self.agent_ids]
 
         if HAS_CPP:
@@ -152,11 +161,51 @@ class RailwayGymEnv(gym.Env):
                 if train_ref:
                     self.cpp_scheduler.update_train_state(tid, train_ref['position_on_track'], train_ref['velocity_kmh'], train_ref.get('is_delayed', False))
             
-            # Background trains (missing from actions) use default logic (Action 0 = Speed)
+            # Unified Safety Layer for ALL trains
+            if self.safety_enabled:
+                state = self.cpp_scheduler.get_network_state()
+                projected_occ = {}
+                for t_state in state.trains:
+                    if not t_state.has_arrived:
+                        projected_occ[t_state.current_track] = projected_occ.get(t_state.current_track, 0) + 1
+
+                for t in self.trains:
+                    tid = t['id']
+                    # Determine if train wants to move (AI controlled or Background)
+                    wants_to_move = False
+                    if str(tid) in actions:
+                        if actions[str(tid)] in [0, 1, 3]: wants_to_move = True
+                    else:
+                        wants_to_move = True
+                    
+                    if wants_to_move:
+                        curr_idx = t.get('route_index', 0)
+                        route = t.get('planned_route', [])
+                        if curr_idx + 1 < len(route):
+                            next_tr_id = route[curr_idx + 1]
+                            next_track = self.raw_tracks.get(next_tr_id)
+                            if next_track:
+                                 if projected_occ.get(next_tr_id, 0) >= next_track.get('capacity', 1):
+                                     cpp_actions[tid] = 1 # Force Stop
+                                     continue
+                                 
+                                 if next_track.get('is_single_track', False):
+                                     chain = []
+                                     for i in range(curr_idx + 1, len(route)):
+                                         cid = route[i]
+                                         c_data = self.raw_tracks.get(cid)
+                                         if c_data and c_data.get('is_single_track', False): chain.append(cid)
+                                         else: break
+                                     
+                                     if any(projected_occ.get(cid, 0) > 0 for cid in chain):
+                                         cpp_actions[tid] = 1 # STOP
+                                         continue
+
+            # Default: ensure all trains have an action
             for t in self.trains:
                 tid = t['id']
                 if tid not in cpp_actions:
-                    cpp_actions[tid] = 0 # Background continues at normal speed
+                    cpp_actions[tid] = 0 # Default Cruise
                     
             self.cpp_scheduler.step(cpp_actions, self.time_step_min)
             
@@ -196,18 +245,48 @@ class RailwayGymEnv(gym.Env):
                 if train['route_index'] > train.get('last_route_index', 0):
                     progress += 5.0 
                 
-                rewards[tid] += progress * 10.0
+                rewards[tid] += progress * 15.0 # Increased from 10.0
+                
+                # Milestone Reward (Reaching next track segment/node)
+                if train['route_index'] > train.get('last_route_index', 0):
+                    rewards[tid] += 25.0 # Significant boost for moving forward
                 
                 # --- PROGRESSIVE PENALTY SHAPING (Anti-Pigrizia) ---
-                # Softened quadratic penalty: Small delays tolerated to solve conflicts.
                 delay_factor = max(0.0, train['delay_min'] / 100.0)
-                # Reduced power from 2.5 to 2.0 to avoid overwhelming the conflict penalty
-                rewards[tid] -= (delay_factor ** 2.0) * 60.0
+                rewards[tid] -= (delay_factor ** 1.8) * 50.0
                 
-                # Standstill Penalty (Dynamic)
+                # Standstill Penalty (Grace period of 30 steps)
                 if progress < 0.001:
-                    # Penalty for not moving
-                    rewards[tid] -= 2.0 
+                    # Slot 14 of obs is lookahead_danger. We can check it here.
+                    # For simplicity, we re-calculate or check the flag.
+                    lookahead_danger = 0.0
+                    route = train.get('planned_route', [])
+                    curr_idx = train.get('route_index', 0)
+                    
+                    # Track occupancy for lookahead
+                    track_occ = {}
+                    for t in self.trains:
+                        if not t['has_arrived']:
+                            tr_id = t.get('current_track')
+                            track_occ[tr_id] = track_occ.get(tr_id, 0) + 1
+                    
+                    for nt_id in route[curr_idx + 1 : curr_idx + 11]:
+                        if track_occ.get(nt_id, 0) > 0:
+                            lookahead_danger += 1.0
+                    
+                    if lookahead_danger == 0:
+                        # Only penalize lazyness, not strategic waiting
+                        curr_track_id = train.get('current_track')
+                        track_info = self.raw_tracks.get(curr_track_id)
+                        is_safe_spot = track_info and track_info.get('capacity', 1) > 1
+                        
+                        time_idx = max(0, self.current_step - 30)
+                        standstill_p = 1.0 + (time_idx * 0.05)
+                        
+                        if is_safe_spot:
+                            standstill_p *= 0.05 # 95% discount for waiting at a station
+                            
+                        rewards[tid] -= standstill_p
                 # ---------------------------------------------------
                 
                 train['last_position'] = train['position_on_track']
@@ -216,10 +295,26 @@ class RailwayGymEnv(gym.Env):
         if HAS_CPP:
             for c in conflicts:
                 t1, t2 = str(c.train1_id), str(c.train2_id)
-                # DRAMATIC INCREASE: Penalty for conflict must dominate the delay reward
-                # Increased from 150 to 1000 per agent involved
+                # Penalty for conflict
                 if t1 in rewards: rewards[t1] -= 1000.0 
                 if t2 in rewards: rewards[t2] -= 1000.0
+            
+            # PROXIMITY SURCHARGE: Penalty for being in the same track if single-track
+            # This helps the AI learn to wait BEFORE the conflict happens
+            state = self.cpp_scheduler.get_network_state()
+            track_trains = {}
+            for ct in state.trains:
+                if not ct.has_arrived:
+                    track_trains.setdefault(ct.current_track, []).append(ct.id)
+            
+            for trid, tids in track_trains.items():
+                if len(tids) > 1:
+                    track_data = self.raw_tracks.get(trid)
+                    if track_data and track_data.get('is_single_track', True):
+                        for tid in tids:
+                            tid_str = str(tid)
+                            if tid_str in rewards:
+                                rewards[tid_str] -= 250.0 # CRITICAL: Stop entering already occupied single tracks
 
         self.current_step += 1
         truncated = self.current_step >= self.max_steps
@@ -248,29 +343,31 @@ class RailwayGymEnv(gym.Env):
             # Slot 0: Current track occupancy (excluding self)
             neighbor_occ[0] = max(0, track_occupancy.get(curr_track_id, 0) - 1)
             
-            # Slots 1-11: Occupancy on connected tracks (BFS search up to depth 2)
+            # Slots 1-11: Occupancy on connected tracks (Proper BFS search up to depth 5)
             try:
                 visited_tracks = {curr_track_id}
-                tracked_stations = set()
+                queue = []
                 
                 curr_track_data = self.raw_tracks.get(curr_track_id)
                 if curr_track_data:
-                    tracked_stations.update(curr_track_data['station_ids'])
+                    for s_id in curr_track_data['station_ids']:
+                        queue.append((s_id, 1)) # station_id, depth
                 
                 idx = 1
-                for s_id in tracked_stations:
-                    if idx >= 12: break
-                    for _, _, edge_data in self.graph.edges(s_id, data=True):
+                while queue and idx < 12:
+                    s_id, depth = queue.pop(0)
+                    if depth > 5: continue
+                    
+                    for _, neighbor_sid, edge_data in self.graph.edges(s_id, data=True):
                         other_track_id = edge_data['id']
                         if other_track_id not in visited_tracks:
                             neighbor_occ[idx] = track_occupancy.get(other_track_id, 0)
                             visited_tracks.add(other_track_id)
                             idx += 1
                             if idx >= 12: break
-                            
-                # Fill remaining by searching neighbors of neighbors if possible
-                # (Omitted complex BFS for speed, just zero padding is fine)
-            except Exception:
+                            # Add neighbor stations to queue
+                            queue.append((neighbor_sid, depth + 1))
+            except Exception as e:
                 pass
                 
             # Slot 12: Weighted Approach Velocity

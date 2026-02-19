@@ -216,7 +216,8 @@ class IdleTrainingManager:
                 "--episodes", str(self.episodes_per_run),
                 "--background",
                 "--out_dir", str(out_dir),
-                "--scenario", "scenarios/siena_empoli_real.json" # Always use the real map for production
+                "--scenario", "scenarios/siena_empoli_real.json", # Always use the real map for production
+                "--safety"
             ]
             
             if self.curriculum_enabled:

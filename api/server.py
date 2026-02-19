@@ -26,8 +26,8 @@ from datetime import datetime, timedelta
 import torch
 import numpy as np
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, WebSocket, WebSocketDisconnect, Form, Query, Request, File, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
 from python.integration.auth import get_current_user, create_access_token, api_key_header
@@ -901,7 +901,7 @@ def load_model(checkpoint_path: Optional[str] = None):
             checkpoint_path = str(manual_path)
         else:
             # PRIORITÀ 1: Checkpoint MAPPO in addestramento (Il nostro cervello attuale)
-            search_dirs = [Path("models/training"), Path("python/marl_scheduling/checkpoints")]
+            search_dirs = [Path("models/training"), Path("checkpoints"), Path("python/marl_scheduling/checkpoints")]
             latest_ckpt = None
             
             for d in search_dirs:
@@ -939,7 +939,7 @@ def load_model(checkpoint_path: Optional[str] = None):
                 logger.info("⚡ Neural Model detected.")
                 
                 # Prova a dedurre le dimensioni dal checkpoint
-                obs_dim = checkpoint_data.get('obs_dim', 15)
+                obs_dim = checkpoint_data.get('obs_dim', 22) # Default to v3
                 
                 # Determina num_actions dai pesi se necessario
                 state_dict = checkpoint_data.get('actor', checkpoint_data.get('model_state_dict'))
@@ -1002,13 +1002,12 @@ def load_model(checkpoint_path: Optional[str] = None):
 
 @app.get("/", tags=["Root"])
 async def root():
-    """Root endpoint"""
-    return {
-        "service": "Railway AI Scheduler API",
-        "version": "1.0.0",
-        "status": "running",
-        "docs": "/docs"
-    }
+    """Serve the management dashboard"""
+    index_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
+    if not os.path.exists(index_path):
+        # Fallback for different CWD
+        index_path = "api/static/index.html"
+    return HTMLResponse(content=open(index_path).read())
 
 
 @app.get("/api/v1/health", response_model=HealthResponse, tags=["Health"])
@@ -1345,19 +1344,74 @@ async def optimize_schedule(
             logger.info(f"AI (MAPPO) Inference for {num_trains_to_process} trains")
             
             for i, train in enumerate(processed_trains):
-                # Build observation
+                # Build observation (v3: 22 dimensions)
                 norm_pos = train.position_km / 10.0
                 norm_track = train.current_track / 1000.0
                 norm_vel = train.velocity_kmh / 200.0
+                
+                # Neighbor Occupancy (12 slots)
                 norm_occ = np.zeros(12)
+                track_trains = {}
+                for other in all_trains:
+                    if not other.is_delayed or other.velocity_kmh > 0: # Active trains
+                        track_trains.setdefault(other.current_track, []).append(other)
+                
+                # Current track occupancy
+                curr_track_trains = track_trains.get(train.current_track, [])
+                norm_occ[0] = max(0, len(curr_track_trains) - 1)
+                
+                # Neighbors (simplified BFS for API - just check connected tracks if info available)
+                # In the API we might not have the full graph easily, so we use a simplified version
+                # or just focus on the current track and approach vector.
+                
+                # Approach Vector (Slot 12)
+                approach_vel = 0.0
+                for other in all_trains:
+                    if other.id != train.id:
+                        if other.current_track == train.current_track:
+                            rel_v = (other.velocity_kmh - train.velocity_kmh) / 200.0
+                            approach_vel += rel_v
+                
+                # Station Lookahead (Slots 13-14)
+                # We can't easily compute depth BFS here without the graph object, 
+                # but we can check if current track has high capacity (likely a station)
+                # This information should ideally come from a cached graph or the request data.
+                is_station = 0.0
+                if request.tracks:
+                    tr_data = next((t for t in request.tracks if t.id == train.current_track), None)
+                    if tr_data and tr_data.capacity > 1: is_station = 1.0
+                
+                lookahead_danger = 0.0
+                if train.planned_route and len(train.planned_route) > train.current_route_index + 1:
+                    next_track = train.planned_route[train.current_route_index + 1]
+                    if len(track_trains.get(next_track, [])) > 0:
+                        lookahead_danger = 1.0
+                
+                # Strategic Stats (Slots 15-18)
+                self_priority = train.priority / 10.0
+                self_delay = min(1.0, train.delay_minutes / 60.0)
+                dist_to_station = 1.0 # Default
+                max_neighbor_prio = 0.0
                 for other in all_trains:
                     if other.id != train.id and other.current_track == train.current_track:
-                        rel_pos = other.position_km - train.position_km
-                        if 0 < rel_pos < 5.0:
-                            idx = int(rel_pos / 0.5)
-                            if idx < 12: norm_occ[idx] = 1.0
+                        max_neighbor_prio = max(max_neighbor_prio, other.priority / 10.0)
+
+                # Final 22-dim vector
+                obs_vec = np.concatenate([
+                    [norm_pos, norm_track, norm_vel], 
+                    norm_occ, 
+                    [approach_vel], 
+                    [is_station, lookahead_danger],
+                    [self_priority, self_delay, dist_to_station, max_neighbor_prio]
+                ])
                 
-                obs_vec = np.concatenate([[norm_pos, norm_track, norm_vel], norm_occ])
+                # Padding or Truncating to handle dimension mismatch during transition
+                expected_dim = (model_config or {}).get('obs_dim', 22)
+                if len(obs_vec) < expected_dim:
+                    obs_vec = np.pad(obs_vec, (0, expected_dim - len(obs_vec)))
+                elif len(obs_vec) > expected_dim:
+                    obs_vec = obs_vec[:expected_dim]
+                    
                 obs_tensor = torch.FloatTensor(obs_vec).unsqueeze(0).unsqueeze(0)
                 
                 with torch.no_grad():

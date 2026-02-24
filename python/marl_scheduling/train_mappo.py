@@ -114,7 +114,7 @@ def train_mappo(args):
         return
 
     logger.info(f"Initialized environment with {len(agent_ids)} active agents.")
-    obs_dim = 22  # v3: 1 (pos) + 1 (track) + 1 (vel) + 12 (occ) + 1 (appr) + 2 (st/look) + 4 (strat)
+    obs_dim = 23  # v4: 1 (pos) + 1 (track) + 1 (vel) + 12 (occ) + 1 (appr) + 2 (st/look) + 5 (strat + ID)
     num_actions = 4 # 0:Normal, 1:Slow, 2:Wait, 3:Fast
     
     # 2. Universal Policy (Shared Weights)
@@ -138,8 +138,18 @@ def train_mappo(args):
                 actor.load_state_dict(ckpt)
                 logger.info("✅ Resumed weights from direct state dict.")
         except Exception as e:
-            logger.warning(f"⚠️ Could not load weights due to architectural mismatch: {e}")
-            logger.warning("Starting from scratch with fresh weights instead.")
+            logger.error(f"❌ CRITICAL ARCHITECTURAL MISMATCH: {e}")
+            if "size mismatch" in str(e):
+                logger.error(f"Expected obs_dim={obs_dim}, but checkpoint has different dimensions.")
+                if not args.background:
+                    raise RuntimeError("Architecture mismatch. Use a compatible checkpoint or start from scratch.")
+                else:
+                    logger.warning("Starting from scratch with FRESH WEIGHTS to avoid corrupted training.")
+                    # Reset weights to ensure clean state
+                    actor = ActorNetwork(obs_dim, num_actions=num_actions)
+                    critic = CriticNetwork(obs_dim)
+            else:
+                logger.warning(f"⚠️ Could not load weights: {e}")
     
     actor_opt = optim.Adam(actor.parameters(), lr=args.lr)
     critic_opt = optim.Adam(critic.parameters(), lr=args.lr)
@@ -325,10 +335,12 @@ def train_mappo(args):
                         # Optimize
                         actor_opt.zero_grad()
                         actor_loss.backward()
+                        torch.nn.utils.clip_grad_norm_(actor.parameters(), max_norm=0.5)
                         actor_opt.step()
                         
                         critic_opt.zero_grad()
                         critic_loss.backward()
+                        torch.nn.utils.clip_grad_norm_(critic.parameters(), max_norm=0.5)
                         critic_opt.step()
                         
                         total_actor_loss += actor_loss.item()
@@ -407,44 +419,57 @@ def train_mappo(args):
             except Exception as e:
                 logger.error(f"Failed to save checkpoint: {e}")
 
-        # Health Check
+        # Health Check & Drift Detection
         if episode > 0 and episode % 100 == 0:
              try:
                  is_stagnant = (abs(episode_reward - last_reward) < 0.1) and (running_reward < -500)
                  is_chaotic = (avg_conflicts > 3.0)
                  
+                 # Drift detection: confronta ultimi 50 ep vs 50 precedenti
+                 mid = len(conflict_history) // 2
+                 recent_conflicts = conflict_history[mid:] if len(conflict_history) >= 10 else conflict_history
+                 older_conflicts  = conflict_history[:mid]  if len(conflict_history) >= 10 else conflict_history
+                 conflicts_trend = (
+                     (sum(recent_conflicts) / len(recent_conflicts)) - 
+                     (sum(older_conflicts)  / len(older_conflicts))
+                 ) if older_conflicts else 0.0
+                 
+                 # Best reward mai visto (persiste tra check)
+                 if not hasattr(train_mappo, '_best_reward'):
+                     train_mappo._best_reward = running_reward
+                 else:
+                     train_mappo._best_reward = max(train_mappo._best_reward, running_reward)
+                 
+                 # Health score composito 0-100 (100 = perfetto)
+                 conflict_score  = max(0.0, 100.0 - avg_conflicts  * 30.0)
+                 stagnant_score  = 0.0 if is_stagnant else 50.0
+                 chaos_score     = 0.0 if is_chaotic  else 50.0
+                 health_score    = (conflict_score * 0.6 + stagnant_score * 0.2 + chaos_score * 0.2)
+                 
                  monitor_data = {
-                     "episode": episode,
-                     "level": current_level,
-                     "avg_reward": running_reward,
-                     "avg_conflicts": avg_conflicts,
-                     "stagnant": is_stagnant,
-                     "chaotic": is_chaotic,
-                     "timestamp": datetime.now().isoformat()
+                     "episode":          episode,
+                     "level":            current_level,
+                     "avg_reward":       running_reward,
+                     "best_reward":      train_mappo._best_reward,
+                     "episode_reward":   episode_reward,
+                     "avg_conflicts":    avg_conflicts,
+                     "conflicts_trend":  round(conflicts_trend, 4),  # <0 = miglioramento
+                     "epsilon":          round(epsilon, 4),
+                     "stagnant":         is_stagnant,
+                     "chaotic":          is_chaotic,
+                     "health_score":     round(health_score, 1),     # 0-100
+                     "timestamp":        datetime.now().isoformat()
                  }
                  
                  with open(os.path.join(args.out_dir, "monitor.json"), 'w') as f:
                      json.dump(monitor_data, f, indent=2)
                  
                  if is_stagnant:
-                     logger.warning("💤 STAGNATION DETECTED. Applying Neural Shock (LR Boost + Entropy Kick).")
-                     # Temporary learning rate boost to escape local minima
-                     for param_group in actor_opt.param_groups:
-                         param_group['lr'] = args.lr * 2.5
-                     for param_group in critic_opt.param_groups:
-                         param_group['lr'] = args.lr * 2.5
+                     logger.warning(f"💤 STAGNATION DETECTED. Health: {health_score:.0f}/100")
                  elif is_chaotic:
-                     logger.warning("💥 CHAOS DETECTED. Stabilizing learning rate.")
-                     for param_group in actor_opt.param_groups:
-                         param_group['lr'] = args.lr * 0.5
-                     for param_group in critic_opt.param_groups:
-                         param_group['lr'] = args.lr * 0.5
+                     logger.warning(f"💥 CHAOS DETECTED. Health: {health_score:.0f}/100")
                  else:
-                     # Back to normal lr
-                     for param_group in actor_opt.param_groups:
-                         param_group['lr'] = args.lr
-                     for param_group in critic_opt.param_groups:
-                         param_group['lr'] = args.lr
+                     logger.info(f"💚 Health: {health_score:.0f}/100 | Trend conflitti: {conflicts_trend:+.2f} | Best reward: {train_mappo._best_reward:.1f}")
              except Exception as e:
                  logger.error(f"Health check failed: {e}")
 

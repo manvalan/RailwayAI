@@ -191,19 +191,27 @@ async def health_check():
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Endpoint per ottenere il token JWT.
-    In produzione, verificare le credenziali su DB sicuro.
+    Le credenziali vengono verificate tramite UserService (DB).
     """
-    # Esempio semplificato: admin/admin
-    if form_data.username != "admin" or form_data.password != "admin":
+    from python.integration.user_service import UserService
+    
+    user = UserService.authenticate_user(form_data.username, form_data.password)
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Credenziali non valide",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not user.get("is_active", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account disattivato. Contattare l'amministratore.",
         )
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": form_data.username}, expires_delta=access_token_expires
+        data={"sub": user["username"], "privilege": user.get("privilege", "normal")},
+        expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 

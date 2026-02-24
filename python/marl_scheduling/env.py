@@ -87,8 +87,8 @@ class RailwayGymEnv(gym.Env):
         # Dynamic horizon: Level 1 needs less time, Level 5 needs more.
         # Starting with a base of 100, plus 50 per level of difficulty.
         # If active_agent_ids is large, we increase it.
-        self.max_steps = 100 + (len(self.agent_ids) * 20)
-        self.max_steps = min(300, max(120, self.max_steps))
+        self.max_steps = 100 + (len(self.agent_ids) * 30)
+        self.max_steps = min(400, max(150, self.max_steps))
         
         self.active_ids_int = [int(aid) for aid in self.agent_ids]
 
@@ -200,12 +200,18 @@ class RailwayGymEnv(gym.Env):
                                      if any(projected_occ.get(cid, 0) > 0 for cid in chain):
                                          cpp_actions[tid] = 1 # STOP
                                          continue
+                                 
+                                 # SAFETY FIX: Mark the next track as 'claimed' so others in this step see it as occupied
+                                 projected_occ[next_tr_id] = projected_occ.get(next_tr_id, 0) + 1
 
             # Default: ensure all trains have an action
             for t in self.trains:
                 tid = t['id']
                 if tid not in cpp_actions:
-                    cpp_actions[tid] = 0 # Default Cruise
+                    if t.get('is_background', False):
+                        cpp_actions[tid] = 1  # STOP: Background trains park at stations
+                    else:
+                        cpp_actions[tid] = 0  # Default Cruise for active agents
                     
             self.cpp_scheduler.step(cpp_actions, self.time_step_min)
             
@@ -221,7 +227,12 @@ class RailwayGymEnv(gym.Env):
                         t['delay_min'] = cpp_train.delay_minutes
                         break
             
-            conflicts = self.cpp_scheduler.detect_conflicts()
+            all_conflicts = self.cpp_scheduler.detect_conflicts()
+            # Filter: only count conflicts involving at least one active agent
+            # This prevents background-vs-background phantom conflicts from
+            # polluting the reward signal and inflating the conflict counter
+            conflicts = [c for c in all_conflicts 
+                         if str(c.train1_id) in self.agent_ids or str(c.train2_id) in self.agent_ids]
             num_conflicts = len(conflicts)
         else:
             num_conflicts = 0 
@@ -284,7 +295,7 @@ class RailwayGymEnv(gym.Env):
                         standstill_p = 1.0 + (time_idx * 0.05)
                         
                         if is_safe_spot:
-                            standstill_p *= 0.05 # 95% discount for waiting at a station
+                            standstill_p *= 0.01 # 99% discount for waiting at a station (allow strategic waiting)
                             
                         rewards[tid] -= standstill_p
                 # ---------------------------------------------------
@@ -295,12 +306,12 @@ class RailwayGymEnv(gym.Env):
         if HAS_CPP:
             for c in conflicts:
                 t1, t2 = str(c.train1_id), str(c.train2_id)
-                # Penalty for conflict
-                if t1 in rewards: rewards[t1] -= 1000.0 
-                if t2 in rewards: rewards[t2] -= 1000.0
+                # Penalty for conflict: calibrated to be significant but not overwhelming
+                if t1 in rewards: rewards[t1] -= 150.0
+                if t2 in rewards: rewards[t2] -= 150.0
             
-            # PROXIMITY SURCHARGE: Penalty for being in the same track if single-track
-            # This helps the AI learn to wait BEFORE the conflict happens
+            # PROXIMITY SURCHARGE: Penalty for being on the same single-track segment
+            # Reduced so progress signal is not annihilated
             state = self.cpp_scheduler.get_network_state()
             track_trains = {}
             for ct in state.trains:
@@ -314,7 +325,31 @@ class RailwayGymEnv(gym.Env):
                         for tid in tids:
                             tid_str = str(tid)
                             if tid_str in rewards:
-                                rewards[tid_str] -= 250.0 # CRITICAL: Stop entering already occupied single tracks
+                                rewards[tid_str] -= 80.0  # Reduced: signal must remain learnable
+            
+            # STRATEGIC WAIT REWARD: Reward a train that waits in a safe spot
+            # while its path ahead is genuinely blocked. This is the key behavior to learn.
+            for train in self.trains:
+                tid_str = str(train['id'])
+                if tid_str not in self.agent_ids or train['has_arrived']:
+                    continue
+                curr_track_id = train.get('current_track')
+                track_info = self.raw_tracks.get(curr_track_id)
+                is_safe_spot = track_info and track_info.get('capacity', 1) > 1
+                
+                if is_safe_spot:
+                    # Check if path ahead is actually blocked
+                    route = train.get('planned_route', [])
+                    curr_idx = train.get('route_index', 0)
+                    path_blocked = False
+                    for nt_id in route[curr_idx + 1: curr_idx + 4]:
+                        if track_trains.get(nt_id) and len(track_trains[nt_id]) > 0:
+                            path_blocked = True
+                            break
+                    
+                    # If actively waiting (velocity=0) in safe spot while path is blocked: REWARD
+                    if path_blocked and train.get('velocity_kmh', 100) == 0.0:
+                        rewards[tid_str] += 30.0  # Strategic patience bonus
 
         self.current_step += 1
         truncated = self.current_step >= self.max_steps
@@ -420,6 +455,10 @@ class RailwayGymEnv(gym.Env):
                 if neighbor['current_track'] in visited_tracks:
                     max_neighbor_prio = max(max_neighbor_prio, neighbor.get('priority', 5) / 10.0)
 
+            # Slot 19: Symmetry Breaker (Deterministic unique ID)
+            # Use the integer ID directly for stable, consistent hierarchy signal
+            self_id_norm = (int(agent_id) % 100) / 100.0
+
             obs[agent_id] = {
                 "position": np.array([train.get('position_on_track', 0.0) / 10.0], dtype=np.float32),
                 "current_track": curr_track_id, 
@@ -427,6 +466,6 @@ class RailwayGymEnv(gym.Env):
                 "neighbor_occupancy": np.array(neighbor_occ, dtype=np.float32),
                 "approach_vector": np.array([approach_vel], dtype=np.float32),
                 "station_lookahead": np.array([is_station, lookahead_danger], dtype=np.float32),
-                "strategic_stats": np.array([self_priority, self_delay, dist_to_station, max_neighbor_prio], dtype=np.float32)
+                "strategic_stats": np.array([self_priority, self_delay, dist_to_station, max_neighbor_prio, self_id_norm], dtype=np.float32)
             }
         return obs

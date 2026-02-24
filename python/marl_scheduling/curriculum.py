@@ -51,8 +51,8 @@ class CurriculumManager:
                 },
                 {
                     "id": 2, "origin_station": 2, "destination_station": 1, 
-                    "scheduled_departure_time": "08:00:00", "velocity_kmh": 100,
-                    "position_km": 0, "current_track": 102, "priority": 5, "delay_minutes": 0,
+                    "scheduled_departure_time": "08:08:00", "velocity_kmh": 100,
+                    "position_km": 0, "current_track": 102, "priority": 3, "delay_minutes": 0,
                     "planned_route": [102, 1, 101]
                 }
             ]

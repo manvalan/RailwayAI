@@ -938,8 +938,15 @@ def load_model(checkpoint_path: Optional[str] = None):
             if 'actor' in checkpoint_data or 'model_state_dict' in checkpoint_data:
                 logger.info("⚡ Neural Model detected.")
                 
-                # Prova a dedurre le dimensioni dal checkpoint
-                obs_dim = checkpoint_data.get('obs_dim', 22) # Default to v3
+                # Determina le dimensioni reali dai pesi (Più affidabile dei metadati)
+                state_dict = checkpoint_data.get('actor', checkpoint_data.get('model_state_dict'))
+                
+                # Deduzione obs_dim (v3=22, v4=23)
+                if 'encoder.weight' in state_dict:
+                    obs_dim = state_dict['encoder.weight'].shape[1]
+                    logger.info(f"🔍 Deducing obs_dim={obs_dim} from encoder weights.")
+                else:
+                    obs_dim = checkpoint_data.get('obs_dim', 23)
                 
                 # Determina num_actions dai pesi se necessario
                 state_dict = checkpoint_data.get('actor', checkpoint_data.get('model_state_dict'))
@@ -1047,9 +1054,9 @@ async def get_model_info():
     return ModelInfo(
         architecture="LSTM + Attention / MARL Universal",
         parameters=sum(p.numel() for p in model.parameters()),
-        input_dim=model_config['input_dim'],
-        hidden_dim=model_config['hidden_dim'],
-        num_trains=model_config['num_trains'],
+        input_dim=model_config.get('input_dim', model_config.get('obs_dim', 0)),
+        hidden_dim=model_config.get('hidden_dim', 64),
+        num_trains=model_config.get('num_trains', 0),
         loaded_at=metrics['model_loaded_at']
     )
 
@@ -1396,17 +1403,20 @@ async def optimize_schedule(
                     if other.id != train.id and other.current_track == train.current_track:
                         max_neighbor_prio = max(max_neighbor_prio, other.priority / 10.0)
 
-                # Final 22-dim vector
+                # Slot 19: Symmetry Breaker (Unique ID)
+                self_id_norm = (hash(str(train.id)) % 100) / 100.0
+
+                # Final 23-dim vector (v4)
                 obs_vec = np.concatenate([
                     [norm_pos, norm_track, norm_vel], 
                     norm_occ, 
                     [approach_vel], 
                     [is_station, lookahead_danger],
-                    [self_priority, self_delay, dist_to_station, max_neighbor_prio]
+                    [self_priority, self_delay, dist_to_station, max_neighbor_prio, self_id_norm]
                 ])
                 
                 # Padding or Truncating to handle dimension mismatch during transition
-                expected_dim = (model_config or {}).get('obs_dim', 22)
+                expected_dim = (model_config or {}).get('obs_dim', 23)
                 if len(obs_vec) < expected_dim:
                     obs_vec = np.pad(obs_vec, (0, expected_dim - len(obs_vec)))
                 elif len(obs_vec) > expected_dim:

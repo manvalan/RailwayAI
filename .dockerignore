@@ -1,0 +1,18 @@
+# Docker Ignore
+venv/
+__pycache__/
+*.pyc
+.git/
+.vscode/
+
+# Ignora i checkpoint pesanti durante la build
+# L'API caricherà il modello desiderato dal mount esterno o 
+# lo scaricherà al volo, ma non vogliamo 20GB di build context.
+checkpoints/
+models/
+logs/
+*.log
+
+# Evita di copiare build C++ locali
+build/
+*.so

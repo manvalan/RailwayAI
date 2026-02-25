@@ -306,9 +306,9 @@ class RailwayGymEnv(gym.Env):
         if HAS_CPP:
             for c in conflicts:
                 t1, t2 = str(c.train1_id), str(c.train2_id)
-                # Penalty for conflict: calibrated to be significant but not overwhelming
-                if t1 in rewards: rewards[t1] -= 150.0
-                if t2 in rewards: rewards[t2] -= 150.0
+                # Penalty for conflict: SHOCK THERAPY (-400.0 instead of -150.0)
+                if t1 in rewards: rewards[t1] -= 400.0
+                if t2 in rewards: rewards[t2] -= 400.0
             
             # PROXIMITY SURCHARGE: Penalty for being on the same single-track segment
             # Reduced so progress signal is not annihilated
@@ -354,6 +354,12 @@ class RailwayGymEnv(gym.Env):
         self.current_step += 1
         truncated = self.current_step >= self.max_steps
         env_terminated = all(terminated.values())
+        
+        # --- ZERO CONFLICT BONUS ---
+        # Reward agents for completing the scenario safely
+        if (env_terminated or truncated) and num_conflicts == 0:
+            for aid in self.agent_ids:
+                rewards[aid] += 100.0
         
         observations = self._get_obs()
         return observations, rewards, env_terminated, truncated, {"conflicts": num_conflicts}
